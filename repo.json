@@ -1,0 +1,6 @@
+{
+  "name": "ExtCloud",
+  "description": "Cloudstream extensions collection (custom providers)",
+  "manifestVersion": 1,
+  "pluginIndex": "https://raw.githubusercontent.com/duro92/ExtCloud/builds/plugins.json"
+}
