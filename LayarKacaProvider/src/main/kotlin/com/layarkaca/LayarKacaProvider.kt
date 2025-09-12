@@ -50,7 +50,6 @@ class LayarKacaProvider : MainAPI() {
         }
     }
 
-
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h3")?.ownText()?.trim() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
@@ -189,14 +188,11 @@ class LayarKacaProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-
         val document = app.get(data).document
-        document.select("ul#player-list > li").map {
-                fixUrl(it.select("a").attr("href"))
-            }.amap {
-                val test=it.getIframe()
-                Log.d("Phisher",test)
-            loadExtractor(it.getIframe(), mainUrl, subtitleCallback, callback)
+        document.select("ul#player-list > li").map { fixUrl(it.select("a").attr("href")) }.amap {
+            val iframeUrl = it.getIframe()
+            Log.d("Phisher", iframeUrl)
+            loadExtractor(iframeUrl, mainUrl, subtitleCallback, callback)
         }
         return true
     }
@@ -218,5 +214,4 @@ class LayarKacaProvider : MainAPI() {
             url
         }
     }
-
 }
