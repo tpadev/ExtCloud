@@ -109,7 +109,7 @@ class Animasu : MainAPI() {
             val link = fixUrl(it.selectFirst("a")!!.attr("href"))
             val name = it.selectFirst("a")?.text() ?: ""
             val episode = Regex("Episode\\s?(\\d+)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
-            Episode(link, episode = episode)
+            newEpisode(link, episode = episode)
         }.reversed()
 
         val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(type),year,true)
@@ -152,7 +152,7 @@ class Animasu : MainAPI() {
     ) {
         loadExtractor(url, referer, subtitleCallback) { link ->
             callback.invoke(
-                ExtractorLink(
+                newExtractorLink(
                     link.name,
                     link.name,
                     link.url,
