@@ -1,13 +1,12 @@
 // use an integer for version numbers
-version = 10
-
+version = 33
 
 cloudstream {
     language = "id"
     // All of these properties are optional, you can safely remove them
 
-    // description = "Lorem Ipsum"
-     authors = listOf("Hexated")
+    description = "Includes: DutaMovie, Ngefilm, Nodrakorid, Multiplex, Pusatfilm"
+    authors = listOf("Hexated")
 
     /**
      * Status int as the following:
@@ -18,10 +17,10 @@ cloudstream {
      * */
     status = 1 // will be 3 if unspecified
     tvTypes = listOf(
-        "AnimeMovie",
-        "OVA",
-        "Anime",
+        "AsianDrama",
+        "TvSeries",
+        "Movie",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=animasu.cc&sz=%size%"
+    iconUrl = "https://www.google.com/s2/favicons?domain=gomov.bio&sz=%size%"
 }
