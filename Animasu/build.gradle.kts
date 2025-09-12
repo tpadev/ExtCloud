@@ -1,5 +1,5 @@
 // use an integer for version numbers
-version = 15
+version = 10
 
 
 cloudstream {
@@ -23,5 +23,5 @@ cloudstream {
         "Anime",
     )
 
-    iconUrl = "https://animeindo.quest/wp-content/uploads/2023/05/favicon-300x300.png"
+    iconUrl = "https://www.google.com/s2/favicons?domain=animasu.cc&sz=%size%"
 }
