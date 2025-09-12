@@ -1,5 +1,5 @@
 // use an integer for version numbers
-version = 10
+version = 15
 
 
 cloudstream {
@@ -7,7 +7,7 @@ cloudstream {
     // All of these properties are optional, you can safely remove them
 
     // description = "Lorem Ipsum"
-     authors = listOf("Hexated","Duro92")
+     authors = listOf("Hexated")
 
     /**
      * Status int as the following:
@@ -23,5 +23,5 @@ cloudstream {
         "Anime",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=animasu.cc&sz=%size%"
+    iconUrl = "https://animeindo.quest/wp-content/uploads/2023/05/favicon-300x300.png"
 }
