@@ -48,6 +48,8 @@ jobs:
           echo DUMP_KEY=${{ secrets.DUMP_KEY }} >> local.properties
           echo FanCode_API=${{ secrets.FanCode_API }} >> local.properties
           echo FlixHQAPI=${{ secrets.FlixHQAPI }} >> local.properties
+          echo KissKh=${{ secrets.KissKh }} >> local.properties
+          echo KisskhSub=${{ secrets.KisskhSub }} >> local.properties
 
       - name: Build Plugins
         run: |
