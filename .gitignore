@@ -1,3 +1,4 @@
+*.iml
 .gradle
 **/build/
 !**/src/**/build/
@@ -21,3 +22,4 @@ gradle-app.setting
 .classpath
 
 local.properties
+.vscodetest.txt
