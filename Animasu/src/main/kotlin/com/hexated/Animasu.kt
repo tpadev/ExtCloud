@@ -64,11 +64,13 @@ class Animasu : MainAPI() {
         } else {
             var title = uri.substringAfter("$mainUrl/")
             title = when {
-                (title.contains("-episode")) && !(title.contains("-movie")) -> title.substringBefore("-episode")
+                (title.contains("-episode")) && !(title.contains("-movie")) ->
+                    title.substringBefore("-episode")
+
                 (title.contains("-movie")) -> title.substringBefore("-movie")
                 else -> title
             }
-
+            
             "$mainUrl/anime/$title"
         }
     }
@@ -94,26 +96,37 @@ class Animasu : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
 
-        val title = document.selectFirst("div.infox h1")?.text().toString().replace("Sub Indo", "").trim()
+        val title = document.selectFirst("div.infox h1")?.text().toString()
+            .replace("Sub Indo", "")
+            .trim()
+
         val poster = document.selectFirst("div.bigcontent img")?.getImageAttr()
 
         val table = document.selectFirst("div.infox div.spe")
+
         val type = getType(table?.selectFirst("span:contains(Jenis:)")?.ownText())
-        val year = table?.selectFirst("span:contains(Rilis:)")?.ownText()?.substringAfterLast(",")?.trim()?.toIntOrNull()
+        val year = table?.selectFirst("span:contains(Rilis:)")?.ownText()
+            ?.substringAfterLast(",")?.trim()?.toIntOrNull()
         val status = table?.selectFirst("span:contains(Status:) font")?.text()
         val trailer = document.selectFirst("div.trailer iframe")?.attr("src")
 
         val episodes = document.select("ul#daftarepisode > li").map {
             val link = fixUrl(it.selectFirst("a")!!.attr("href"))
             val name = it.selectFirst("a")?.text() ?: ""
-            val episodeNum = Regex("Episode\\s?(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val episode = Regex("Episode\\s?(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
             newEpisode(link) {
+                this.episode = episode
                 this.name = name
-                this.episodeNumber = episodeNum
+
             }
         }.reversed()
 
-        val tracker = APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), year, true)
+        val tracker = APIHolder.getTracker(
+            listOf(title),
+            TrackerType.getTypes(type),
+            year,
+            true
+        )
 
         return newAnimeLoadResponse(title, url, type) {
             posterUrl = tracker?.image ?: poster
@@ -159,14 +172,13 @@ class Animasu : MainAPI() {
                     url = link.url,
                     type = link.type
                 ) {
-                    this.quality = if (link.type == ExtractorLinkType.M3U8 || link.name == "Uservideo") {
-                        link.quality
-                    } else {
-                        getIndexQuality(quality)
-                    }
+
                     this.referer = link.referer
-                    this.headers = link.headers
-                    this.extractorData = link.extractorData
+                    this.quality =
+                        if (link.type == ExtractorLinkType.M3U8 || link.name == "Uservideo")
+                            link.quality
+                        else
+                            getIndexQuality(quality)
                 }
             )
         }
@@ -185,5 +197,4 @@ class Animasu : MainAPI() {
             else -> this.attr("abs:src")
         }
     }
-    
 }

@@ -2,15 +2,15 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.*
+
+import com.lagradost.cloudstream3.utils.AppUtils
+import com.lagradost.cloudstream3.utils.ExtractorApi
+import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.INFER_TYPE
+import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.extractors.Bestx
 import com.lagradost.cloudstream3.extractors.Chillx
 import com.lagradost.cloudstream3.extractors.Filesim
-import com.lagradost.cloudstream3.utils.AppUtils
-import com.lagradost.cloudstream3.utils.ExtractorApi
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.INFER_TYPE
-import com.lagradost.cloudstream3.utils.Qualities
 
 class Archivd : ExtractorApi() {
     override val name: String = "Archivd"
@@ -21,24 +21,26 @@ class Archivd : ExtractorApi() {
         url: String,
         referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
+        callback: (com.lagradost.cloudstream3.utils.ExtractorLink) -> Unit
     ) {
         val res = app.get(url).document
         val json = res.select("div#app").attr("data-page")
-        val video = AppUtils.tryParseJson<Sources>(json)?.props?.datas?.data?.link?.media ?: return
+        val video = AppUtils.tryParseJson<Sources>(json)?.props?.datas?.data?.link?.media
 
-        // gunakan newExtractorLink dengan initializer untuk set referer/quality/headers
-        val link = newExtractorLink(
-            source = this.name,
-            name = this.name,
-            url = video,
-            type = INFER_TYPE
-        ) {
-            this.referer = "$mainUrl/"
-            this.quality = Qualities.Unknown.value
+        video?.let { link ->
+            callback.invoke(
+                newExtractorLink(
+                    source = this.name,
+                    name = this.name,
+                    url = link,
+                    type = INFER_TYPE
+                ) {
+                    this.quality = Qualities.Unknown.value
+                    this.referer = "$mainUrl/"
+                }
+            )
         }
 
-        callback.invoke(link)
     }
 
     data class Link(
@@ -63,42 +65,39 @@ class Archivd : ExtractorApi() {
 }
 
 class Newuservideo : ExtractorApi() {
-    override val name = "Uservideo"
-    override val mainUrl = "https://new.uservideo.xyz"
+    override val name: String = "Uservideo"
+    override val mainUrl: String = "https://new.uservideo.xyz"
     override val requiresReferer = true
 
     override suspend fun getUrl(
         url: String,
         referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
+        callback: (com.lagradost.cloudstream3.utils.ExtractorLink) -> Unit
     ) {
         val iframe = app.get(url, referer = referer).document.select("iframe#videoFrame").attr("src")
         val doc = app.get(iframe, referer = "$mainUrl/").text
         val json = "VIDEO_CONFIG\\s?=\\s?(.*)".toRegex().find(doc)?.groupValues?.get(1)
-        val sources = AppUtils.tryParseJson<Sources>(json) ?: return
 
-        sources.streams?.forEach { stream ->
-            val playUrl = stream.playUrl ?: return@forEach
-            val qualityValue = when (stream.formatId) {
-                18 -> Qualities.P360.value
-                22 -> Qualities.P720.value
-                else -> Qualities.Unknown.value
+        AppUtils.tryParseJson<Sources>(json)?.streams?.map { stream ->
+            stream.playUrl?.let { playUrl ->
+                callback.invoke(
+                    newExtractorLink(
+                        source = this.name,
+                        name = this.name,
+                        url = playUrl,
+                        type = INFER_TYPE
+                    ) {
+                        this.referer = "$mainUrl/"
+                        this.quality = when (stream.formatId) {
+                            18 -> Qualities.P360.value
+                            22 -> Qualities.P720.value
+                            else -> Qualities.Unknown.value
+                        }
+                    }
+                )
             }
-
-            val link = newExtractorLink(
-                source = this.name,
-                name = this.name,
-                url = playUrl,
-                type = INFER_TYPE
-            ) {
-                this.referer = "$mainUrl/"
-                this.quality = qualityValue
-            }
-
-            callback.invoke(link)
         }
-        
     }
 
     data class Streams(
