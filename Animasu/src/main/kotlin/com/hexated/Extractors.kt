@@ -25,17 +25,20 @@ class Archivd : ExtractorApi() {
     ) {
         val res = app.get(url).document
         val json = res.select("div#app").attr("data-page")
-        val video = AppUtils.tryParseJson<Sources>(json)?.props?.datas?.data?.link?.media
-        callback.invoke(
-            ExtractorLink(
-                this.name,
-                this.name,
-                video ?: return,
-                "$mainUrl/",
-                Qualities.Unknown.value,
-                INFER_TYPE
-            )
-        )
+        val video = AppUtils.tryParseJson<Sources>(json)?.props?.datas?.data?.link?.media ?: return
+
+        // gunakan newExtractorLink dengan initializer untuk set referer/quality/headers
+        val link = newExtractorLink(
+            source = this.name,
+            name = this.name,
+            url = video,
+            type = INFER_TYPE
+        ) {
+            this.referer = "$mainUrl/"
+            this.quality = Qualities.Unknown.value
+        }
+
+        callback.invoke(link)
     }
 
     data class Link(
@@ -60,8 +63,8 @@ class Archivd : ExtractorApi() {
 }
 
 class Newuservideo : ExtractorApi() {
-    override val name: String = "Uservideo"
-    override val mainUrl: String = "https://new.uservideo.xyz"
+    override val name = "Uservideo"
+    override val mainUrl = "https://new.uservideo.xyz"
     override val requiresReferer = true
 
     override suspend fun getUrl(
@@ -70,27 +73,32 @@ class Newuservideo : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val iframe = app.get(url,referer=referer).document.select("iframe#videoFrame").attr("src")
-        val doc = app.get(iframe,referer="$mainUrl/").text
+        val iframe = app.get(url, referer = referer).document.select("iframe#videoFrame").attr("src")
+        val doc = app.get(iframe, referer = "$mainUrl/").text
         val json = "VIDEO_CONFIG\\s?=\\s?(.*)".toRegex().find(doc)?.groupValues?.get(1)
+        val sources = AppUtils.tryParseJson<Sources>(json) ?: return
 
-        AppUtils.tryParseJson<Sources>(json)?.streams?.map {
-            callback.invoke(
-                ExtractorLink(
-                    this.name,
-                    this.name,
-                    it.playUrl ?: return@map,
-                    "$mainUrl/",
-                    when (it.formatId) {
-                        18 -> Qualities.P360.value
-                        22 -> Qualities.P720.value
-                        else -> Qualities.Unknown.value
-                    },
-                    INFER_TYPE
-                )
-            )
+        sources.streams?.forEach { stream ->
+            val playUrl = stream.playUrl ?: return@forEach
+            val qualityValue = when (stream.formatId) {
+                18 -> Qualities.P360.value
+                22 -> Qualities.P720.value
+                else -> Qualities.Unknown.value
+            }
+
+            val link = newExtractorLink(
+                source = this.name,
+                name = this.name,
+                url = playUrl,
+                type = INFER_TYPE
+            ) {
+                this.referer = "$mainUrl/"
+                this.quality = qualityValue
+            }
+
+            callback.invoke(link)
         }
-
+        
     }
 
     data class Streams(
