@@ -46,8 +46,8 @@ jobs:
           echo TMDB_API=${{ secrets.TMDB_API }} >> local.properties
           echo DUMP_API=${{ secrets.DUMP_API }} >> local.properties
           echo DUMP_KEY=${{ secrets.DUMP_KEY }} >> local.properties
-          echo LAYARKACA_API=${{ secrets.LAYARKACA_API }} >> local.properties
-          
+          echo FanCode_API=${{ secrets.FanCode_API }} >> local.properties
+          echo FlixHQAPI=${{ secrets.FlixHQAPI }} >> local.properties
 
       - name: Build Plugins
         run: |
