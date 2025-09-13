@@ -26,3 +26,15 @@ cloudstream {
 
     isCrossPlatform = true
 }
+
+android {
+    namespace = "com.funmovieslix"
+
+    defaultConfig {
+        minSdk = 21
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+}
