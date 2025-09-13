@@ -2,6 +2,7 @@ import com.android.build.gradle.BaseExtension
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+import java.util.Properties
 
 buildscript {
     repositories {
@@ -23,6 +24,19 @@ allprojects {
         mavenCentral()
         maven("https://jitpack.io")
     }
+}
+
+val localProperties = Properties().apply {
+    val localFile = rootProject.file("local.properties")
+    if (localFile.exists()) {
+        localFile.inputStream().use { load(it) }
+    }
+}
+
+fun getSecret(key: String, fallback: String = ""): String {
+    return localProperties.getProperty(key)
+        ?: System.getenv(key)
+        ?: fallback
 }
 
 fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) = extensions.getByName<CloudstreamExtension>("cloudstream").configuration()
