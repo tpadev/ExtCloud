@@ -1,6 +1,11 @@
 // use an integer for version numbers
 version = 2
 
+android {
+    buildFeatures {
+        buildConfig = true
+    }
+}
 
 cloudstream {
     // All of these properties are optional, you can safely remove them
@@ -33,16 +38,4 @@ dependencies {
     // FIXME remove this when crossplatform is fully supported
     val cloudstream by configurations
     cloudstream("com.lagradost:cloudstream3:pre-release")
-}
-
-android {
-    namespace = "com.phisher98"
-
-    defaultConfig {
-        minSdk = 21
-    }
-
-    buildFeatures {
-        buildConfig = true
-    }
 }

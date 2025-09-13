@@ -1,6 +1,11 @@
 // use an integer for version numbers
 version = 4
 
+android {
+    buildFeatures {
+        buildConfig = true
+    }
+}
 
 cloudstream {
     // All of these properties are optional, you can safely remove them
@@ -27,14 +32,3 @@ cloudstream {
     isCrossPlatform = true
 }
 
-android {
-    namespace = "com.Pencurimovie"
-
-    defaultConfig {
-        minSdk = 21
-    }
-
-    buildFeatures {
-        buildConfig = true
-    }
-}
