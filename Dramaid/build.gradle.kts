@@ -1,13 +1,13 @@
 // use an integer for version numbers
-version = 24
+version = 13
 
 
 cloudstream {
     language = "id"
     // All of these properties are optional, you can safely remove them
 
-    // description = "Lorem Ipsum"
-     authors = listOf("Hexated", "TeKuma25", "Duro92")
+    description = "Include: Oppadrama"
+     authors = listOf("Hexated", "TeKuma25")
 
     /**
      * Status int as the following:
@@ -18,10 +18,9 @@ cloudstream {
      * */
     status = 1 // will be 3 if unspecified
     tvTypes = listOf(
-        "AnimeMovie",
-        "OVA",
-        "Anime",
+        "AsianDrama",
+        "Movie",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=animeindo.xyz&sz=%size%"
+    iconUrl = "https://www.google.com/s2/favicons?domain=dramaid.nl&sz=%size%"
 }
