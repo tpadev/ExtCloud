@@ -48,6 +48,10 @@ subprojects {
             compileSdkVersion(35)
             targetSdk = 35
 
+            // Inject secrets into BuildConfig
+            buildConfigField("String", "MOVIEBOX_SECRET_KEY_DEFAULT", "\"${getSecret("MOVIEBOX_SECRET_KEY_DEFAULT")}\"")
+            buildConfigField("String", "MOVIEBOX_SECRET_KEY_ALT", "\"${getSecret("MOVIEBOX_SECRET_KEY_ALT")}\"")
+            
         }
 
         compileOptions {
