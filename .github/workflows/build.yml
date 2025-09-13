@@ -41,6 +41,9 @@ jobs:
         uses: android-actions/setup-android@v3.2.2
 
       - name: Access Secrets
+        env:
+          MOVIEBOX_SECRET_KEY_DEFAULT: ${{ secrets.MOVIEBOX_SECRET_KEY_DEFAULT }}
+          MOVIEBOX_SECRET_KEY_ALT: ${{ secrets.MOVIEBOX_SECRET_KEY_ALT }}
         run: |
           cd $GITHUB_WORKSPACE/src
           echo TMDB_API=${{ secrets.TMDB_API }} >> local.properties
@@ -51,6 +54,9 @@ jobs:
 
 
       - name: Build Plugins
+        env:
+          MOVIEBOX_SECRET_KEY_DEFAULT: ${{ secrets.MOVIEBOX_SECRET_KEY_DEFAULT }}
+          MOVIEBOX_SECRET_KEY_ALT: ${{ secrets.MOVIEBOX_SECRET_KEY_ALT }}
         run: |
           cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
