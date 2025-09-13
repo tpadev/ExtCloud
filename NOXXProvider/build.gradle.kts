@@ -34,3 +34,15 @@ dependencies {
     val cloudstream by configurations
     cloudstream("com.lagradost:cloudstream3:pre-release")
 }
+
+android {
+    namespace = "com.phisher98"
+
+    defaultConfig {
+        minSdk = 21
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+}

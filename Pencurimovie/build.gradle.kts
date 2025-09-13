@@ -26,3 +26,15 @@ cloudstream {
 
     isCrossPlatform = true
 }
+
+android {
+    namespace = "com.Pencurimovie"
+
+    defaultConfig {
+        minSdk = 21
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+}

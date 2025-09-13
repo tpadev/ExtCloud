@@ -28,7 +28,7 @@ cloudstream {
 }
 
 android {
-    namespace = "com.funmovieslix"
+    namespace = "com.Funmovieslix"
 
     defaultConfig {
         minSdk = 21
