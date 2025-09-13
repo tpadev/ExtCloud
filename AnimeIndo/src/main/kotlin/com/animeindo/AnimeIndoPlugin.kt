@@ -1,13 +1,14 @@
-package com.cncverse
+
+package com.animeindo
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 
 @CloudstreamPlugin
-class MovieBoxProviderINPlugin: Plugin() {
+class AnimeIndoPlugin: Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
-        registerMainAPI(MovieBoxProviderIN())
+        registerMainAPI(AnimeIndo())
     }
 }
