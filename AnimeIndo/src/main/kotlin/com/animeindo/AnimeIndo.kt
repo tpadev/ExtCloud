@@ -185,26 +185,29 @@ class AnimeIndo : MainAPI() {
     }
 
     override suspend fun loadLinks(
-            data: String,
-            isCasting: Boolean,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
-    ): Boolean {
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val document = app.get(data).document
+    val options = document.select("div.mobius > select.mirror > option")
 
-        val document = app.get(data).document
-        document.select("div.mobius > select.mirror > option")
-                .mapNotNull {
-                    fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src"))
+    coroutineScope {
+        options.mapNotNull {
+            fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src"))
+        }.map { url ->
+            async {
+                val fixedUrl = if (url.startsWith(mainUrl)) {
+                    app.get(url, referer = "$mainUrl/").document.select("iframe").attr("src")
+                } else {
+                    url
                 }
-                .apmap {
-                    if (it.startsWith(mainUrl)) {
-                        app.get(it, referer = "$mainUrl/").document.select("iframe").attr("src")
-                    } else {
-                        it
-                    }
-                }
-                .apmap { loadExtractor(httpsify(it), data, subtitleCallback, callback) }
-
-        return true
+                loadExtractor(httpsify(fixedUrl), data, subtitleCallback, callback)
+            }
+        }.awaitAll()
     }
+
+    return true
 }
+
