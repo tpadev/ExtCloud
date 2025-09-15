@@ -12,6 +12,7 @@ class LayarKaca : MainAPI() {
     override var name = "LayarKaca21"
     override val hasMainPage = true
     override var lang = "id"
+    override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     // ---------------- MAIN PAGE ----------------
@@ -83,7 +84,17 @@ class LayarKaca : MainAPI() {
 
     // ---------------- LOAD DETAIL ----------------
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url).document
+        // Follow intermediate redirect pages ("dialihkan ke nontondrama")
+        var document = app.get(url).document
+        runCatching {
+            val refresh = document.selectFirst("meta[http-equiv=refresh i]")?.attr("content")
+            val refreshUrl = refresh?.substringAfter("url=", "")?.trim()
+            val ndAnchor = document.select("a[href*='nontondrama']").firstOrNull()?.attr("href")
+            val target = listOf(refreshUrl, ndAnchor).firstOrNull { !it.isNullOrBlank() }
+            if (!target.isNullOrBlank()) {
+                document = app.get(fixUrl(target)).document
+            }
+        }
 
         val titleRaw = listOf(
             document.selectFirst("meta[property=og:title]")?.attr("content"),
@@ -114,17 +125,27 @@ class LayarKaca : MainAPI() {
         val actors = document.select("p:contains(Bintang Film) a, .mvici-left p:contains(Bintang Film) a").map { it.text() }
 
         // cek episode (series)
-        val episodes = document.select("div#seasons a, .les-content a").mapIndexed { index, el ->
-            val epUrl = fixUrl(el.attr("href"))
-            val epName = el.text().trim()
-            newEpisode(epUrl) {
-                name = epName
-                season = 1
-                episode = index + 1
-                posterUrl = poster
-                runTime = null
+        val episodeCandidates = document.select(
+            "div#seasons a, .les-content a, a[href*='/episode/'], a[href*='-episode-']"
+        )
+            .filter { a ->
+                val t = a.text().trim()
+                t.contains("Episode", true) || t.matches(Regex("^(Ep\\.?\\s*)?\\d+.*$"))
             }
-        }
+        val episodes = episodeCandidates
+            .map { it.attr("href") to it.text().trim() }
+            .distinctBy { it.first }
+            .mapIndexed { index, (hrefE, textE) ->
+                val epUrl = fixUrl(hrefE)
+                val epNumber = Regex("(\\d+)").find(textE)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                newEpisode(epUrl) {
+                    name = textE.ifBlank { "Episode ${epNumber ?: (index + 1)}" }
+                    season = 1
+                    episode = epNumber ?: (index + 1)
+                    posterUrl = poster
+                    runTime = null
+                }
+            }
 
         return if (episodes.isNotEmpty()) {
             // Series
