@@ -230,6 +230,24 @@ class DutaMovie : MainAPI() {
             }
         }
 
+        // Extra: collect explicit download links blocks if present
+        val dlAnchors = document.select("div#gmr-id-download ul li a[href], table tbody tr td a[href]")
+        dlAnchors.apmap { a ->
+            val href = fixUrl(a.attr("href"))
+            val refererBase = runCatching { getBaseUrl(href) }.getOrDefault(directUrl ?: "") + "/"
+            if (href.endsWith(".m3u8", true)) {
+                M3u8Helper.generateM3u8(name, href, mainUrl).forEach(callback)
+            } else if (href.endsWith(".mp4", true)) {
+                callback.invoke(
+                    ExtractorLink(name, name, href, refererBase, Qualities.Unknown.value, type = ExtractorLinkType.VIDEO)
+                )
+            } else {
+                if (!tryDirectJW(href, refererBase, subtitleCallback, callback)) {
+                    loadExtractor(href, refererBase, subtitleCallback, callback)
+                }
+            }
+        }
+
         return true
     }
 
