@@ -18,10 +18,10 @@ class LayarKaca : MainAPI() {
     // ---------------- MAIN PAGE ----------------
     override val mainPage = mainPageOf(
         "$mainUrl/page/" to "Film Terbaru",
-        "$mainUrl/category/action/page/" to "Action Terbaru",
-        "$mainUrl/category/horror/page/" to "Horror Terbaru",
-        "$mainUrl/category/romance/page/" to "Romance Terbaru",
-        "$mainUrl/category/comedy/page/" to "Comedy Terbaru",
+        "$mainUrl/genre/action/page/" to "Action Terbaru",
+        "$mainUrl/genre/horror/page/" to "Horror Terbaru",
+        "$mainUrl/genre/romance/page/" to "Romance Terbaru",
+        "$mainUrl/genre/comedy/page/" to "Comedy Terbaru",
         "$seriesUrl/series/page/" to "Series Update",
         "$seriesUrl/populer/page/" to "Series Unggulan",
     )
@@ -30,12 +30,12 @@ class LayarKaca : MainAPI() {
         // WordPress sites often use base for page 1 and "/page/N" for subsequent pages.
         val base = request.data
         val url = if (base.endsWith("/page/")) {
-            if (page <= 1) base.removeSuffix("/page/") else base + page
+            if (page <= 1) base.removeSuffix("/page/").let { if (it.endsWith("/")) it else "$it/" } else base + page
         } else base + page
         val document = app.get(url).document
 
         // Support both LK21 (article-based) and "ml-item" card grids
-        val home = document.select("div.ml-item, article, div.movie-item, div.item").mapNotNull { it.toSearchResult() }
+        val home = document.select("div.listupd article, div.ml-item, article, div.movie-item, div.item").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(request.name, home)
     }
@@ -43,7 +43,7 @@ class LayarKaca : MainAPI() {
     // ---------------- SEARCH ----------------
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query").document
-        return document.select("article, div.ml-item, div.movie-item, div.item").mapNotNull { it.toSearchResult() }
+        return document.select("div.listupd article, article, div.ml-item, div.movie-item, div.item").mapNotNull { it.toSearchResult() }
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
@@ -117,6 +117,9 @@ class LayarKaca : MainAPI() {
             document.selectFirst("meta[name=description]")?.attr("content"),
             document.selectFirst("div.desc")?.text(),
             document.selectFirst(".entry-content")?.text(),
+            document.selectFirst(".entry-content p")?.text(),
+            document.selectFirst("article .entry-content p")?.text(),
+            document.selectFirst("article p")?.text(),
             document.selectFirst(".mvici-right p")?.text()
         ).firstOrNull { !it.isNullOrBlank() }?.trim()
         val rating = document.selectFirst("span[itemprop=ratingValue]")?.text()?.toRatingInt()
@@ -193,18 +196,22 @@ class LayarKaca : MainAPI() {
             if (refreshUrl.startsWith("http")) candidates += refreshUrl
         }
 
-        // 3) Direct anchors to external player domains
+        // 3) Direct anchors to external player domains (support relative links)
         val hostHints = listOf("nontondrama", "lk21", "castplayer", "hydrax", "turbovip", "p2pstream", "embed", "player")
         document.select("a[href]").forEach { a ->
-            val href = a.attr("href").trim()
-            if (href.startsWith("http") && hostHints.any { href.contains(it, true) }) candidates += href
+            val raw = a.attr("href").trim()
+            if (raw.isBlank()) return@forEach
+            val fixed = if (raw.startsWith("http")) raw else fixUrl(raw)
+            if (hostHints.any { fixed.contains(it, true) }) candidates += fixed
         }
 
         // 4) Data attributes that sometimes carry the player url
         document.select("*[data-src], *[data-video], *[data-url], *[data-href]").forEach { el ->
             listOf("data-src", "data-video", "data-url", "data-href").forEach { k ->
-                val v = el.attr(k).trim()
-                if (v.startsWith("http") && hostHints.any { v.contains(it, true) }) candidates += v
+                val raw = el.attr(k).trim()
+                if (raw.isBlank()) return@forEach
+                val fixed = if (raw.startsWith("http")) raw else fixUrl(raw)
+                if (hostHints.any { fixed.contains(it, true) }) candidates += fixed
             }
         }
 
