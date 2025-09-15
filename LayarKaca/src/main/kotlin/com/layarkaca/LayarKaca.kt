@@ -2,7 +2,7 @@ package com.layarkaca
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 
@@ -77,19 +77,18 @@ class LayarKaca : MainAPI() {
 
         val tags = document.select("p:contains(Genre) a, .mvici-left p:contains(Genre) a").map { it.text() }
         val actors = document.select("p:contains(Bintang Film) a, .mvici-left p:contains(Bintang Film) a").map { it.text() }
-        val directors = document.select("p:contains(Sutradara) a").map { it.text() }
 
         // cek episode (series)
-        val episodes = document.select("div#seasons div#episode ul li a, .les-content a").mapIndexed { index, el ->
+        val episodes = document.select("div#seasons a, .les-content a").mapIndexed { index, el ->
             val epUrl = fixUrl(el.attr("href"))
-            val epName = el.text()
-            Episode(
-                epUrl,
-                name = epName,
-                season = 1,
-                episode = index + 1,
+            val epName = el.text().trim()
+            newEpisode(epUrl) {
+                name = epName
+                season = 1
+                episode = index + 1
                 posterUrl = poster
-            )
+                runTime = null
+            }
         }
 
         return if (episodes.isNotEmpty()) {
