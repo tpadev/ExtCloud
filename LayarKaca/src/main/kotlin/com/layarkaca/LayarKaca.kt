@@ -42,7 +42,7 @@ class LayarKaca : MainAPI() {
     // ---------------- SEARCH ----------------
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query").document
-        return document.select("article, div.ml-item").mapNotNull { it.toSearchResult() }
+        return document.select("article, div.ml-item, div.movie-item, div.item").mapNotNull { it.toSearchResult() }
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
@@ -85,15 +85,29 @@ class LayarKaca : MainAPI() {
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
 
-        val titleRaw = document.selectFirst("h1")?.text()?.trim() ?: return null
+        val titleRaw = listOf(
+            document.selectFirst("meta[property=og:title]")?.attr("content"),
+            document.selectFirst("h1")?.text()
+        ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: return null
         val title = titleRaw.substringBefore("(").trim()
         val year = Regex("\\((\\d{4})\\)").find(titleRaw)?.groupValues?.getOrNull(1)?.toIntOrNull()
 
         val poster = fixUrlNull(
-            document.selectFirst(".thumb img, img.img-thumbnail, meta[property=og:image]")?.attr("src")
+            listOf(
+                document.selectFirst("meta[property=og:image]")?.attr("content"),
+                document.selectFirst("meta[name=twitter:image]")?.attr("content"),
+                document.selectFirst(".thumb img")?.attr("src"),
+                document.selectFirst("img.img-thumbnail")?.attr("src")
+            ).firstOrNull { !it.isNullOrBlank() }
         )
 
-        val description = document.selectFirst("div.desc, .entry-content, .mvici-right p")?.text()?.trim()
+        val description = listOf(
+            document.selectFirst("meta[property=og:description]")?.attr("content"),
+            document.selectFirst("meta[name=description]")?.attr("content"),
+            document.selectFirst("div.desc")?.text(),
+            document.selectFirst(".entry-content")?.text(),
+            document.selectFirst(".mvici-right p")?.text()
+        ).firstOrNull { !it.isNullOrBlank() }?.trim()
         val rating = document.selectFirst("span[itemprop=ratingValue]")?.text()?.toRatingInt()
 
         val tags = document.select("p:contains(Genre) a, .mvici-left p:contains(Genre) a").map { it.text() }
@@ -143,9 +157,50 @@ class LayarKaca : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        val iframe = document.selectFirst("iframe#main-player, iframe[src]")?.attr("src")?.takeIf { it.isNotBlank() }
-            ?: return false
-        loadExtractor(fixUrl(iframe), data, subtitleCallback, callback)
-        return true
+        val candidates = linkedSetOf<String>()
+
+        // 1) Standard iframe(s)
+        document.select("iframe#main-player, iframe[src]").forEach { el ->
+            val s = el.attr("src").trim()
+            if (s.isNotBlank()) candidates += fixUrl(s)
+        }
+
+        // 2) Meta refresh redirection
+        document.select("meta[http-equiv=refresh i]").forEach { meta ->
+            val refresh = meta.attr("content")
+            val refreshUrl = refresh.substringAfter("url=", "").trim()
+            if (refreshUrl.startsWith("http")) candidates += refreshUrl
+        }
+
+        // 3) Direct anchors to external player domains
+        val hostHints = listOf("nontondrama", "lk21", "castplayer", "hydrax", "turbovip", "p2pstream", "embed", "player")
+        document.select("a[href]").forEach { a ->
+            val href = a.attr("href").trim()
+            if (href.startsWith("http") && hostHints.any { href.contains(it, true) }) candidates += href
+        }
+
+        // 4) Data attributes that sometimes carry the player url
+        document.select("*[data-src], *[data-video], *[data-url], *[data-href]").forEach { el ->
+            listOf("data-src", "data-video", "data-url", "data-href").forEach { k ->
+                val v = el.attr(k).trim()
+                if (v.startsWith("http") && hostHints.any { v.contains(it, true) }) candidates += v
+            }
+        }
+
+        // 5) URLs inside scripts limited to known hosts
+        val scriptBlock = document.select("script").joinToString("\n") { it.data() }
+        Regex("https?://[\\w./%#?=&-]+", RegexOption.IGNORE_CASE).findAll(scriptBlock).forEach { m ->
+            val u = m.value
+            if (hostHints.any { u.contains(it, true) }) candidates += u
+        }
+
+        var found = false
+        candidates.forEach { link ->
+            try {
+                loadExtractor(link, data, subtitleCallback, callback)
+                found = true
+            } catch (_: Throwable) {}
+        }
+        return found
     }
 }
