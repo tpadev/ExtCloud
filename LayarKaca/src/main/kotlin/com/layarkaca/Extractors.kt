@@ -41,9 +41,15 @@ open class Hownetwork : ExtractorApi() {
         val id = url.substringAfter("id=")
         val res = app.post(
             "$mainUrl/api.php?id=$id",
-            data = mapOf("r" to "https://playeriframe.sbs/", "d" to "cloud.hownetwork.xyz"),
-            referer = url,
-            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+            data = mapOf(
+                "r" to "https://playeriframe.sbs/",
+                "d" to "cloud.hownetwork.xyz"
+            ),
+            referer = "https://playeriframe.sbs/",
+            headers = mapOf(
+                "X-Requested-With" to "XMLHttpRequest",
+                "Origin" to "https://playeriframe.sbs"
+            )
         ).parsedSafe<Sources>()
 
         res?.data?.map {
@@ -52,7 +58,7 @@ open class Hownetwork : ExtractorApi() {
                     this.name,
                     this.name,
                     it.file,
-                    url,
+                    referer ?: url,
                     getQualityFromName(it.label),
                     type = if (it.file.endsWith(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO,
                 )

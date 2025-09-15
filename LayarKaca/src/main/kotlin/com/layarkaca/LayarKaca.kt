@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
+import java.net.URLDecoder
 
 class LayarKaca : MainAPI() {
     override var mainUrl = "https://tv.lk21official.love"
@@ -157,19 +158,30 @@ class LayarKaca : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        val candidates = linkedSetOf<String>()
+        val candidates = linkedSetOf<Pair<String, String?>>()
 
-        // 1) Standard iframe(s)
+        // 1) Standard iframe(s) with special handling for playeriframe.sbs wrapper
         document.select("iframe#main-player, iframe[src]").forEach { el ->
             val s = el.attr("src").trim()
-            if (s.isNotBlank()) candidates += fixUrl(s)
+            if (s.isBlank()) return@forEach
+            if (s.contains("playeriframe.sbs/iframe.php", true) && s.contains("url=", true)) {
+                val enc = s.substringAfter("url=", "").substringBefore('&')
+                val decoded = runCatching { URLDecoder.decode(enc, "UTF-8") }.getOrNull()
+                if (!decoded.isNullOrBlank()) {
+                    candidates += decoded to "https://playeriframe.sbs/"
+                } else {
+                    candidates += fixUrl(s) to data
+                }
+            } else {
+                candidates += fixUrl(s) to data
+            }
         }
 
         // 2) Meta refresh redirection
         document.select("meta[http-equiv=refresh i]").forEach { meta ->
             val refresh = meta.attr("content")
             val refreshUrl = refresh.substringAfter("url=", "").trim()
-            if (refreshUrl.startsWith("http")) candidates += refreshUrl
+            if (refreshUrl.startsWith("http")) candidates += (refreshUrl to data)
         }
 
         // 3) Direct anchors to external player domains (support relative links)
@@ -200,7 +212,7 @@ class LayarKaca : MainAPI() {
             val raw = a.attr("href").trim()
             if (raw.isBlank()) return@forEach
             val fixed = if (raw.startsWith("http")) raw else fixUrl(raw)
-            if (hostHints.any { fixed.contains(it, true) }) candidates += fixed
+            if (hostHints.any { fixed.contains(it, true) }) candidates += (fixed to data)
         }
 
         // 4) Data attributes that sometimes carry the player url
@@ -209,7 +221,7 @@ class LayarKaca : MainAPI() {
                 val raw = el.attr(k).trim()
                 if (raw.isBlank()) return@forEach
                 val fixed = if (raw.startsWith("http")) raw else fixUrl(raw)
-                if (hostHints.any { fixed.contains(it, true) }) candidates += fixed
+                if (hostHints.any { fixed.contains(it, true) }) candidates += (fixed to data)
             }
         }
 
@@ -217,7 +229,7 @@ class LayarKaca : MainAPI() {
         val scriptBlock = document.select("script").joinToString("\n") { it.data() }
         Regex("https?://[\\w./%#?=&-]+", RegexOption.IGNORE_CASE).findAll(scriptBlock).forEach { m ->
             val u = m.value
-            if (hostHints.any { u.contains(it, true) }) candidates += u
+            if (hostHints.any { u.contains(it, true) }) candidates += (u to data)
         }
         // Decode atob('...') or base64 strings
         Regex("atob\\(['\"]([A-Za-z0-9+/=]+)['\"]\\)").findAll(scriptBlock).forEach { m ->
@@ -227,7 +239,7 @@ class LayarKaca : MainAPI() {
                     val decoded = String(android.util.Base64.decode(b64, android.util.Base64.DEFAULT))
                     Regex("https?://[\\w./%#?=&-]+", RegexOption.IGNORE_CASE).findAll(decoded).forEach { mm ->
                         val u = mm.value
-                        if (hostHints.any { u.contains(it, true) }) candidates += u
+                        if (hostHints.any { u.contains(it, true) }) candidates += (u to data)
                     }
                 }
             }
@@ -242,22 +254,22 @@ class LayarKaca : MainAPI() {
         m3u8Patterns.forEach { pat ->
             pat.findAll(scriptBlock).forEach { m ->
                 val h = m.groupValues.getOrNull(1)
-                if (!h.isNullOrBlank()) candidates += fixUrl(h)
+                if (!h.isNullOrBlank()) candidates += (fixUrl(h) to data)
             }
         }
 
         var found = false
         // If any candidate is direct m3u8, emit immediately
-        candidates.filter { it.contains("m3u8", true) }.distinct().forEach { m3u8 ->
+        candidates.map { it.first }.filter { it.contains("m3u8", true) }.distinct().forEach { m3u8 ->
             try {
                 M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
                 found = true
             } catch (_: Throwable) {}
         }
         // Otherwise pass through extractors
-        candidates.forEach { link ->
+        candidates.forEach { (link, ref) ->
             try {
-                loadExtractor(link, data, subtitleCallback, callback)
+                loadExtractor(link, ref ?: data, subtitleCallback, callback)
                 found = true
             } catch (_: Throwable) {}
         }
