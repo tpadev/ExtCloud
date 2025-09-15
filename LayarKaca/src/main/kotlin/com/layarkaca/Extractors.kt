@@ -21,6 +21,7 @@ open class Emturbovid : ExtractorApi() {
         val m3u8 = Regex("[\"'](.*?master\\.m3u8.*?)[\"']")
             .find(response.text)
             ?.groupValues?.getOrNull(1)
+
         M3u8Helper.generateM3u8(name, m3u8 ?: return, mainUrl).forEach(callback)
     }
 }
@@ -44,16 +45,17 @@ open class Hownetwork : ExtractorApi() {
             headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsedSafe<Sources>()
 
-        res?.data?.map {
+        res?.data?.forEach {
             callback.invoke(
-                ExtractorLink(
+                newExtractorLink(
                     this.name,
                     this.name,
                     it.file,
-                    url,
-                    getQualityFromName(it.label),
-                    INFER_TYPE
-                )
+                    url
+                ) {
+                    quality = getQualityFromName(it.label)
+                    type = INFER_TYPE
+                }
             )
         }
     }
