@@ -13,7 +13,7 @@ class LayarKaca : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
-    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
+    override val supportedTypes = setOf(TvType.Movie)
 
     // ---------------- MAIN PAGE ----------------
     override val mainPage = mainPageOf(
@@ -22,8 +22,6 @@ class LayarKaca : MainAPI() {
         "$mainUrl/genre/horror/page/" to "Horror Terbaru",
         "$mainUrl/genre/romance/page/" to "Romance Terbaru",
         "$mainUrl/genre/comedy/page/" to "Comedy Terbaru",
-        "$seriesUrl/series/page/" to "Series Update",
-        "$seriesUrl/populer/page/" to "Series Unggulan",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -35,7 +33,8 @@ class LayarKaca : MainAPI() {
         val document = app.get(url).document
 
         // Support both LK21 (article-based) and "ml-item" card grids
-        val home = document.select("div.listupd article, div.ml-item, article, div.movie-item, div.item").mapNotNull { it.toSearchResult() }
+        val home = document.select("div.listupd article, div.ml-item, article, div.movie-item, div.item")
+            .mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(request.name, home)
     }
@@ -43,7 +42,8 @@ class LayarKaca : MainAPI() {
     // ---------------- SEARCH ----------------
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query").document
-        return document.select("div.listupd article, article, div.ml-item, div.movie-item, div.item").mapNotNull { it.toSearchResult() }
+        return document.select("div.listupd article, article, div.ml-item, div.movie-item, div.item")
+            .mapNotNull { it.toSearchResult() }
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
@@ -69,32 +69,20 @@ class LayarKaca : MainAPI() {
         ).firstOrNull { !it.isNullOrBlank() } ?: ""
         val poster = fixUrlNull(posterRaw)
 
-        val type = if (href.contains(seriesUrl)) TvType.TvSeries else TvType.Movie
+        // Filter out series/nontondrama/episode links; we only keep movies
+        val isSeries = href.contains("nontondrama", true) || href.contains("/series/") || href.contains("/episode/")
+        if (isSeries) return null
 
-        return if (type == TvType.Movie) {
-            newMovieSearchResponse(title, href, TvType.Movie) {
-                this.posterUrl = poster
-            }
-        } else {
-            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                this.posterUrl = poster
-            }
+        return newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = poster
         }
     }
 
     // ---------------- LOAD DETAIL ----------------
     override suspend fun load(url: String): LoadResponse? {
-        // Follow intermediate redirect pages ("dialihkan ke nontondrama")
-        var document = app.get(url).document
-        runCatching {
-            val refresh = document.selectFirst("meta[http-equiv=refresh i]")?.attr("content")
-            val refreshUrl = refresh?.substringAfter("url=", "")?.trim()
-            val ndAnchor = document.select("a[href*='nontondrama']").firstOrNull()?.attr("href")
-            val target = listOf(refreshUrl, ndAnchor).firstOrNull { !it.isNullOrBlank() }
-            if (!target.isNullOrBlank()) {
-                document = app.get(fixUrl(target)).document
-            }
-        }
+        // Only support movies: ignore redirect pages to nontondrama (series)
+        if (url.contains("nontondrama", true) || url.contains("/series/")) return null
+        val document = app.get(url).document
 
         val titleRaw = listOf(
             document.selectFirst("meta[property=og:title]")?.attr("content"),
@@ -150,26 +138,14 @@ class LayarKaca : MainAPI() {
                 }
             }
 
-        return if (episodes.isNotEmpty()) {
-            // Series
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                this.posterUrl = poster
-                this.year = year
-                this.plot = description
-                this.tags = tags
-                this.rating = rating
-                addActors(actors)
-            }
-        } else {
-            // Movie
-            newMovieLoadResponse(title, url, TvType.Movie, url) {
-                this.posterUrl = poster
-                this.year = year
-                this.plot = description
-                this.tags = tags
-                this.rating = rating
-                addActors(actors)
-            }
+        // Always return Movie load response
+        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+            this.posterUrl = poster
+            this.year = year
+            this.plot = description
+            this.tags = tags
+            this.rating = rating
+            addActors(actors)
         }
     }
 
