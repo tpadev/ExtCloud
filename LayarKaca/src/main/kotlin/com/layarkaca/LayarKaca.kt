@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import java.net.URLDecoder
+import android.net.Uri
 
 class LayarKaca : MainAPI() {
     override var mainUrl = "https://tv.lk21official.love"
@@ -259,6 +260,12 @@ class LayarKaca : MainAPI() {
         }
 
         var found = false
+        // Try direct resolver for Hownetwork without extractors
+        candidates.forEach { (link, ref) ->
+            if (!found && link.contains("cloud.hownetwork", true)) {
+                found = found or resolveHownetwork(link, ref ?: data, subtitleCallback, callback)
+            }
+        }
         // If any candidate is direct m3u8, emit immediately
         candidates.map { it.first }.filter { it.contains("m3u8", true) }.distinct().forEach { m3u8 ->
             try {
@@ -275,4 +282,52 @@ class LayarKaca : MainAPI() {
         }
         return found
     }
+
+    private suspend fun resolveHownetwork(
+        link: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val uri = runCatching { Uri.parse(link) }.getOrNull() ?: return false
+        val idFromQuery = uri.getQueryParameter("id")
+        val id = idFromQuery ?: link.substringAfter("id=", "").substringBefore("&").ifBlank { null }
+        if (id.isNullOrBlank()) return false
+
+        val apiUrl = "https://cloud.hownetwork.xyz/api.php?id=$id"
+        val res = app.post(
+            apiUrl,
+            data = mapOf(
+                "r" to "https://playeriframe.sbs/",
+                "d" to "cloud.hownetwork.xyz"
+            ),
+            referer = referer ?: "https://playeriframe.sbs/",
+            headers = mapOf(
+                "X-Requested-With" to "XMLHttpRequest",
+                "Origin" to "https://playeriframe.sbs"
+            )
+        ).parsedSafe<HwSources>() ?: return false
+
+        var ok = false
+        res.data.forEach { item ->
+            val file = item.file
+            if (file.isNullOrBlank()) return@forEach
+            val type = if (file.endsWith(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+            callback.invoke(
+                ExtractorLink(
+                    name,
+                    name,
+                    file,
+                    referer ?: "https://playeriframe.sbs/",
+                    getQualityFromName(item.label),
+                    type = type,
+                )
+            )
+            ok = true
+        }
+        return ok
+    }
+
+    private data class HwSources(val data: List<HwData>)
+    private data class HwData(val file: String, val label: String?)
 }
