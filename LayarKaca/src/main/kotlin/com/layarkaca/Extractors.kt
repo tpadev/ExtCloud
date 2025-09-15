@@ -48,10 +48,14 @@ open class Hownetwork : ExtractorApi() {
 
         res?.data?.map {
             callback.invoke(
-                newExtractorLink(this.name, this.name, it.file, url) {
-                    quality = getQualityFromName(it.label)
-                    type = if (it.file.endsWith(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.DIRECT
-                }
+                ExtractorLink(
+                    this.name,
+                    this.name,
+                    it.file,
+                    url,
+                    getQualityFromName(it.label),
+                    type = if (it.file.endsWith(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO,
+                )
             )
         }
     }
