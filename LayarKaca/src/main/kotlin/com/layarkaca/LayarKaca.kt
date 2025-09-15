@@ -29,9 +29,8 @@ class LayarKaca : MainAPI() {
         val url = request.data + page
         val document = app.get(url).document
 
-        val home = document.select("article, div.ml-item").mapNotNull {
-            it.toSearchResult()
-        }
+        // Support both LK21 (article-based) and "ml-item" card grids
+        val home = document.select("div.ml-item, article").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(request.name, home)
     }
@@ -43,9 +42,20 @@ class LayarKaca : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h2 a, h1 a, .mli-info h2")?.text()?.trim() ?: return null
-        val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
-        val poster = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        // Try ML-style cards first
+        val mlTitle = this.select("a").attr("oldtitle").ifBlank {
+            this.selectFirst(".mli-info h2, h2 a, h1 a")?.text() ?: ""
+        }.trim()
+        val mlHref = this.selectFirst("a")?.attr("href")
+        val mlPoster = this.select("img").attr("data-original").ifBlank {
+            this.select("img").attr("data-src").ifBlank {
+                this.selectFirst("img")?.attr("src") ?: ""
+            }
+        }
+
+        val title = mlTitle.ifBlank { null } ?: return null
+        val href = fixUrl(mlHref ?: return null)
+        val poster = fixUrlNull(mlPoster)
 
         val type = if (href.contains(seriesUrl)) TvType.TvSeries else TvType.Movie
 
