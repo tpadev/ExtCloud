@@ -26,11 +26,15 @@ class LayarKaca : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = request.data + page
+        // WordPress sites often use base for page 1 and "/page/N" for subsequent pages.
+        val base = request.data
+        val url = if (base.endsWith("/page/")) {
+            if (page <= 1) base.removeSuffix("/page/") else base + page
+        } else base + page
         val document = app.get(url).document
 
         // Support both LK21 (article-based) and "ml-item" card grids
-        val home = document.select("div.ml-item, article").mapNotNull { it.toSearchResult() }
+        val home = document.select("div.ml-item, article, div.movie-item, div.item").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(request.name, home)
     }
