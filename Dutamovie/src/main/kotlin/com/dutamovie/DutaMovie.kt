@@ -1,6 +1,7 @@
 package com.dutamovie
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.MainAPI
@@ -134,12 +135,11 @@ class DutaMovie : MainAPI() {
                                                 .firstOrNull()
                                                 ?.filter { it.isDigit() }
                                                 ?.toIntOrNull()
-                                Episode(
-                                        href,
-                                        name,
-                                        season = if (name.contains(" ")) season else null,
-                                        episode = episode,
-                                )
+                                newEpisode(href) {
+                                    this.name = name
+                                    this.season = if (name.contains(" ")) season else null
+                                    this.episode = episode
+                                }
                             }
                             .filter { it.episode != null }
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
