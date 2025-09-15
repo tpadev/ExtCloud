@@ -19,7 +19,7 @@ import org.jsoup.nodes.Element
 
 class DutaMovie : MainAPI() {
 
-    override var mainUrl = "https://tuggycomputer.com/"
+    override var mainUrl = "https://promadurafloors.com"
     private var directUrl: String? = null
     override var name = "DutaMovie"
     override val hasMainPage = true
@@ -243,7 +243,7 @@ class DutaMovie : MainAPI() {
                 val m = rx.find(body)
                 when {
                     m == null -> null
-                    rx.pattern.contains("sources") -> Regex("file\\s*:\\s*\\\"(https?://[^\\\"]+)\\\"")
+                    rx.pattern.contains("sources") -> Regex("file\\s*:\\s*\\\"([^\\\"]+)\\\"")
                         .find(m.groupValues.getOrNull(1) ?: "")
                         ?.groupValues?.getOrNull(1)
                     else -> m.groupValues.getOrNull(1)
@@ -251,35 +251,37 @@ class DutaMovie : MainAPI() {
             }
 
             if (!m3u8.isNullOrBlank()) {
+                val link = absolutize(m3u8, targetUrl)
                 // If it's mp4, push as direct; if m3u8, expand
-                if (m3u8.endsWith(".mp4", true)) {
+                if (link.endsWith(".mp4", true)) {
                     callback.invoke(
                         ExtractorLink(
                             name,
                             name,
-                            m3u8,
+                            link,
                             referer ?: targetUrl,
                             Qualities.Unknown.value,
                             type = ExtractorLinkType.VIDEO,
                         )
                     )
                 } else {
-                    M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
+                    M3u8Helper.generateM3u8(name, link, mainUrl).forEach(callback)
                 }
                 true
             } else {
                 // Also try <source src="...">
-                val src = Regex("<source[^>]+src=\\\"(https?://[^\\\"]+)\\\"", RegexOption.IGNORE_CASE)
+                val src = Regex("<source[^>]+src=\\\"([^\\\"]+)\\\"", RegexOption.IGNORE_CASE)
                     .find(body)?.groupValues?.getOrNull(1)
                 if (!src.isNullOrBlank()) {
-                    if (src.contains("m3u8", true)) {
-                        M3u8Helper.generateM3u8(name, src, mainUrl).forEach(callback)
+                    val link = absolutize(src, targetUrl)
+                    if (link.contains("m3u8", true)) {
+                        M3u8Helper.generateM3u8(name, link, mainUrl).forEach(callback)
                     } else {
                         callback.invoke(
                             ExtractorLink(
                                 name,
                                 name,
-                                src,
+                                link,
                                 referer ?: targetUrl,
                                 Qualities.Unknown.value,
                                 type = ExtractorLinkType.VIDEO,
@@ -301,8 +303,8 @@ class DutaMovie : MainAPI() {
                     var foundAny = false
                     scriptContents.forEach { code ->
                         // 1) direct urls
-                        Regex("https?://[^'\"\\s]+", RegexOption.IGNORE_CASE).findAll(code).forEach { m ->
-                            val u = m.value
+                        Regex("https?://[^'\"\\s]+|//[^'\"\\s]+|/[^'\"\\s]+", RegexOption.IGNORE_CASE).findAll(code).forEach { m ->
+                            val u = absolutize(m.value, targetUrl)
                             if (u.contains("m3u8", true)) {
                                 runCatching { M3u8Helper.generateM3u8(name, u, mainUrl).forEach(callback) }
                                 foundAny = true
@@ -319,8 +321,8 @@ class DutaMovie : MainAPI() {
                             if (!b64.isNullOrBlank()) {
                                 runCatching {
                                     val decoded = String(android.util.Base64.decode(b64, android.util.Base64.DEFAULT))
-                                    Regex("https?://[^'\"\\s]+", RegexOption.IGNORE_CASE).findAll(decoded).forEach { m2 ->
-                                        val u = m2.value
+                                    Regex("https?://[^'\"\\s]+|//[^'\"\\s]+|/[^'\"\\s]+", RegexOption.IGNORE_CASE).findAll(decoded).forEach { m2 ->
+                                        val u = absolutize(m2.value, targetUrl)
                                         if (u.contains("m3u8", true)) {
                                             M3u8Helper.generateM3u8(name, u, mainUrl).forEach(callback)
                                             foundAny = true
@@ -339,6 +341,15 @@ class DutaMovie : MainAPI() {
                 }
             }
         }.getOrElse { false }
+    }
+
+    private fun absolutize(u: String, base: String): String {
+        if (u.startsWith("http://") || u.startsWith("https://")) return u
+        return when {
+            u.startsWith("//") -> "https:" + u
+            u.startsWith("/") -> getBaseUrl(base).trimEnd('/') + u
+            else -> u
+        }
     }
 
     private suspend fun resolveSpecialUrls(url: String, referer: String?): String? {
