@@ -3,8 +3,8 @@ package com.layarkaca
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.Filesim
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 
 /** =============== Extractors Lama =============== **/
 open class Emturbovid : ExtractorApi() {
@@ -29,7 +29,7 @@ open class Emturbovid : ExtractorApi() {
 
 open class Hownetwork : ExtractorApi() {
     override val name = "Hownetwork"
-    override val mainUrl = "https://coud.hownetwork.xyz"
+    override val mainUrl = "https://cloud.hownetwork.xyz"
     override val requiresReferer = true
 
     override suspend fun getUrl(
@@ -48,17 +48,10 @@ open class Hownetwork : ExtractorApi() {
 
         res?.data?.map {
             callback.invoke(
-                ExtractorLink(
-                    source = this.name,
-                    name = this.name,
-                    url = it.file,
-                    referer = url,
-                    quality = getQualityFromName(it.label),
-                    type = if (it.file.endsWith(".m3u8"))
-                        ExtractorLinkType.M3U8
-                    else
-                        INFER_TYPE,   // ✅ ganti DIRECT jadi INFER_TYPE
-                )
+                newExtractorLink(this.name, this.name, it.file, url) {
+                    quality = getQualityFromName(it.label)
+                    type = if (it.file.endsWith(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.DIRECT
+                }
             )
         }
     }
@@ -67,7 +60,6 @@ open class Hownetwork : ExtractorApi() {
         data class Data(val file: String, val label: String?)
     }
 }
-
 
 class Furher : Filesim() {
     override val name = "Furher"
@@ -88,6 +80,7 @@ class TurboVip : ExtractorApi() {
     ) {
         val response = app.get(url, referer = referer).text
         val m3u8 = Regex("file:\"(.*?)\"").find(response)?.groupValues?.get(1) ?: return
+
         M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
     }
 }
@@ -106,6 +99,7 @@ class Hydrax : ExtractorApi() {
         val doc = app.get(url, referer = referer).document
         val script = doc.selectFirst("script:containsData(sources)")?.data() ?: return
         val m3u8 = Regex("file:\"(.*?)\"").find(script)?.groupValues?.get(1) ?: return
+
         M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
     }
 }
@@ -123,6 +117,7 @@ class CastPlayer : ExtractorApi() {
     ) {
         val res = app.get(url).text
         val m3u8 = Regex("file:\"(.*?)\"").find(res)?.groupValues?.get(1) ?: return
+
         M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
     }
 }
