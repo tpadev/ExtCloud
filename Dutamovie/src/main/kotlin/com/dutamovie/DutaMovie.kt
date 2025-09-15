@@ -188,9 +188,10 @@ class DutaMovie : MainAPI() {
                                 .getIframeAttr()
                                 ?.let { httpsify(it) }
                                 ?: return@apmap
-                // Try direct JW parse first
-                if (!tryDirectJW(iframe, "$directUrl/", subtitleCallback, callback)) {
-                    loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
+                val refererBase = runCatching { getBaseUrl(iframe) }.getOrDefault(directUrl ?: "") + "/"
+                // Try direct JW parse first with server origin as referer
+                if (!tryDirectJW(iframe, refererBase, subtitleCallback, callback)) {
+                    loadExtractor(iframe, refererBase, subtitleCallback, callback)
                 }
             }
         } else {
@@ -209,9 +210,10 @@ class DutaMovie : MainAPI() {
                                 .select("iframe")
                                 .attr("src")
                                 .let { httpsify(it) }
-                // Try direct JW parse first
-                if (!tryDirectJW(server, "$directUrl/", subtitleCallback, callback)) {
-                    loadExtractor(server, "$directUrl/", subtitleCallback, callback)
+                val refererBase = runCatching { getBaseUrl(server) }.getOrDefault(directUrl ?: "") + "/"
+                // Try direct JW parse first with server origin as referer
+                if (!tryDirectJW(server, refererBase, subtitleCallback, callback)) {
+                    loadExtractor(server, refererBase, subtitleCallback, callback)
                 }
             }
         }
@@ -225,8 +227,12 @@ class DutaMovie : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        // Handle shorteners/hash-driven players before fetching
+        val preResolved = resolveSpecialUrls(url, referer)
+        val targetUrl = preResolved ?: url
+
         return runCatching {
-            val res = app.get(url, referer = referer)
+            val res = app.get(targetUrl, referer = referer)
             val body = res.text
             // Common jwplayer patterns: sources: [{file:"...m3u8"}], or file:"..."
             val fileRegexes = listOf(
@@ -252,7 +258,7 @@ class DutaMovie : MainAPI() {
                             name,
                             name,
                             m3u8,
-                            referer ?: url,
+                            referer ?: targetUrl,
                             Qualities.Unknown.value,
                             type = ExtractorLinkType.VIDEO,
                         )
@@ -274,16 +280,101 @@ class DutaMovie : MainAPI() {
                                 name,
                                 name,
                                 src,
-                                referer ?: url,
+                                referer ?: targetUrl,
                                 Qualities.Unknown.value,
                                 type = ExtractorLinkType.VIDEO,
                             )
                         )
                     }
                     true
-                } else false
+                } else {
+                    // Fallback: fetch external scripts referenced by the embed page and scan for URLs
+                    val doc = res.document
+                    val scriptContents = mutableListOf<String>()
+                    // Inline scripts
+                    scriptContents += doc.select("script:not([src])").map { it.data() }
+                    // External scripts
+                    doc.select("script[src]").map { it.absUrl("src") }.distinct().forEach { s ->
+                        runCatching { app.get(s, referer = targetUrl).text }.getOrNull()?.let { scriptContents += it }
+                    }
+
+                    var foundAny = false
+                    scriptContents.forEach { code ->
+                        // 1) direct urls
+                        Regex("https?://[^'\"\\s]+", RegexOption.IGNORE_CASE).findAll(code).forEach { m ->
+                            val u = m.value
+                            if (u.contains("m3u8", true)) {
+                                runCatching { M3u8Helper.generateM3u8(name, u, mainUrl).forEach(callback) }
+                                foundAny = true
+                            } else if (u.endsWith(".mp4", true)) {
+                                callback.invoke(
+                                    ExtractorLink(name, name, u, referer ?: targetUrl, Qualities.Unknown.value, type = ExtractorLinkType.VIDEO)
+                                )
+                                foundAny = true
+                            }
+                        }
+                        // 2) base64 atob('...') that contains urls
+                        Regex("atob\\(['\"]([A-Za-z0-9+/=]+)['\"]\\)").findAll(code).forEach { b ->
+                            val b64 = b.groupValues.getOrNull(1)
+                            if (!b64.isNullOrBlank()) {
+                                runCatching {
+                                    val decoded = String(android.util.Base64.decode(b64, android.util.Base64.DEFAULT))
+                                    Regex("https?://[^'\"\\s]+", RegexOption.IGNORE_CASE).findAll(decoded).forEach { m2 ->
+                                        val u = m2.value
+                                        if (u.contains("m3u8", true)) {
+                                            M3u8Helper.generateM3u8(name, u, mainUrl).forEach(callback)
+                                            foundAny = true
+                                        } else if (u.endsWith(".mp4", true)) {
+                                            callback.invoke(
+                                                ExtractorLink(name, name, u, referer ?: targetUrl, Qualities.Unknown.value, type = ExtractorLinkType.VIDEO)
+                                            )
+                                            foundAny = true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    foundAny
+                }
             }
         }.getOrElse { false }
+    }
+
+    private suspend fun resolveSpecialUrls(url: String, referer: String?): String? {
+        // Unwrap shorteners and hash-based players where we know simple transformations
+        return try {
+            val uri = java.net.URI(url)
+            val host = uri.host ?: return null
+            // Shortener: short.icu – often meta refresh / JS redirect
+            if (host.contains("short.icu", true)) {
+                val r = app.get(url, referer = referer)
+                val refreshed = r.document.selectFirst("meta[http-equiv=refresh i]")?.attr("content")
+                    ?.substringAfter("url=", "")?.trim()
+                val jsRedir = Regex("location\\.(href|replace)\\s*=\\s*['\"](.*?)['\"]", RegexOption.IGNORE_CASE)
+                    .find(r.text)?.groupValues?.getOrNull(2)
+                return listOf(refreshed, jsRedir, r.url).firstOrNull { !it.isNullOrBlank() }
+            }
+            // streamcasthub with hash fragment – try common patterns
+            if (host.contains("streamcasthub", true) && url.contains('#')) {
+                val token = url.substringAfter('#').trim()
+                val candidates = listOf(
+                    "https://${host}/hls/${token}.m3u8",
+                    "https://${host}/stream/${token}",
+                    "https://${host}/get?v=${token}",
+                    "https://${host}/api/source/${token}",
+                )
+                // Return first that responds with 200
+                for (c in candidates) {
+                    val ok = runCatching { app.head(c).code == 200 }.getOrDefault(false)
+                    if (ok) return c
+                }
+                return null
+            }
+            // gofile links can be sent to extractor path; but we just return as-is
+            if (host.contains("gofile.io", true)) return url
+            null
+        } catch (_: Throwable) { null }
     }
 
     private fun Element.getImageAttr(): String {
