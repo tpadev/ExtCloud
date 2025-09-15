@@ -9,6 +9,9 @@ import com.lagradost.cloudstream3.SearchResponse
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.utils.M3u8Helper
+import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 import java.net.URI
@@ -185,8 +188,10 @@ class DutaMovie : MainAPI() {
                                 .getIframeAttr()
                                 ?.let { httpsify(it) }
                                 ?: return@apmap
-
-                loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
+                // Try direct JW parse first
+                if (!tryDirectJW(iframe, "$directUrl/", subtitleCallback, callback)) {
+                    loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
+                }
             }
         } else {
             document.select("div.tab-content-ajax").apmap { ele ->
@@ -204,12 +209,81 @@ class DutaMovie : MainAPI() {
                                 .select("iframe")
                                 .attr("src")
                                 .let { httpsify(it) }
-
-                loadExtractor(server, "$directUrl/", subtitleCallback, callback)
+                // Try direct JW parse first
+                if (!tryDirectJW(server, "$directUrl/", subtitleCallback, callback)) {
+                    loadExtractor(server, "$directUrl/", subtitleCallback, callback)
+                }
             }
         }
 
         return true
+    }
+
+    private suspend fun tryDirectJW(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        return runCatching {
+            val res = app.get(url, referer = referer)
+            val body = res.text
+            // Common jwplayer patterns: sources: [{file:"...m3u8"}], or file:"..."
+            val fileRegexes = listOf(
+                Regex("file\\s*:\\s*\\\"(https?://[^\\\"]+m3u8[^\\\"]*)\\\"", RegexOption.IGNORE_CASE),
+                Regex("sources\\s*:\\s*\\[(.*?)\\]", RegexOption.DOT_MATCHES_ALL)
+            )
+            val m3u8 = fileRegexes.firstNotNullOfOrNull { rx ->
+                val m = rx.find(body)
+                when {
+                    m == null -> null
+                    rx.pattern.contains("sources") -> Regex("file\\s*:\\s*\\\"(https?://[^\\\"]+)\\\"")
+                        .find(m.groupValues.getOrNull(1) ?: "")
+                        ?.groupValues?.getOrNull(1)
+                    else -> m.groupValues.getOrNull(1)
+                }
+            }
+
+            if (!m3u8.isNullOrBlank()) {
+                // If it's mp4, push as direct; if m3u8, expand
+                if (m3u8.endsWith(".mp4", true)) {
+                    callback.invoke(
+                        ExtractorLink(
+                            name,
+                            name,
+                            m3u8,
+                            referer ?: url,
+                            Qualities.Unknown.value,
+                            type = ExtractorLinkType.VIDEO,
+                        )
+                    )
+                } else {
+                    M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
+                }
+                true
+            } else {
+                // Also try <source src="...">
+                val src = Regex("<source[^>]+src=\\\"(https?://[^\\\"]+)\\\"", RegexOption.IGNORE_CASE)
+                    .find(body)?.groupValues?.getOrNull(1)
+                if (!src.isNullOrBlank()) {
+                    if (src.contains("m3u8", true)) {
+                        M3u8Helper.generateM3u8(name, src, mainUrl).forEach(callback)
+                    } else {
+                        callback.invoke(
+                            ExtractorLink(
+                                name,
+                                name,
+                                src,
+                                referer ?: url,
+                                Qualities.Unknown.value,
+                                type = ExtractorLinkType.VIDEO,
+                            )
+                        )
+                    }
+                    true
+                } else false
+            }
+        }.getOrElse { false }
     }
 
     private fun Element.getImageAttr(): String {
