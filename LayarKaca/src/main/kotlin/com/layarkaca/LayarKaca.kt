@@ -46,20 +46,27 @@ class LayarKaca : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        // Try ML-style cards first
-        val mlTitle = this.select("a").attr("oldtitle").ifBlank {
-            this.selectFirst(".mli-info h2, h2 a, h1 a")?.text() ?: ""
-        }.trim()
-        val mlHref = this.selectFirst("a")?.attr("href")
-        val mlPoster = this.select("img").attr("data-original").ifBlank {
-            this.select("img").attr("data-src").ifBlank {
-                this.selectFirst("img")?.attr("src") ?: ""
-            }
-        }
+        // Anchor and poster
+        val a = this.selectFirst("a")
+        val mlHref = a?.attr("href")?.trim()?.ifBlank { null } ?: return null
+        val href = fixUrl(mlHref)
 
-        val title = mlTitle.ifBlank { null } ?: return null
-        val href = fixUrl(mlHref ?: return null)
-        val poster = fixUrlNull(mlPoster)
+        // Title: try multiple sources in order
+        val title = listOf(
+            a?.attr("oldtitle"),
+            a?.attr("title"),
+            this.selectFirst(".mli-info h2, h2 a, h1 a, .title, .name")?.text(),
+            this.selectFirst("img")?.attr("alt")
+        ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: return null
+
+        // Poster: common lazy attributes
+        val posterRaw = listOf(
+            this.select("img").attr("data-original"),
+            this.select("img").attr("data-src"),
+            this.selectFirst("img")?.attr("src"),
+            this.selectFirst("img")?.attr("srcset")?.split(" ")?.firstOrNull()
+        ).firstOrNull { !it.isNullOrBlank() } ?: ""
+        val poster = fixUrlNull(posterRaw)
 
         val type = if (href.contains(seriesUrl)) TvType.TvSeries else TvType.Movie
 
@@ -136,7 +143,8 @@ class LayarKaca : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        val iframe = document.selectFirst("iframe#main-player")?.attr("src") ?: return false
+        val iframe = document.selectFirst("iframe#main-player, iframe[src]")?.attr("src")?.takeIf { it.isNotBlank() }
+            ?: return false
         loadExtractor(fixUrl(iframe), data, subtitleCallback, callback)
         return true
     }

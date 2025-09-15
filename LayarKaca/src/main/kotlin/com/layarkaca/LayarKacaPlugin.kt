@@ -13,5 +13,11 @@ class LayarKacaPlugin : Plugin() {
         // Extractor lama
         registerExtractorAPI(Emturbovid())
         registerExtractorAPI(Hownetwork())
+
+        // Extractor baru (tambahan)
+        registerExtractorAPI(TurboVip())
+        registerExtractorAPI(Hydrax())
+        registerExtractorAPI(CastPlayer())
+        registerExtractorAPI(P2P())
     }
 }
