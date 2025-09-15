@@ -7,10 +7,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 class DutaMoviePlugin : Plugin() {
     override fun load(context: Context) {
+        // Register only the provider. All host handling is done inside DutaMovie.loadLinks.
         registerMainAPI(DutaMovie())
-        // Register only the extractors defined in this module
-        registerExtractorAPI(EmbedPyrox())
-        registerExtractorAPI(Helvid())
-        registerExtractorAPI(P2PPlay())
     }
 }
