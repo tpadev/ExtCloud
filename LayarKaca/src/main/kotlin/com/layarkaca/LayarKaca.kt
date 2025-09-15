@@ -173,7 +173,29 @@ class LayarKaca : MainAPI() {
         }
 
         // 3) Direct anchors to external player domains (support relative links)
-        val hostHints = listOf("nontondrama", "lk21", "castplayer", "hydrax", "turbovip", "p2pstream", "embed", "player")
+        val hostHints = listOf(
+            "nontondrama",
+            "lk21",
+            "castplayer",
+            "hydrax",
+            "turbovip",
+            "p2pstream",
+            "gdriveplayer",
+            "gplayer",
+            "m3u8",
+            "embed",
+            "player",
+            "ok.ru",
+            "streamtape",
+            "voe",
+            "dood",
+            "filemoon",
+            "mixdrop",
+            "megacloud",
+            "rapidcdn",
+            "vidhide",
+            "furher"
+        )
         document.select("a[href]").forEach { a ->
             val raw = a.attr("href").trim()
             if (raw.isBlank()) return@forEach
@@ -191,14 +213,48 @@ class LayarKaca : MainAPI() {
             }
         }
 
-        // 5) URLs inside scripts limited to known hosts
+        // 5) URLs inside scripts limited to known hosts, including base64-decoded
         val scriptBlock = document.select("script").joinToString("\n") { it.data() }
         Regex("https?://[\\w./%#?=&-]+", RegexOption.IGNORE_CASE).findAll(scriptBlock).forEach { m ->
             val u = m.value
             if (hostHints.any { u.contains(it, true) }) candidates += u
         }
+        // Decode atob('...') or base64 strings
+        Regex("atob\\(['\"]([A-Za-z0-9+/=]+)['\"]\\)").findAll(scriptBlock).forEach { m ->
+            val b64 = m.groupValues.getOrNull(1)
+            if (!b64.isNullOrBlank()) {
+                runCatching {
+                    val decoded = String(android.util.Base64.decode(b64, android.util.Base64.DEFAULT))
+                    Regex("https?://[\\w./%#?=&-]+", RegexOption.IGNORE_CASE).findAll(decoded).forEach { mm ->
+                        val u = mm.value
+                        if (hostHints.any { u.contains(it, true) }) candidates += u
+                    }
+                }
+            }
+        }
+
+        // 6) Direct m3u8 inside scripts: file:"...m3u8" or file:"..."
+        val m3u8Patterns = listOf(
+            Regex("""file:\\"(.*?m3u8.*?)\\"""),
+            Regex("""file:\s*\"(.*?m3u8.*?)\"""),
+            Regex("""file:\s*"(.*?m3u8.*?)"""")
+        )
+        m3u8Patterns.forEach { pat ->
+            pat.findAll(scriptBlock).forEach { m ->
+                val h = m.groupValues.getOrNull(1)
+                if (!h.isNullOrBlank()) candidates += fixUrl(h)
+            }
+        }
 
         var found = false
+        // If any candidate is direct m3u8, emit immediately
+        candidates.filter { it.contains("m3u8", true) }.distinct().forEach { m3u8 ->
+            try {
+                M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
+                found = true
+            } catch (_: Throwable) {}
+        }
+        // Otherwise pass through extractors
         candidates.forEach { link ->
             try {
                 loadExtractor(link, data, subtitleCallback, callback)
