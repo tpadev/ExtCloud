@@ -180,18 +180,30 @@ class DutaMovie : MainAPI() {
         val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
 
         if (id.isNullOrEmpty()) {
-            document.select("ul.muvipro-player-tabs li a").apmap { ele ->
-                val iframe =
-                        app.get(fixUrl(ele.attr("href")))
-                                .document
-                                .selectFirst("div.gmr-embed-responsive iframe")
-                                .getIframeAttr()
-                                ?.let { httpsify(it) }
-                                ?: return@apmap
-                val refererBase = runCatching { getBaseUrl(iframe) }.getOrDefault(directUrl ?: "") + "/"
-                // Try direct JW parse first with server origin as referer
-                if (!tryDirectJW(iframe, refererBase, subtitleCallback, callback)) {
-                    loadExtractor(iframe, refererBase, subtitleCallback, callback)
+            val tabs = document.select("ul.muvipro-player-tabs li a")
+            if (tabs.isNotEmpty()) {
+                tabs.apmap { ele ->
+                    val subDoc = app.get(fixUrl(ele.attr("href"))).document
+                    val iframe =
+                        subDoc.selectFirst("div.gmr-embed-responsive iframe")
+                            .getIframeAttr()
+                            ?.let { httpsify(it) }
+                            ?: return@apmap
+                    val refererBase = runCatching { getBaseUrl(iframe) }.getOrDefault(directUrl ?: "") + "/"
+                    if (!tryDirectJW(iframe, refererBase, subtitleCallback, callback)) {
+                        loadExtractor(iframe, refererBase, subtitleCallback, callback)
+                    }
+                }
+            } else {
+                // Fallback: try iframe present on the same page
+                val iframe = document.selectFirst("div.gmr-embed-responsive iframe, iframe")
+                    .getIframeAttr()
+                    ?.let { httpsify(it) }
+                if (!iframe.isNullOrBlank()) {
+                    val refererBase = runCatching { getBaseUrl(iframe) }.getOrDefault(directUrl ?: "") + "/"
+                    if (!tryDirectJW(iframe, refererBase, subtitleCallback, callback)) {
+                        loadExtractor(iframe, refererBase, subtitleCallback, callback)
+                    }
                 }
             }
         } else {
@@ -398,8 +410,13 @@ class DutaMovie : MainAPI() {
     }
 
     private fun Element?.getIframeAttr(): String? {
-        return this?.attr("data-litespeed-src").takeIf { it?.isNotEmpty() == true }
-                ?: this?.attr("src")
+        if (this == null) return null
+        val attrs = listOf("data-src", "data-litespeed-src", "src")
+        for (a in attrs) {
+            val v = this.attr(a)
+            if (!v.isNullOrBlank()) return v
+        }
+        return null
     }
 
     private fun String?.fixImageQuality(): String? {
