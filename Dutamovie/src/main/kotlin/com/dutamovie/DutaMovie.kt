@@ -367,7 +367,24 @@ class DutaMovie : MainAPI() {
                             }
                         }
                     }
-                    foundAny
+                    if (foundAny) return@runCatching true
+
+                    // Last resort: nested iframes and explicit anchors inside embed page
+                    val nested = mutableListOf<String>()
+                    doc.select("iframe[src], iframe[data-src], iframe[data-litespeed-src]").forEach { f ->
+                        f.attr("src").takeIf { it.isNotBlank() }?.let { nested += absolutize(it, targetUrl) }
+                        f.attr("data-src").takeIf { it.isNotBlank() }?.let { nested += absolutize(it, targetUrl) }
+                        f.attr("data-litespeed-src").takeIf { it.isNotBlank() }?.let { nested += absolutize(it, targetUrl) }
+                    }
+                    doc.select("a[href]").forEach { a ->
+                        val h = a.attr("href")
+                        if (h.isNotBlank() && (h.contains("embed", true) || h.contains("player", true) || h.contains("m3u8", true))) {
+                            nested += absolutize(h, targetUrl)
+                        }
+                    }
+                    nested.distinct().any { inner ->
+                        tryDirectJW(inner, targetUrl, subtitleCallback, callback)
+                    }
                 }
             }
         }.getOrElse { false }
