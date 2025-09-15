@@ -3,6 +3,7 @@ package com.layarkaca
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.Filesim
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.*
 
 /** =============== Extractors Lama =============== **/
@@ -45,17 +46,19 @@ open class Hownetwork : ExtractorApi() {
             headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsedSafe<Sources>()
 
-        res?.data?.forEach {
+        res?.data?.map {
             callback.invoke(
-                newExtractorLink(
-                    this.name,
-                    this.name,
-                    it.file,
-                    url
-                ) {
-                    quality = getQualityFromName(it.label)
-                    type = INFER_TYPE
-                }
+                ExtractorLink(
+                    source = this.name,
+                    name = this.name,
+                    url = it.file,
+                    referer = url,
+                    quality = getQualityFromName(it.label),
+                    type = if (it.file.endsWith(".m3u8"))
+                        ExtractorLinkType.M3U8
+                    else
+                        INFER_TYPE,   // ✅ ganti DIRECT jadi INFER_TYPE
+                )
             )
         }
     }
@@ -64,6 +67,7 @@ open class Hownetwork : ExtractorApi() {
         data class Data(val file: String, val label: String?)
     }
 }
+
 
 class Furher : Filesim() {
     override val name = "Furher"
