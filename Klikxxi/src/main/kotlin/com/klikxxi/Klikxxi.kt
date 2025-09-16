@@ -21,10 +21,13 @@ class Klikxxi : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val data = request.data.format(page)
-        val url = if (data.startsWith("?")) "$mainUrl/$data" else "$mainUrl/$data"
+        val url = if (request.data.startsWith("?")) "$mainUrl/${request.data.format(page)}"
+        else "$mainUrl/${request.data.format(page)}"
+
         val document = app.get(url).document
-        val items = document.select("article.mega-item, article.item, div.ml-item").mapNotNull { it.toSearchResult() }
+        val items = document.select("article.mega-item, article.item, div.ml-item")
+            .mapNotNull { it.toSearchResult() }
+
         return newHomePageResponse(
             list = HomePageList(request.name, items, isHorizontalImages = false),
             hasNext = items.isNotEmpty()
@@ -33,8 +36,9 @@ class Klikxxi : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val linkElement = this.selectFirst("a[href]") ?: return null
-        val title = this.selectFirst("h2.entry-title > a, h1.grid-title > a, .content-thumbnail h2 a, a[oldtitle]")?.text()?.trim()
-            ?.substringBefore("(")?.ifBlank { null } ?: return null
+        val title = this.selectFirst("h2.entry-title > a, h1.grid-title > a, .content-thumbnail h2 a, a[oldtitle]")
+            ?.text()?.trim()?.substringBefore("(")?.ifBlank { null } ?: return null
+
         val href = fixUrl(linkElement.attr("href"))
         val poster = this.selectFirst("img")?.getImageAttr()?.let { fixUrlNull(it) }
         val quality = this.select("div.quality, span.mli-quality, span.quality").text().trim()
@@ -54,7 +58,8 @@ class Klikxxi : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query", timeout = 50L).document
-        return document.select("article.mega-item, article.item, div.ml-item").mapNotNull { it.toSearchResult() }
+        return document.select("article.mega-item, article.item, div.ml-item")
+            .mapNotNull { it.toSearchResult() }
     }
 
     override suspend fun load(url: String): LoadResponse {
@@ -62,8 +67,13 @@ class Klikxxi : MainAPI() {
 
         val title = document.selectFirst("h1.entry-title, div.mvic-desc h3")?.text()
             ?.substringBefore("Season")?.substringBefore("Episode")?.substringBefore("(")?.trim().orEmpty()
-        val poster = document.selectFirst("figure.pull-left img, div.gmr-movieposter img, .poster img")?.getImageAttr()?.let { fixUrlNull(it) }
-        val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")?.text()?.trim()
+
+        val poster = document.selectFirst("figure.pull-left img, div.gmr-movieposter img, .poster img")
+            ?.getImageAttr()?.let { fixUrlNull(it) }
+
+        val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")
+            ?.text()?.trim()
+
         val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a").map { it.text() }
         val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().toIntOrNull()
         val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
@@ -115,12 +125,19 @@ class Klikxxi : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        document.select("div.gmr-embed-responsive iframe, div.movieplay iframe, iframe").forEach { frame ->
+        val iframes = document.select("iframe")
+
+        iframes.forEach { frame ->
             val src = listOf("data-src", "data-litespeed-src", "src")
-                .firstNotNullOfOrNull { key -> frame.attr(key).takeIf { it.isNotBlank() } }
-                ?: return@forEach
+                .firstNotNullOfOrNull { key -> frame.attr(key).takeIf { it.isNotBlank() } } ?: return@forEach
+
             val link = fixUrl(src)
-            val referer = runCatching { getBaseUrl(link) }.getOrDefault(mainUrl) + "/"
+            val referer = getBaseUrl(link)
+
+            // Debug log supaya tahu link mana yang diambil
+            println("Klikxxi loadLinks: found iframe $link")
+
+            // Panggil extractor bawaan (contoh: VOE sudah ada di Cloudstream)
             loadExtractor(link, referer, subtitleCallback, callback)
         }
         return true
