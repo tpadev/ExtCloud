@@ -32,11 +32,12 @@ class KrakenFilesEmbed : ExtractorApi() {
         val body = html.replace("\\/", "/")
 
         // Find m3u8 first
-        val m3u8 = listOf(
-            """"file"\s*:\s*"(https?://[^"]+\.m3u8)"""",
-            """source\s+src=['"](https?://[^'"\\]+\.m3u8)['"]""",
-            """['"](https?://[^'"\\]+\.m3u8)['"]""",
-        ).firstNotNullOfOrNull { pat ->
+        val m3u8Patterns = listOf(
+            "\\\"file\\\"\\s*:\\s*\\\"(https?://[^\\\"]+\\.m3u8)\\\"",
+            "source\\s+src=['\"](https?://[^'\"]+\\.m3u8)['\"]",
+            "['\"](https?://[^'\"]+\\.m3u8)['\"]",
+        )
+        val m3u8 = m3u8Patterns.firstNotNullOfOrNull { pat ->
             Regex(pat, setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
                 .find(body)
                 ?.groupValues
@@ -48,10 +49,11 @@ class KrakenFilesEmbed : ExtractorApi() {
         }
 
         // Fallback to MP4
-        val mp4 = listOf(
-            """source\s+src=['"](https?://[^'"\\]+\.mp4)['"]""",
-            """"file"\s*:\s*"(https?://[^"]+\.mp4)"""",
-        ).firstNotNullOfOrNull { pat ->
+        val mp4Patterns = listOf(
+            "source\\s+src=['\"](https?://[^'\"]+\\.mp4)['\"]",
+            "\\\"file\\\"\\s*:\\s*\\\"(https?://[^\\\"]+\\.mp4)\\\"",
+        )
+        val mp4 = mp4Patterns.firstNotNullOfOrNull { pat ->
             Regex(pat, setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
                 .find(body)
                 ?.groupValues

@@ -141,7 +141,7 @@ class Ngefilm : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val candidates = mutableListOf<String>()
+        val candidates = mutableListOf<Pair<String, String>>()
         val hostHints = listOf("gofile.io", "krakenfiles", "buzzheavier", "chillx.top")
 
         // Gather pages to check: main detail + all server tabs (?player=X)
@@ -167,7 +167,7 @@ class Ngefilm : MainAPI() {
                 val s = listOf("src", "data-src", "data-litespeed-src")
                     .firstNotNullOfOrNull { key -> el.attr(key).takeIf { it.isNotBlank() } }
                     ?.let { httpsify(it) }
-                if (!s.isNullOrBlank()) candidates += s
+                if (!s.isNullOrBlank()) candidates += (s to pageUrl)
             }
 
             // Collect explicit host links/buttons if present (Gofile + common mirrors)
@@ -175,7 +175,9 @@ class Ngefilm : MainAPI() {
                 val s = listOf("href", "data-src", "data-litespeed-src", "data-url")
                     .firstNotNullOfOrNull { k -> el.attr(k).takeIf { it.isNotBlank() } }
                     ?.let { httpsify(it) }
-                if (!s.isNullOrBlank() && hostHints.any { s.contains(it, ignoreCase = true) }) candidates += s
+                if (!s.isNullOrBlank() && hostHints.any { s.contains(it, ignoreCase = true) }) {
+                    candidates += (s to pageUrl)
+                }
             }
 
             // Fallback: sniff from HTML
@@ -183,14 +185,13 @@ class Ngefilm : MainAPI() {
                 val html = doc.outerHtml()
                 val allUrls = Regex("https?://[^\"'\\s<>]+", RegexOption.IGNORE_CASE).findAll(html).map { it.value }
                 allUrls.filter { u -> hostHints.any { u.contains(it, ignoreCase = true) } }
-                    .forEach { u -> candidates += httpsify(u) }
+                    .forEach { u -> candidates += (httpsify(u) to pageUrl) }
             }
         }
 
-        candidates.distinct().forEach { raw ->
+        candidates.distinctBy { it.first }.forEach { (raw, refererPage) ->
             val link = normalizeLink(raw)
-            val refererBase = runCatching { getBaseUrl(link) }.getOrDefault(mainUrl) + "/"
-            loadExtractor(link, refererBase, subtitleCallback, callback)
+            loadExtractor(link, refererPage, subtitleCallback, callback)
         }
         return true
     }
