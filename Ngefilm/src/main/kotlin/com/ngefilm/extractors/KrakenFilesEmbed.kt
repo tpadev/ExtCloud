@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.httpsify
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 
 class KrakenFilesEmbed : ExtractorApi() {
     override val name = "KrakenFiles"
@@ -32,9 +33,9 @@ class KrakenFilesEmbed : ExtractorApi() {
 
         // Find m3u8 first
         val m3u8 = listOf(
-            "\\\"file\\\"\\s*:\\s*\\\"(https?://[^\\\"]+\\\\.m3u8)\\\"",
-            "source\\s+src=['\"](https?://[^'\\"]+\\.m3u8)['\"]",
-            "['\"](https?://[^'\\"]+\\.m3u8)['\"]",
+            """"file"\s*:\s*"(https?://[^"]+\.m3u8)"""",
+            """source\s+src=['"](https?://[^'"\\]+\.m3u8)['"]""",
+            """['"](https?://[^'"\\]+\.m3u8)['"]""",
         ).firstNotNullOfOrNull { pat ->
             Regex(pat, setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
                 .find(body)
@@ -42,14 +43,14 @@ class KrakenFilesEmbed : ExtractorApi() {
                 ?.getOrNull(1)
         }
         if (m3u8 != null) {
-            M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
+            M3u8Helper.generateM3u8(name, m3u8, embedUrl).forEach(callback)
             return
         }
 
         // Fallback to MP4
         val mp4 = listOf(
-            "source\\s+src=['\"](https?://[^'\\"]+\\.mp4)['\"]",
-            "\\\"file\\\"\\s*:\\s*\\\"(https?://[^\\\"]+\\\\.mp4)\\\"",
+            """source\s+src=['"](https?://[^'"\\]+\.mp4)['"]""",
+            """"file"\s*:\s*"(https?://[^"]+\.mp4)"""",
         ).firstNotNullOfOrNull { pat ->
             Regex(pat, setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
                 .find(body)
@@ -63,11 +64,11 @@ class KrakenFilesEmbed : ExtractorApi() {
                     source = name,
                     name = name,
                     url = mp4,
-                    referer = mainUrl,
+                    referer = embedUrl,
                     quality = Qualities.P1080.value,
+                    type = ExtractorLinkType.VIDEO,
                 )
             )
         }
     }
 }
-
