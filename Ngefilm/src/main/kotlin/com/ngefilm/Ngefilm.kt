@@ -154,7 +154,7 @@ class Ngefilm : MainAPI() {
         }
 
         // Collect explicit host links/buttons if present (Gofile + common mirrors)
-        val hostHints = listOf("gofile.io", "krakenfiles", "buzzheavier")
+        val hostHints = listOf("gofile.io", "krakenfiles", "buzzheavier", "chillx.top")
         document.select("a[href], a[data-src], a[data-litespeed-src], button[data-url], div[data-url]").forEach { el ->
             val s = listOf("href", "data-src", "data-litespeed-src", "data-url")
                 .firstNotNullOfOrNull { k -> el.attr(k).takeIf { it.isNotBlank() } }
