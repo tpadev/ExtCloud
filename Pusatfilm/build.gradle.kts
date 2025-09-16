@@ -1,7 +1,9 @@
-version = 3
+// use an integer for version numbers
+version = 2
 
 cloudstream {
-    description = "DutaMovie"
+    // All of these properties are optional, you can safely remove them
+    description = "Pusatfilm is a plugin that provides streaming links for movies and TV series."
     language = "id"
     authors = listOf("Hexated", "TeKuma25")
 
@@ -19,5 +21,5 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=scandal.dutamovie21.cc&sz=256"
+    iconUrl = "https://www.google.com/s2/favicons?domain=gomov.bio&sz=%size%"
 }
