@@ -141,17 +141,38 @@ class Ngefilm : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
+        val basePage = httpsify(if (data.startsWith("http")) data else "$mainUrl/${data.removePrefix("/")}")
+        val mainDocument = app.get(basePage).document
 
-        val iframeEl = document.selectFirst("iframe")
-        val src = listOf("src", "data-src", "data-litespeed-src")
-            .firstNotNullOfOrNull { key -> iframeEl?.attr(key)?.takeIf { it.isNotBlank() } }
-            ?.let { httpsify(it) }
+        val pageQueue = mutableListOf(basePage)
+        mainDocument.select("ul.gmr-player-nav a[href], ul.muvipro-player-tabs a[href]").forEach { a ->
+            val href = a.attr("href").trim()
+            if (href.isNullOrEmpty()) return@forEach
+            if (href.startsWith("javascript", ignoreCase = true)) return@forEach
+            val absolute = if (href.startsWith("http")) href else fixUrl(href)
+            pageQueue += httpsify(absolute)
+        }
 
-        if (!src.isNullOrBlank()) {
-            val referer = runCatching { getBaseUrl(src) }.getOrDefault(mainUrl) + "/"
-            val link = normalizeLink(src)
-            loadExtractor(link, referer, subtitleCallback, callback)
+        val seenLinks = hashSetOf<String>()
+
+        pageQueue.distinct().forEach { pageUrl ->
+            val document = if (pageUrl == basePage) {
+                mainDocument
+            } else {
+                app.get(pageUrl, referer = basePage).document
+            }
+
+            document.select("div.gmr-embed-responsive iframe, div.movieplay iframe, iframe").forEach { iframe ->
+                val raw = listOf("data-src", "data-litespeed-src", "src")
+                    .firstNotNullOfOrNull { key -> iframe.attr(key).takeIf { it.isNotBlank() } }
+                    ?.takeIf { src -> !src.startsWith("about:", ignoreCase = true) && !src.startsWith("javascript", ignoreCase = true) }
+                    ?: return@forEach
+
+                val link = normalizeLink(httpsify(raw))
+                if (!seenLinks.add(link)) return@forEach
+                val referer = runCatching { getBaseUrl(link) }.getOrDefault(mainUrl) + "/"
+                loadExtractor(link, referer, subtitleCallback, callback)
+            }
         }
         return true
     }
