@@ -55,16 +55,16 @@ open class Hownetwork : ExtractorApi() {
                         )
                         .parsedSafe<Sources>()
 
-        res?.data?.map {
+        res?.data?.forEach {
             callback.invoke(
-                    ExtractorLink(
-                            this.name,
-                            this.name,
-                            it.file,
-                            url,
-                            getQualityFromName(it.label),
-                            INFER_TYPE
-                    )
+                ExtractorLink(
+                    source = name,
+                    name = name,
+                    url = it.file,
+                    referer = url,
+                    quality = getQualityFromName(it.label),
+                    type = INFER_TYPE,
+                )
             )
         }
     }
