@@ -171,9 +171,10 @@ class DutaMovie : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
 
-        // ambil iframe dari halaman film
-        val iframe = document.selectFirst("div.gmr-embed-responsive iframe, iframe")
-            ?.attr("src")
+        // ambil iframe dari halaman film (src/data-src/data-litespeed-src)
+        val iframeEl = document.selectFirst("div.gmr-embed-responsive iframe, iframe")
+        val iframe = listOf("src", "data-src", "data-litespeed-src")
+            .firstNotNullOfOrNull { key -> iframeEl?.attr(key)?.takeIf { it.isNotBlank() } }
             ?.let { httpsify(it) }
 
         if (!iframe.isNullOrBlank()) {
