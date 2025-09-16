@@ -1,7 +1,7 @@
 package com.dutamovie.extractors
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.extractors.ExtractorApi
+import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.*
 
 class EmbedPyrox : ExtractorApi() {
@@ -14,7 +14,7 @@ class EmbedPyrox : ExtractorApi() {
         referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
-    ): Boolean {
+    ) {
         // Ambil token dari url iframe
         val token = url.substringAfter("video/").substringBefore("?")
         val apiUrl = "$mainUrl/player/index.php?data=$token&do=getVideo"
@@ -33,9 +33,7 @@ class EmbedPyrox : ExtractorApi() {
         val m3u8 = Regex("https?://[^\"]+\\.m3u8").find(res)?.value
         if (m3u8 != null) {
             M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
-            return true
+            return
         }
-
-        return false
     }
 }
