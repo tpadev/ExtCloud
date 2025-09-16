@@ -141,7 +141,8 @@ class Ngefilm : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
+        val response = app.get(data)
+        val document = response.document
         val candidates = mutableListOf<String>()
 
         // Collect iframe sources
@@ -152,12 +153,21 @@ class Ngefilm : MainAPI() {
             if (!s.isNullOrBlank()) candidates += s
         }
 
-        // Collect explicit gofile links/buttons if present
-        document.select("a[href*='gofile.io'], a[data-src*='gofile.io'], a[data-litespeed-src*='gofile.io']").forEach { a ->
-            val s = listOf("href", "data-src", "data-litespeed-src")
-                .firstNotNullOfOrNull { k -> a.attr(k).takeIf { it.isNotBlank() } }
+        // Collect explicit host links/buttons if present (Gofile + common mirrors)
+        val hostHints = listOf("gofile.io", "krakenfiles", "buzzheavier")
+        document.select("a[href], a[data-src], a[data-litespeed-src], button[data-url], div[data-url]").forEach { el ->
+            val s = listOf("href", "data-src", "data-litespeed-src", "data-url")
+                .firstNotNullOfOrNull { k -> el.attr(k).takeIf { it.isNotBlank() } }
                 ?.let { httpsify(it) }
-            if (!s.isNullOrBlank()) candidates += s
+            if (!s.isNullOrBlank() && hostHints.any { s.contains(it, ignoreCase = true) }) candidates += s
+        }
+
+        // As a final fallback, sniff any gofile-like links from raw HTML
+        runCatching {
+            val html = document.outerHtml()
+            val allUrls = Regex("https?://[^\"'\\s<>]+", RegexOption.IGNORE_CASE).findAll(html).map { it.value }
+            allUrls.filter { u -> hostHints.any { u.contains(it, ignoreCase = true) } }
+                .forEach { u -> candidates += httpsify(u) }
         }
 
         candidates.distinct().forEach { link ->
@@ -180,4 +190,3 @@ class Ngefilm : MainAPI() {
         return URI(url).let { "${it.scheme}://${it.host}" }
     }
 }
-
