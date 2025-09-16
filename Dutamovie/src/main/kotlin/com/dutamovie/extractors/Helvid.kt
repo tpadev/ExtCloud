@@ -1,17 +1,17 @@
 package com.dutamovie.extractors
 
 import com.lagradost.cloudstream3.SubtitleFile
+import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.httpsify
-import com.lagradost.cloudstream3.app
 import java.net.URI
 import java.net.URLDecoder
 
-class StreamCastHub : ExtractorApi() {
-    override val name = "StreamCastHub"
-    override val mainUrl = "https://streamcasthub.store"
+class Helvid : ExtractorApi() {
+    override val name = "Helvid"
+    override val mainUrl = "https://helvid.net"
     override val requiresReferer = true
 
     override suspend fun getUrl(
@@ -23,16 +23,19 @@ class StreamCastHub : ExtractorApi() {
         val pageUrl = httpsify(url)
         val base = getBaseUrl(pageUrl)
 
-        val rawToken = when {
-            pageUrl.contains('#') -> pageUrl.substringAfter('#').substringBefore('?')
+        // Try to derive an id/token from common helvid paths
+        val token = when {
+            pageUrl.contains("/play/index/") -> pageUrl.substringAfter("/play/index/").substringBefore('?')
             pageUrl.contains("/v/") -> pageUrl.substringAfter("/v/").substringBefore('?')
             else -> pageUrl.substringAfterLast('/').substringBefore('?')
         }
 
+        // Known/common endpoints used by this family of players
         val endpoints = listOf(
-            "$base/player/index.php?data=$rawToken&do=getVideo",
-            "$base/index.php?data=$rawToken&do=getVideo",
-            "$base/player/?data=$rawToken&do=getVideo",
+            "$base/player/index.php?data=$token&do=getVideo",
+            "$base/index.php?data=$token&do=getVideo",
+            "$base/player/?data=$token&do=getVideo",
+            "$base/play/index/$token?get=1",
         )
 
         for (ep in endpoints) {
@@ -46,7 +49,6 @@ class StreamCastHub : ExtractorApi() {
                         "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
                     )
                 ).text
-
                 sniffM3u8(res)?.let { m3u8 ->
                     M3u8Helper.generateM3u8(name, m3u8, pageUrl).forEach(callback)
                     return
@@ -54,9 +56,10 @@ class StreamCastHub : ExtractorApi() {
             }
         }
 
+        // Fallback: fetch page and sniff m3u8
         runCatching {
-            val res = app.get(pageUrl, referer = referer ?: base).text
-            sniffM3u8(res)?.let { m3u8 ->
+            val body = app.get(pageUrl, referer = referer ?: base).text
+            sniffM3u8(body)?.let { m3u8 ->
                 M3u8Helper.generateM3u8(name, m3u8, pageUrl).forEach(callback)
                 return
             }
@@ -80,8 +83,9 @@ class StreamCastHub : ExtractorApi() {
         return null
     }
 
-    private fun getBaseUrl(url: String): String {
-        val u = URI(url)
-        return "${u.scheme}://${u.host}"
+    private fun getBaseUrl(u: String): String {
+        val uri = URI(u)
+        return "${uri.scheme}://${uri.host}"
     }
 }
+

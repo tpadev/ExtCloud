@@ -3,9 +3,7 @@ package com.dutamovie
 import android.content.Context
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
-import com.dutamovie.extractors.EmbedPyrox
-import com.dutamovie.extractors.P2pPlay
-import com.dutamovie.extractors.StreamCastHub
+import com.dutamovie.extractors.Helvid
 
 @CloudstreamPlugin
 class DutaMoviePlugin : Plugin() {
@@ -13,9 +11,7 @@ class DutaMoviePlugin : Plugin() {
         // Register provider
         registerMainAPI(DutaMovie())
 
-        // Register extractor khusus
-        registerExtractorAPI(EmbedPyrox())
-        registerExtractorAPI(P2pPlay())
-        registerExtractorAPI(StreamCastHub())
+        // Register only Helvid extractor
+        registerExtractorAPI(Helvid())
     }
 }
