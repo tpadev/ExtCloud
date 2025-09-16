@@ -170,7 +170,8 @@ class Ngefilm : MainAPI() {
                 .forEach { u -> candidates += httpsify(u) }
         }
 
-        candidates.distinct().forEach { link ->
+        candidates.distinct().forEach { raw ->
+            val link = normalizeGofile(raw)
             val refererBase = runCatching { getBaseUrl(link) }.getOrDefault(mainUrl) + "/"
             loadExtractor(link, refererBase, subtitleCallback, callback)
         }
@@ -188,5 +189,18 @@ class Ngefilm : MainAPI() {
 
     private fun getBaseUrl(url: String): String {
         return URI(url).let { "${it.scheme}://${it.host}" }
+    }
+
+    // Some pages link gofile via store subdomains or direct download endpoints.
+    // Convert those into the canonical page form accepted by the built-in Gofile extractor.
+    private fun normalizeGofile(u: String): String {
+        val url = httpsify(u)
+        val id1 = Regex("gofile\\.io/(?:\\?c=|d/)([\\da-zA-Z-]+)").find(url)?.groupValues?.getOrNull(1)
+        if (id1 != null) return "https://gofile.io/d/$id1"
+
+        val id2 = Regex("(?:store[0-9]+\\.)?gofile\\.io/[^\\s]*/([\\da-zA-Z-]{6,})").find(url)?.groupValues?.getOrNull(1)
+        if (id2 != null) return "https://gofile.io/d/$id2"
+
+        return url
     }
 }
