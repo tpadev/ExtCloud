@@ -141,57 +141,17 @@ class Ngefilm : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val candidates = mutableListOf<Pair<String, String>>()
-        val hostHints = listOf("gofile.io", "krakenfiles", "buzzheavier", "chillx.top")
+        val document = app.get(data).document
 
-        // Gather pages to check: main detail + all server tabs (?player=X)
-        val mainDoc = app.get(data).document
-        val pageQueue = mutableListOf(data)
-        mainDoc.select("ul.gmr-player-nav a[href], ul.muvipro-player-tabs a[href]").forEach { a ->
-            val href = a.attr("href")
-            if (href.isNullOrBlank()) return@forEach
-            val playerUrl = if (href.startsWith("?")) {
-                data.substringBefore('?') + href
-            } else {
-                fixUrl(href)
-            }
-            pageQueue += httpsify(playerUrl)
-        }
+        val iframeEl = document.selectFirst("iframe")
+        val src = listOf("src", "data-src", "data-litespeed-src")
+            .firstNotNullOfOrNull { key -> iframeEl?.attr(key)?.takeIf { it.isNotBlank() } }
+            ?.let { httpsify(it) }
 
-        // Visit each page (detail and each player=X) to collect links
-        pageQueue.distinct().forEach { pageUrl ->
-            val doc = app.get(pageUrl, referer = data).document
-
-            // Collect iframe sources
-            doc.select("div.gmr-embed-responsive iframe, div.movieplay iframe, iframe").forEach { el ->
-                val s = listOf("src", "data-src", "data-litespeed-src")
-                    .firstNotNullOfOrNull { key -> el.attr(key).takeIf { it.isNotBlank() } }
-                    ?.let { httpsify(it) }
-                if (!s.isNullOrBlank()) candidates += (s to pageUrl)
-            }
-
-            // Collect explicit host links/buttons if present (Gofile + common mirrors)
-            doc.select("a[href], a[data-src], a[data-litespeed-src], button[data-url], div[data-url]").forEach { el ->
-                val s = listOf("href", "data-src", "data-litespeed-src", "data-url")
-                    .firstNotNullOfOrNull { k -> el.attr(k).takeIf { it.isNotBlank() } }
-                    ?.let { httpsify(it) }
-                if (!s.isNullOrBlank() && hostHints.any { s.contains(it, ignoreCase = true) }) {
-                    candidates += (s to pageUrl)
-                }
-            }
-
-            // Fallback: sniff from HTML
-            runCatching {
-                val html = doc.outerHtml()
-                val allUrls = Regex("https?://[^\"'\\s<>]+", RegexOption.IGNORE_CASE).findAll(html).map { it.value }
-                allUrls.filter { u -> hostHints.any { u.contains(it, ignoreCase = true) } }
-                    .forEach { u -> candidates += (httpsify(u) to pageUrl) }
-            }
-        }
-
-        candidates.distinctBy { it.first }.forEach { (raw, refererPage) ->
-            val link = normalizeLink(raw)
-            loadExtractor(link, refererPage, subtitleCallback, callback)
+        if (!src.isNullOrBlank()) {
+            val referer = runCatching { getBaseUrl(src) }.getOrDefault(mainUrl) + "/"
+            val link = normalizeLink(src)
+            loadExtractor(link, referer, subtitleCallback, callback)
         }
         return true
     }
