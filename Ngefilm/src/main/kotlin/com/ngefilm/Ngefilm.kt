@@ -141,37 +141,54 @@ class Ngefilm : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val response = app.get(data)
-        val document = response.document
         val candidates = mutableListOf<String>()
-
-        // Collect iframe sources
-        document.select("div.gmr-embed-responsive iframe, div.movieplay iframe, iframe").forEach { el ->
-            val s = listOf("src", "data-src", "data-litespeed-src")
-                .firstNotNullOfOrNull { key -> el.attr(key).takeIf { it.isNotBlank() } }
-                ?.let { httpsify(it) }
-            if (!s.isNullOrBlank()) candidates += s
-        }
-
-        // Collect explicit host links/buttons if present (Gofile + common mirrors)
         val hostHints = listOf("gofile.io", "krakenfiles", "buzzheavier", "chillx.top")
-        document.select("a[href], a[data-src], a[data-litespeed-src], button[data-url], div[data-url]").forEach { el ->
-            val s = listOf("href", "data-src", "data-litespeed-src", "data-url")
-                .firstNotNullOfOrNull { k -> el.attr(k).takeIf { it.isNotBlank() } }
-                ?.let { httpsify(it) }
-            if (!s.isNullOrBlank() && hostHints.any { s.contains(it, ignoreCase = true) }) candidates += s
+
+        // Gather pages to check: main detail + all server tabs (?player=X)
+        val mainDoc = app.get(data).document
+        val pageQueue = mutableListOf(data)
+        mainDoc.select("ul.gmr-player-nav a[href], ul.muvipro-player-tabs a[href]").forEach { a ->
+            val href = a.attr("href")
+            if (href.isNullOrBlank()) return@forEach
+            val playerUrl = if (href.startsWith("?")) {
+                data.substringBefore('?') + href
+            } else {
+                fixUrl(href)
+            }
+            pageQueue += httpsify(playerUrl)
         }
 
-        // As a final fallback, sniff any gofile-like links from raw HTML
-        runCatching {
-            val html = document.outerHtml()
-            val allUrls = Regex("https?://[^\"'\\s<>]+", RegexOption.IGNORE_CASE).findAll(html).map { it.value }
-            allUrls.filter { u -> hostHints.any { u.contains(it, ignoreCase = true) } }
-                .forEach { u -> candidates += httpsify(u) }
+        // Visit each page (detail and each player=X) to collect links
+        pageQueue.distinct().forEach { pageUrl ->
+            val doc = app.get(pageUrl, referer = data).document
+
+            // Collect iframe sources
+            doc.select("div.gmr-embed-responsive iframe, div.movieplay iframe, iframe").forEach { el ->
+                val s = listOf("src", "data-src", "data-litespeed-src")
+                    .firstNotNullOfOrNull { key -> el.attr(key).takeIf { it.isNotBlank() } }
+                    ?.let { httpsify(it) }
+                if (!s.isNullOrBlank()) candidates += s
+            }
+
+            // Collect explicit host links/buttons if present (Gofile + common mirrors)
+            doc.select("a[href], a[data-src], a[data-litespeed-src], button[data-url], div[data-url]").forEach { el ->
+                val s = listOf("href", "data-src", "data-litespeed-src", "data-url")
+                    .firstNotNullOfOrNull { k -> el.attr(k).takeIf { it.isNotBlank() } }
+                    ?.let { httpsify(it) }
+                if (!s.isNullOrBlank() && hostHints.any { s.contains(it, ignoreCase = true) }) candidates += s
+            }
+
+            // Fallback: sniff from HTML
+            runCatching {
+                val html = doc.outerHtml()
+                val allUrls = Regex("https?://[^\"'\\s<>]+", RegexOption.IGNORE_CASE).findAll(html).map { it.value }
+                allUrls.filter { u -> hostHints.any { u.contains(it, ignoreCase = true) } }
+                    .forEach { u -> candidates += httpsify(u) }
+            }
         }
 
         candidates.distinct().forEach { raw ->
-            val link = normalizeGofile(raw)
+            val link = normalizeLink(raw)
             val refererBase = runCatching { getBaseUrl(link) }.getOrDefault(mainUrl) + "/"
             loadExtractor(link, refererBase, subtitleCallback, callback)
         }
@@ -202,5 +219,19 @@ class Ngefilm : MainAPI() {
         if (id2 != null) return "https://gofile.io/d/$id2"
 
         return url
+    }
+
+    private fun normalizeKraken(u: String): String {
+        val url = httpsify(u)
+        val id = Regex("krakenfiles\\.com/(?:embed-video|view|download)/([a-zA-Z0-9]+)", RegexOption.IGNORE_CASE)
+            .find(url)?.groupValues?.getOrNull(1)
+        return if (id != null) "https://krakenfiles.com/view/$id" else url
+    }
+
+    private fun normalizeLink(u: String): String {
+        var out = httpsify(u)
+        out = normalizeGofile(out)
+        out = normalizeKraken(out)
+        return out
     }
 }
