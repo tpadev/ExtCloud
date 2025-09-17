@@ -51,30 +51,12 @@ class LayarKaca : MainAPI() {
         val genres = doc.select("div.gmr-moviedata a").map { it.text() }
         val trailer = doc.selectFirst("iframe[src*=\"youtube\"]")?.attr("src")
 
-        // parsing mirror unduh (download links)
-        val downloads = doc.select("a[href*=\".mp4\"], a[href*=\".mkv\"]").map {
-            val link = fixUrl(it.attr("href"))
-            val name = it.text().ifBlank { "Mirror" }
-            ExtractorLink(
-                source = this.name,
-                name = name,
-                url = link,
-                referer = mainUrl,
-                quality = getQualityFromName(name),
-                type = DIRECT_LINK
-            )
-        }
-
         return newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl = poster
             this.year = year
             this.plot = plot
             this.tags = genres
             addTrailer(trailer)
-            this.recommendations = emptyList()
-            this.comingSoon = false
-            this.data = url
-            this.links = downloads // ✅ supaya mirror unduh muncul
         }
     }
 
@@ -85,6 +67,8 @@ class LayarKaca : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val doc = app.get(data).document
+
+        // Ambil iframe player streaming
         val iframes = doc.select("iframe[src], iframe[data-src]")
         iframes.forEach { iframe ->
             val src = iframe.attr("src").ifBlank { iframe.attr("data-src") }
@@ -92,6 +76,24 @@ class LayarKaca : MainAPI() {
                 loadExtractor(fixUrl(src), data, subtitleCallback, callback)
             }
         }
+
+        // Ambil link unduh langsung (mp4/mkv)
+        val downloads = doc.select("a[href*=\".mp4\"], a[href*=\".mkv\"]")
+        downloads.forEach {
+            val link = fixUrl(it.attr("href"))
+            val name = it.text().ifBlank { "Mirror" }
+            callback.invoke(
+                ExtractorLink(
+                    source = this.name,
+                    name = "Unduh - $name",
+                    url = link,
+                    referer = mainUrl,
+                    quality = getQualityFromName(name),
+                    type = INFER_TYPE
+                )
+            )
+        }
+
         return true
     }
 }
