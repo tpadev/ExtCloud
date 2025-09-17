@@ -40,7 +40,6 @@ class NetflixProvider : MainAPI() {
         cookie_value = if(cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
         val userToken = System.getenv("NETFLIX_USER_TOKEN")
             ?: System.getProperty("netflix.user.token")
-            ?: App.getSystemProperty("netflix.user.token")
             ?: ""
 
         val cookies = mapOf(
