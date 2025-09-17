@@ -228,15 +228,15 @@ class PrimeVideoProvider : MainAPI() {
         playlist.forEach { item ->
             item.sources.forEach {
                 callback.invoke(
-                    newExtractorLink(
-                        name,
-                        it.label,
-                        """https://net50.cc${it.file.replace("/tv/", "/")}""",
+                    ExtractorLink(
+                        source = this@PrimeVideoProvider.name,
+                        name = it.label,
+                        url = """https://net50.cc${it.file.replace("/tv/", "/")}""",
+                        referer = "https://net50.cc/",
+                        quality = getQualityFromName(it.file.substringAfter("q=", "")),
+                        headers = mapOf(),
                         type = ExtractorLinkType.M3U8
-                    ) {
-                        this.referer = "https://net50.cc/"
-                        this.quality = getQualityFromName(it.file.substringAfter("q=", ""))
-                    }
+                    )
                 )
             }
 

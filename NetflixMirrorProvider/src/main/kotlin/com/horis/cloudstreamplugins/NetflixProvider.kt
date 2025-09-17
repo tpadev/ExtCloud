@@ -38,9 +38,15 @@ class NetflixProvider : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
         cookie_value = if(cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
+        val userToken = System.getenv("NETFLIX_USER_TOKEN")
+            ?: System.getProperty("netflix.user.token")
+            ?: App.getSystemProperty("netflix.user.token")
+            ?: ""
+
         val cookies = mapOf(
             "t_hash_t" to cookie_value,
-            "user_token" to "233123f803cf02184bf6c67e149cdd50",
+            // user_token should be provided via env var or local properties. Do not commit real tokens.
+            "user_token" to userToken,
             "ott" to "nf",
             "hd" to "on"
         )
@@ -226,15 +232,15 @@ class NetflixProvider : MainAPI() {
         playlist.forEach { item ->
             item.sources.forEach {
                 callback.invoke(
-                    newExtractorLink(
-                        name,
-                        it.label,
-                        """https://net50.cc${it.file.replace("/tv/", "/")}""",
+                    ExtractorLink(
+                        source = this@NetflixProvider.name,
+                        name = it.label,
+                        url = """https://net50.cc${it.file.replace("/tv/", "/")}""",
+                        referer = "https://net50.cc/",
+                        quality = getQualityFromName(it.file.substringAfter("q=", "")),
+                        headers = mapOf(),
                         type = ExtractorLinkType.M3U8
-                    ) {
-                        this.referer = "https://net50.cc/"
-                        this.quality = getQualityFromName(it.file.substringAfter("q=", ""))
-                    }
+                    )
                 )
             }
 
