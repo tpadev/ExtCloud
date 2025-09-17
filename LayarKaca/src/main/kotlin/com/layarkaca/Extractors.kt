@@ -9,9 +9,7 @@ import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.getQualityFromName
 
-// Helper builder used by local newExtractorLink
-// Using project-provided newExtractorLink implementation
-// Local builder fallback for newExtractorLink when library symbol isn't available
+// Local helper: build an ExtractorLink using a mutable builder to avoid reassigning vals.
 class ExtractorLinkBuilder(
     var source: String,
     var name: String,
@@ -25,10 +23,10 @@ class ExtractorLinkBuilder(
 }
 
 @Suppress("DEPRECATION")
-fun newExtractorLink(source: String, name: String, url: String, block: (ExtractorLinkBuilder.() -> Unit)? = null): com.lagradost.cloudstream3.utils.ExtractorLink {
+fun newExtractorLink(source: String, name: String, url: String, block: (ExtractorLinkBuilder.() -> Unit)? = null): ExtractorLink {
     val b = ExtractorLinkBuilder(source, name, url)
     block?.invoke(b)
-    return com.lagradost.cloudstream3.utils.ExtractorLink(
+    return ExtractorLink(
         b.source,
         b.name,
         b.url,
