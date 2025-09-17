@@ -11,7 +11,7 @@ class LayarKaca : MainAPI() {
     override var lang = "id"
     override val hasDownloadSupport = true
 
-    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
+    override val supportedTypes = setOf(TvType.Movie)
 
     override val mainPage = mainPageOf(
         "$mainUrl/latest" to "Terbaru",
@@ -72,31 +72,12 @@ class LayarKaca : MainAPI() {
         val genres = doc.select("div.genres a").map { it.text() }
         val trailer = doc.selectFirst("iframe[src*=\"youtube\"]")?.attr("src")
 
-        val isSeries = url.contains("nontondrama")
-
-        return if (isSeries) {
-            // Untuk series (drama/TV)
-            val episodes = doc.select("div.episode-list a").map { ep ->
-                val epTitle = ep.text()
-                val epUrl = fixUrl(ep.attr("href"))
-                Episode(epUrl, epTitle)
-            }
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                this.posterUrl = poster
-                this.year = year
-                this.plot = plot
-                this.tags = genres
-                this.trailerUrl = trailer
-            }
-        } else {
-            // Untuk movie
-            newMovieLoadResponse(title, url, TvType.Movie, url) {
-                this.posterUrl = poster
-                this.year = year
-                this.plot = plot
-                this.tags = genres
-                this.trailerUrl = trailer
-            }
+        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+            this.posterUrl = poster
+            this.year = year
+            this.plot = plot
+            this.tags = genres
+            this.trailerUrl = trailer
         }
     }
 
