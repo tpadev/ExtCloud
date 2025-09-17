@@ -119,20 +119,16 @@ class Klikxxi : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
 
-        // DEBUG: tampilkan semua iframe
-        document.select("iframe").forEachIndexed { idx, frame ->
-            val src = frame.attr("src")
-            println("DEBUG: iframe[$idx] -> $src")
-        }
-
+        // cari iframe di halaman
         document.select("iframe").forEach { frame ->
-            val src = listOf("data-src", "data-litespeed-src", "src")
-                .firstNotNullOfOrNull { key -> frame.attr(key).takeIf { it.isNotBlank() } }
-                ?: return@forEach
-            val link = fixUrl(src)
-            val referer = runCatching { getBaseUrl(link) }.getOrDefault(mainUrl) + "/"
-            loadExtractor(link, referer, subtitleCallback) { extLink ->
-                callback(extLink)
+            val src = frame.attr("src").ifBlank { frame.attr("data-src") }
+            if (src.isNotBlank()) {
+                val link = fixUrl(src)
+
+                // khusus iframe VOE atau domain mirror-nya
+                if (link.contains("voe.sx") || link.contains("jilliandescribecompany.com")) {
+                    loadExtractor(link, getBaseUrl(data), subtitleCallback, callback)
+                }
             }
         }
         return true
