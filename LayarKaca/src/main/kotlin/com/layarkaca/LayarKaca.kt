@@ -1,6 +1,7 @@
 package com.layarkaca
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
@@ -29,68 +30,48 @@ class LayarKaca : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get(request.data.format(page)).document
-        val home = when {
-            request.data.contains(mainUrl) -> {
-                // FILM
-                document.select("div.gallery-grid article").mapNotNull { it.toMovieResult() }
-            }
-            request.data.contains(seriesUrl) -> {
-                // SERIES
-                document.select("article.item, div.ml-item").mapNotNull { it.toSeriesResult() }
-            }
-            else -> emptyList()
-        }
+        val home = document.select("article.mega-item, article.item, div.ml-item")
+            .mapNotNull { it.toSearchResult() }
         return newHomePageResponse(request.name, home)
     }
 
-    // 🔹 Parsing Movie Result
-    private fun Element.toMovieResult(): SearchResponse? {
-        val aTag = selectFirst("a[itemprop=url]") ?: return null
-        val href = fixUrl(aTag.attr("href"))
-        val title = selectFirst("h3.poster-title")?.text()?.trim() ?: return null
-        val poster = selectFirst("img[itemprop=image]")?.attr("src")?.let { fixUrlNull(it) }
-        val quality = selectFirst("span.label")?.text()?.trim().orEmpty()
-        val year = selectFirst("span.year")?.text()?.toIntOrNull()
+    private fun Element.toSearchResult(): SearchResponse? {
+        val title = selectFirst("h1.grid-title > a, h2.entry-title > a, h2 a")?.text()?.trim() ?: return null
+        val href = fixUrl(selectFirst("a")?.attr("href") ?: return null)
+        val poster = fixUrlNull(selectFirst("img")?.getImageAttr())
+        val quality = select("div.quality, span.mli-quality").text().trim()
+        val isSeries = selectFirst("div.last-episode, span.mli-episode") != null || href.contains("/series/", true)
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = poster
-            this.year = year
-            if (quality.isNotBlank()) addQuality(quality)
-        }
-    }
-
-    // 🔹 Parsing Series Result (nontondrama)
-    private fun Element.toSeriesResult(): SearchResponse? {
-        val aTag = selectFirst("a") ?: return null
-        val href = fixUrl(aTag.attr("href"))
-        val title = selectFirst("h2.entry-title a, h1.grid-title a, h3")?.text()?.trim() ?: return null
-        val poster = selectFirst("img")?.getImageAttr()?.let { fixUrlNull(it) }
-
-        return newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-            this.posterUrl = poster
+        return if (isSeries) {
+            newTvSeriesSearchResponse(title, href, TvType.TvSeries) { this.posterUrl = poster }
+        } else {
+            newMovieSearchResponse(title, href, TvType.Movie) {
+                this.posterUrl = poster
+                if (quality.isNotBlank()) addQuality(quality)
+            }
         }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query").document
-        return document.select("div.gallery-grid article, article.item, div.ml-item")
-            .mapNotNull {
-                it.toMovieResult() ?: it.toSeriesResult()
-            }
+        return document.select("article.mega-item, article.item, div.ml-item")
+            .mapNotNull { it.toSearchResult() }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-        val title = document.selectFirst("h1.entry-title, div.mvic-desc h3")?.text()?.trim().orEmpty()
-        val poster = document.selectFirst("img[src]")?.getImageAttr()?.let { fixUrlNull(it) }
-        val description = document.selectFirst("div[itemprop=description], div.desc, blockquote")?.text()?.trim()
-        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) a, div.content h3 a").map { it.text() }
-        val year = document.select("span.year, div.gmr-moviedata strong:contains(Year:) a").text().toIntOrNull()
-        val trailer = document.selectFirst("a.gmr-trailer-popup, a.fancybox")?.attr("href")
-        val rating = document.selectFirst("span[itemprop=ratingValue]")?.text()?.toRatingInt()
-        val actors = document.select("span[itemprop=actors] a, div.col-xs-9.content h3 a").map { it.text() }
 
-        val episodes = document.select("div.vid-episodes a, div.gmr-listseries a, div.episode-list a")
+        val title = document.selectFirst("h1.entry-title, h1.title, div.mvic-desc h3")?.text()?.trim().orEmpty()
+        val poster = document.selectFirst("img.wp-post-image, img.img-thumbnail")?.getImageAttr()?.let { fixUrlNull(it) }
+        val description = document.selectFirst("div[itemprop=description], div.desc, div#info p, blockquote")?.text()?.trim()
+        val year = document.select("span.year, div#info span:matches(\\d{4})").text().toIntOrNull()
+        val tags = document.select("div.genres a, div.gmr-moviedata a, div.content h3 a").map { it.text() }
+        val trailer = document.selectFirst("a.trailer, a.fancybox, a.gmr-trailer-popup")?.attr("href")
+        val rating = document.selectFirst("span[itemprop=ratingValue], span.rating")?.text()?.toRatingInt()
+        val actors = document.select("span[itemprop=actors] a, div.cast a").map { it.text() }
+
+        // cek apakah ini series
+        val episodes = document.select("div.episode-list a, ul.episodios li a, div#episodes a")
             .mapNotNull { ep ->
                 val href = fixUrl(ep.attr("href"))
                 val name = ep.text()
@@ -131,14 +112,26 @@ class LayarKaca : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
+
+        // iframe player
         val iframes = document.select("iframe[src], iframe[data-src], div.gmr-embed-responsive iframe")
         iframes.forEach { iframe ->
-            val src = listOf("data-src", "src").firstNotNullOfOrNull { iframe.attr(it).takeIf { v -> v.isNotBlank() } }
-                ?: return@forEach
-            val link = fixUrl(src)
+            val src = iframe.attr("src").ifBlank { iframe.attr("data-src") }
+            if (src.isNotBlank()) {
+                val link = fixUrl(src)
+                val referer = getBaseUrl(link) + "/"
+                loadExtractor(link, referer, subtitleCallback, callback)
+            }
+        }
+
+        // tombol mirror unduh
+        val mirrors = document.select("a[href*=/e/], a.mirror_link, div#download a, ul#loadProviders li a")
+        mirrors.forEach { a ->
+            val link = fixUrl(a.attr("href"))
             val referer = getBaseUrl(link) + "/"
             loadExtractor(link, referer, subtitleCallback, callback)
         }
+
         return true
     }
 
@@ -152,7 +145,6 @@ class LayarKaca : MainAPI() {
     }
 
     private fun getBaseUrl(url: String): String {
-        return kotlin.runCatching { java.net.URI(url).let { "${it.scheme}://${it.host}" } }
-            .getOrDefault(mainUrl)
+        return kotlin.runCatching { java.net.URI(url).let { "${it.scheme}://${it.host}" } }.getOrDefault(mainUrl)
     }
 }
