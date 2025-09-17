@@ -107,8 +107,24 @@ class MovieBoxProviderIN : MainAPI() {
     ): String {
         val timestamp = hardcodedTimestamp ?: System.currentTimeMillis()
         val canonical = buildCanonicalString(method, accept, contentType, url, body, timestamp)
-        val secret = if (useAltKey) secretKeyAlt else secretKeyDefault
-        val secretBytes = base64DecodeArray(secret)
+        // Choose key: prefer requested key, fallback to the other if empty
+        val candidate = if (useAltKey) secretKeyAlt else secretKeyDefault
+        val secret = if (candidate.isNotBlank()) candidate else if (useAltKey) secretKeyDefault else secretKeyAlt
+
+        // If no key provided, throw a clear error so callers know how to fix it
+        if (secret.isBlank()) {
+            throw IllegalStateException(
+                "Missing MovieBox secret key. Set environment variable MOVIEBOX_SECRET_DEFAULT or MOVIEBOX_SECRET_ALT, or provide project properties."
+            )
+        }
+
+        // Try base64 decode first; if it yields empty or fails, fall back to using raw UTF-8 bytes
+        val secretBytes = try {
+            val decoded = base64DecodeArray(secret)
+            if (decoded.isEmpty()) secret.toByteArray(Charsets.UTF_8) else decoded
+        } catch (e: Exception) {
+            secret.toByteArray(Charsets.UTF_8)
+        }
 
         val mac = Mac.getInstance("HmacMD5")
         mac.init(SecretKeySpec(secretBytes, "HmacMD5"))
