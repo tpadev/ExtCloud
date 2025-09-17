@@ -23,7 +23,6 @@ class LayarKaca : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get(request.data.format(page)).document
 
-        // ambil semua card movie
         val home = document.select("article.ml-item, div.ml-item")
             .mapNotNull { it.toSearchResult() }
 
@@ -74,7 +73,6 @@ class LayarKaca : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
 
-        // ambil iframe player
         val iframes = document.select("iframe[src], iframe[data-src]")
         iframes.forEach { frame ->
             val src = listOf("data-src", "src")
