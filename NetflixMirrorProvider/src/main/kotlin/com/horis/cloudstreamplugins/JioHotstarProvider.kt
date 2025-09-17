@@ -224,15 +224,15 @@ class JioHotstarProvider : MainAPI() {
         playlist.forEach { item ->
             item.sources.forEach {
                 callback.invoke(
-                    newExtractorLink(
-                        name,
-                        it.label,
-                        fixUrl(it.file),
+                    ExtractorLink(
+                        source = this@JioHotstarProvider.name,
+                        name = it.label,
+                        url = fixUrl(it.file),
+                        referer = "$mainUrl/tv/home",
+                        quality = getQualityFromName(it.file.substringAfter("q=", "")),
+                        headers = mapOf(),
                         type = ExtractorLinkType.M3U8
-                    ) {
-                        this.referer = "$mainUrl/tv/home"
-                        this.quality = getQualityFromName(it.file.substringAfter("q=", ""))
-                    }
+                    )
                 )
             }
 

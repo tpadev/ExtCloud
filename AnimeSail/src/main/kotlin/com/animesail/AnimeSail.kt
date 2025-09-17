@@ -4,10 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.mvvm.safeApiCall
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.nicehttp.NiceResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -227,14 +224,14 @@ class AnimeSail : MainAPI() {
                                         else -> this.name
                                     }
                                 callback.invoke(
-                                    newExtractorLink(
-                                        source,
-                                        source,
-                                        link,
-                                    ) {
-                                        this.referer = mainUrl
-                                        this.quality = getIndexQuality(it.text())
-                                    }
+                                    ExtractorLink(
+                                        source = source,
+                                        name = source,
+                                        url = link,
+                                        referer = mainUrl,
+                                        quality = getIndexQuality(it.text()),
+                                        type = ExtractorLinkType.VIDEO
+                                    )
                                 )
                             }
                     //                    skip for now
@@ -287,16 +284,16 @@ class AnimeSail : MainAPI() {
         loadExtractor(url, referer, subtitleCallback) { link ->
             CoroutineScope(Dispatchers.IO).launch {
                 callback.invoke(
-                    newExtractorLink(
-                        name,
-                        name,
-                        link.url,
-                    ) {
-                        this.referer = link.referer
-                        this.type = link.type
-                        this.extractorData = link.extractorData
-                        this.headers = link.headers
-                    }
+                    ExtractorLink(
+                        source = name,
+                        name = name,
+                        url = link.url,
+                        referer = link.referer,
+                        quality = link.quality,
+                        type = link.type,
+                        extractorData = link.extractorData,
+                        headers = link.headers
+                    )
                 )
             }
         }

@@ -8,7 +8,6 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.MainPageRequest
-import com.lagradost.cloudstream3.Score
 import com.lagradost.cloudstream3.SearchQuality
 import com.lagradost.cloudstream3.SearchResponse
 import com.lagradost.cloudstream3.SubtitleFile
@@ -75,11 +74,11 @@ class Funmovieslix : MainAPI() {
             fixUrlNull(bestUrl?.replace(Regex("-\\d+x\\d+"), ""))
         }
         val searchQuality = getSearchQuality(this)
-        val score=this.select("div.rating-stars").text().substringAfter("(").substringBefore(")")
+            val score=this.select("div.rating-stars").text().substringAfter("(").substringBefore(")")
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             this.quality = searchQuality
-            this.score=Score.from10(score)
+            // Score helper not available in this environment; omit score assignment
         }
     }
 
