@@ -125,6 +125,11 @@ class MovieBoxProviderIN : MainAPI() {
             secret.toByteArray(Charsets.UTF_8)
         }
 
+        // Defensive: if secretBytes is empty, avoid initializing SecretKeySpec with empty key
+        if (secretBytes.isEmpty()) {
+            return "$timestamp|2|"
+        }
+
         val mac = Mac.getInstance("HmacMD5")
         mac.init(SecretKeySpec(secretBytes, "HmacMD5"))
         val signature = mac.doFinal(canonical.toByteArray(Charsets.UTF_8))
