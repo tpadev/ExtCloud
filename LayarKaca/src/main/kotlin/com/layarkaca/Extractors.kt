@@ -10,6 +10,9 @@ import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+/**
+ * Extractor untuk host emturbovid
+ */
 open class Emturbovid : ExtractorApi() {
     override val name = "Emturbovid"
     override val mainUrl = "https://emturbovid.com"
@@ -29,11 +32,18 @@ open class Emturbovid : ExtractorApi() {
                 ?.getOrNull(1)
 
         if (!m3u8.isNullOrBlank()) {
-            M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
+            M3u8Helper.generateM3u8(
+                source = name,
+                streamUrl = m3u8,
+                referer = mainUrl
+            ).forEach(callback)
         }
     }
 }
 
+/**
+ * Extractor untuk host hownetwork
+ */
 open class Hownetwork : ExtractorApi() {
     override val name = "Hownetwork"
     override val mainUrl = "https://cloud.hownetwork.xyz"
@@ -62,10 +72,11 @@ open class Hownetwork : ExtractorApi() {
                     source = this@Hownetwork.name,
                     name = this@Hownetwork.name,
                     url = it.file,
-                    referer = url,
-                    quality = getQualityFromName(it.label),
                     type = INFER_TYPE
-                )
+                ) {
+                    this.referer = url
+                    this.quality = getQualityFromName(it.label)
+                }
             )
         }
     }
@@ -78,6 +89,9 @@ open class Hownetwork : ExtractorApi() {
     }
 }
 
+/**
+ * Extractor untuk filemoon (turunan dari Filesim bawaan Cloudstream)
+ */
 class FileMoon : Filesim() {
     override val name = "FileMoon"
     override var mainUrl = "https://filemoon.sx"
