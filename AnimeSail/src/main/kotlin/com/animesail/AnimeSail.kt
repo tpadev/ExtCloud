@@ -9,6 +9,9 @@ import com.lagradost.nicehttp.NiceResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.SubtitleFile
@@ -203,67 +206,70 @@ class AnimeSail : MainAPI() {
 
         val document = request(data).document
 
-        document.select(".mobius > .mirror > option").apmap {
-            safeApiCall {
-                val iframe =
-                    fixUrl(
-                        Jsoup.parse(base64Decode(it.attr("data-em")))
-                            .select("iframe")
-                            .attr("src")
-                    )
-                val quality = getIndexQuality(it.text())
-                when {
-                    iframe.startsWith("$mainUrl/utils/player/arch/") ||
-                            iframe.startsWith("$mainUrl/utils/player/race/") ->
-                        request(iframe, ref = data).document.select("source").attr("src")
-                            .let { link ->
-                                val source =
-                                    when {
-                                        iframe.contains("/arch/") -> "Arch"
-                                        iframe.contains("/race/") -> "Race"
-                                        else -> this.name
-                                    }
-                                callback.invoke(
-                                    ExtractorLink(
-                                        source = source,
-                                        name = source,
-                                        url = link,
-                                        referer = mainUrl,
-                                        quality = getIndexQuality(it.text()),
-                                        type = ExtractorLinkType.VIDEO
-                                    )
-                                )
-                            }
-                    //                    skip for now
-                    //                    iframe.startsWith("$mainUrl/utils/player/fichan/") -> ""
-                    //                    iframe.startsWith("$mainUrl/utils/player/blogger/") -> ""
-                    iframe.startsWith("https://aghanim.xyz/tools/redirect/") -> {
-                        val link =
-                            "https://rasa-cintaku-semakin-berantai.xyz/v/${
-                                iframe.substringAfter("id=").substringBefore("&token")
-                            }"
-                        loadFixedExtractor(link, quality, mainUrl, subtitleCallback, callback)
-                    }
-
-                    iframe.startsWith("$mainUrl/utils/player/framezilla/") ||
-                            iframe.startsWith("https://uservideo.xyz") -> {
-                        request(iframe, ref = data).document.select("iframe").attr("src").let { link
-                            ->
-                            loadFixedExtractor(
-                                fixUrl(link),
-                                quality,
-                                mainUrl,
-                                subtitleCallback,
-                                callback
+        // Replace blocking apmap with coroutine-friendly concurrent processing
+        coroutineScope {
+            val jobs = document.select(".mobius > .mirror > option").map { element ->
+                async {
+                    safeApiCall {
+                        val iframe =
+                            fixUrl(
+                                Jsoup.parse(base64Decode(element.attr("data-em")))
+                                    .select("iframe")
+                                    .attr("src")
                             )
-                        }
-                    }
+                        val quality = getIndexQuality(element.text())
+                        when {
+                            iframe.startsWith("$mainUrl/utils/player/arch/") ||
+                                    iframe.startsWith("$mainUrl/utils/player/race/") ->
+                                request(iframe, ref = data).document.select("source").attr("src")
+                                    .let { link ->
+                                        val source =
+                                            when {
+                                                iframe.contains("/arch/") -> "Arch"
+                                                iframe.contains("/race/") -> "Race"
+                                                else -> this@AnimeSail.name
+                                            }
+                                        callback.invoke(
+                                            ExtractorLink(
+                                                source = source,
+                                                name = source,
+                                                url = link,
+                                                referer = mainUrl,
+                                                quality = getIndexQuality(element.text()),
+                                                type = ExtractorLinkType.VIDEO
+                                            )
+                                        )
+                                    }
+                            iframe.startsWith("https://aghanim.xyz/tools/redirect/") -> {
+                                val link =
+                                    "https://rasa-cintaku-semakin-berantai.xyz/v/${
+                                        iframe.substringAfter("id=").substringBefore("&token")
+                                    }"
+                                loadFixedExtractor(link, quality, mainUrl, subtitleCallback, callback)
+                            }
 
-                    else -> {
-                        loadFixedExtractor(iframe, quality, mainUrl, subtitleCallback, callback)
+                            iframe.startsWith("$mainUrl/utils/player/framezilla/") ||
+                                    iframe.startsWith("https://uservideo.xyz") -> {
+                                request(iframe, ref = data).document.select("iframe").attr("src").let { link
+                                    ->
+                                    loadFixedExtractor(
+                                        fixUrl(link),
+                                        quality,
+                                        mainUrl,
+                                        subtitleCallback,
+                                        callback
+                                    )
+                                }
+                            }
+
+                            else -> {
+                                loadFixedExtractor(iframe, quality, mainUrl, subtitleCallback, callback)
+                            }
+                        }
                     }
                 }
             }
+            jobs.awaitAll()
         }
 
         return true
