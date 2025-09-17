@@ -111,11 +111,10 @@ class MovieBoxProviderIN : MainAPI() {
         val candidate = if (useAltKey) secretKeyAlt else secretKeyDefault
         val secret = if (candidate.isNotBlank()) candidate else if (useAltKey) secretKeyDefault else secretKeyAlt
 
-        // If no key provided, throw a clear error so callers know how to fix it
+        // If no key provided, avoid throwing (prevents app crash) and return an empty signature.
+        // Upstream callers will receive a timestamped-but-empty signature and should handle API errors gracefully.
         if (secret.isBlank()) {
-            throw IllegalStateException(
-                "Missing MovieBox secret key. Set environment variable MOVIEBOX_SECRET_DEFAULT or MOVIEBOX_SECRET_ALT, or provide project properties."
-            )
+            return "$timestamp|2|"
         }
 
         // Try base64 decode first; if it yields empty or fails, fall back to using raw UTF-8 bytes
