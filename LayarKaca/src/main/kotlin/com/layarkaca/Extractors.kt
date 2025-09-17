@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.layarkaca
 
 import com.lagradost.cloudstream3.SubtitleFile
