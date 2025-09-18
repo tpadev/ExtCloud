@@ -2,6 +2,7 @@ package com.dutamovie
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.SearchResponse
@@ -15,7 +16,7 @@ import org.jsoup.nodes.Element
 
 class DutaMovie : MainAPI() {
 
-    override var mainUrl = "https://tuggycomputer.com/"
+    override var mainUrl = "https://justilien.com/"
     private var directUrl: String? = null
     override var name = "DutaMovie"
     override val hasMainPage = true
@@ -108,7 +109,7 @@ class DutaMovie : MainAPI() {
         val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
         val rating =
                 document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")
-                        ?.text()?.trim()?.toRatingInt()
+                        ?.text()?.trim()
         val actors =
                 document.select("div.gmr-moviedata").last()?.select("span[itemprop=actors]")?.map {
                     it.select("a").text()
@@ -145,7 +146,7 @@ class DutaMovie : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                this.rating = rating
+                addScore(rating)
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
@@ -156,7 +157,7 @@ class DutaMovie : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                this.rating = rating
+                addScore(rating)
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
@@ -234,8 +235,3 @@ class DutaMovie : MainAPI() {
         return URI(url).let { "${it.scheme}://${it.host}" }
     }
 }
-
-
-
-
-
