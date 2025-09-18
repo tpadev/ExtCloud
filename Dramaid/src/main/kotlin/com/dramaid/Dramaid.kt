@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.dramaid.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -140,6 +141,7 @@ open class Dramaid : MainAPI() {
         @JsonProperty("default") val default: Boolean?
     )
 
+    @Suppress("DEPRECATION", "DEPRECATION_ERROR")
     private suspend fun invokeDriveSource(
         url: String,
         name: String,
@@ -154,16 +156,16 @@ open class Dramaid : MainAPI() {
         val tracks = "[${server.substringAfter("tracks:[")
             .substringBefore("],")}]"
 
-        tryParseJson<List<Sources>>(sources)?.map {
+        tryParseJson<List<Sources>>(sources)?.forEach {
             sourceCallback(
-                ExtractorLink(
+                newExtractorLink(
                     this.name,
                     "GDrivePlayer",
-                    fixUrl(it.file),
-                    url,
-                    getQualityFromName(it.label),
-                    if (fixUrl(it.file).endsWith(".m3u8", true) || it.type.equals("hls", true)) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                )
+                    fixUrl(it.file)
+                ) {
+                    this.referer = url
+                    this.quality = getQualityFromName(it.label)
+                }
             )
         }
 
