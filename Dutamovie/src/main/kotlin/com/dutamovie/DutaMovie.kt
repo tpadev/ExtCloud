@@ -234,6 +234,7 @@ class DutaMovie : MainAPI() {
                     val host = runCatching { URI(link).host?.removePrefix("www.") }.getOrNull()
                     if (host == null || host !in fallbackHostBlacklist) {
                         val displayName = anchor.text().ifBlank { host ?: "Download" }
+                        @Suppress("DEPRECATION")
                         callback(
                                 ExtractorLink(
                                         source = name,
@@ -300,6 +301,11 @@ class DutaMovie : MainAPI() {
         return URI(url).let { "${it.scheme}://${it.host}" }
     }
 }
+
+
+
+
+
 
 
 
