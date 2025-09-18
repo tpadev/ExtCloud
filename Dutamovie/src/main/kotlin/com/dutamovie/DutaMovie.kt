@@ -8,9 +8,10 @@ import com.lagradost.cloudstream3.SearchResponse
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import java.net.URI
 import kotlin.math.roundToInt
 import org.jsoup.nodes.Element
@@ -239,6 +240,8 @@ class DutaMovie : MainAPI() {
                                     this.referer = referer
                                     this.quality = Qualities.Unknown.value
                                     this.isM3u8 = link.contains(".m3u8", true)
+                                    this.headers = emptyMap()
+                                    this.extractorData = null
                                 }
                         )
                     }
@@ -275,34 +278,6 @@ class DutaMovie : MainAPI() {
                 ?: this?.attr("src")
     }
 
-
-    private inline fun newExtractorLink(
-            source: String,
-            name: String,
-            url: String,
-            block: ExtractorLinkBuilder.() -> Unit
-    ): ExtractorLink {
-        val builder = ExtractorLinkBuilder(source, name, url)
-        builder.block()
-        return builder.build()
-    }
-
-    private class ExtractorLinkBuilder(
-            private val source: String,
-            private val name: String,
-            private val url: String
-    ) {
-        var referer: String = ""
-        var quality: Int = Qualities.Unknown.value
-        var isM3u8: Boolean = false
-        var headers: Map<String, String> = emptyMap()
-        var extractorData: String? = null
-
-        @Suppress("DEPRECATION")
-        fun build(): ExtractorLink {
-            return ExtractorLink(source, name, url, referer, quality, isM3u8, headers, extractorData)
-        }
-    }
     private fun String?.toRatingInt(): Int? {
         if (this.isNullOrBlank()) return null
         val normalized = this.replace(',', '.').trim()
