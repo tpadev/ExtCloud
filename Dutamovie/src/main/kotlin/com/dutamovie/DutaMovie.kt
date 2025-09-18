@@ -2,7 +2,6 @@ package com.dutamovie
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.SearchResponse
@@ -11,12 +10,15 @@ import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.Qualities
 import java.net.URI
+import kotlin.math.roundToInt
 import org.jsoup.nodes.Element
+import org.jsoup.nodes.Document
 
 class DutaMovie : MainAPI() {
 
-    override var mainUrl = "https://justilien.com/"
+    override var mainUrl = "https://justilien.com"
     private var directUrl: String? = null
     override var name = "DutaMovie"
     override val hasMainPage = true
@@ -109,7 +111,7 @@ class DutaMovie : MainAPI() {
         val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
         val rating =
                 document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")
-                        ?.text()?.trim()
+                        ?.text()?.toRatingInt()
         val actors =
                 document.select("div.gmr-moviedata").last()?.select("span[itemprop=actors]")?.map {
                     it.select("a").text()
@@ -146,7 +148,7 @@ class DutaMovie : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                addScore(rating)
+                this.rating = rating
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
@@ -157,7 +159,7 @@ class DutaMovie : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                addScore(rating)
+                this.rating = rating
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
@@ -165,50 +167,101 @@ class DutaMovie : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(
+        override suspend fun loadLinks(
             data: String,
             isCasting: Boolean,
             subtitleCallback: (SubtitleFile) -> Unit,
             callback: (ExtractorLink) -> Unit
     ): Boolean {
+        val referer = directUrl?.let { if (it.endsWith("/")) it else "$it/" } ?: mainUrl
+        val baseResponse = app.get(data)
+        val baseDocument = baseResponse.document
+        val streamVisited = mutableSetOf<String>()
+        val downloadVisited = mutableSetOf<String>()
+        val switchRegex = Regex("switchVideo\\(['\"](.*?)['\"]\\)", RegexOption.IGNORE_CASE)
+        val fallbackHostBlacklist = setOf("embedpyrox.xyz", "helvid.net", "pm21.p2pplay.pro")
 
-        val document = app.get(data).document
-        val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
-
-        if (id.isNullOrEmpty()) {
-            document.select("ul.muvipro-player-tabs li a").amap { ele ->
-                val iframe =
-                        app.get(fixUrl(ele.attr("href")))
-                                .document
-                                .selectFirst("div.gmr-embed-responsive iframe")
-                                .getIframeAttr()
-                                ?.let { httpsify(it) }
-                                ?: return@amap
-
-                loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
-            }
-        } else {
-            document.select("div.tab-content-ajax").amap { ele ->
-                val server =
-                        app.post(
-                                        "$directUrl/wp-admin/admin-ajax.php",
-                                        data =
-                                                mapOf(
-                                                        "action" to "muvipro_player_content",
-                                                        "tab" to ele.attr("id"),
-                                                        "post_id" to "$id"
-                                                )
-                                )
-                                .document
-                                .select("iframe")
-                                .attr("src")
-                                .let { httpsify(it) }
-
-                loadExtractor(server, "$directUrl/", subtitleCallback, callback)
+        fun resolveUrl(rawUrl: String?): String? {
+            if (rawUrl.isNullOrBlank()) return null
+            val trimmed = rawUrl.trim()
+            if (trimmed == "#" || trimmed.startsWith("javascript", ignoreCase = true)) return null
+            return when {
+                trimmed.startsWith("//") -> httpsify("https:$trimmed")
+                trimmed.startsWith("http", ignoreCase = true) -> httpsify(trimmed)
+                else -> runCatching {
+                    val base = (directUrl ?: mainUrl).let { if (it.endsWith("/")) it else "$it/" }
+                    httpsify(URI(base).resolve(trimmed).toString())
+                }.getOrNull()
             }
         }
 
-        return true
+        suspend fun handlePage(document: Document) {
+            val embedCandidates = linkedSetOf<String>()
+
+            document.select("div.gmr-embed-responsive iframe, div.gmr-pagi-player iframe, iframe[data-litespeed-src], iframe#video-frame")
+                    .forEach { iframe ->
+                        resolveUrl(iframe.getIframeAttr())?.let(embedCandidates::add)
+                    }
+
+            document.select("[data-video]").forEach { element ->
+                resolveUrl(element.attr("data-video"))?.let(embedCandidates::add)
+            }
+
+            document.select("[onclick*=switchVideo]").forEach { element ->
+                switchRegex.findAll(element.attr("onclick")).forEach { match ->
+                    resolveUrl(match.groupValues.getOrNull(1))?.let(embedCandidates::add)
+                }
+            }
+
+            document.select("script").forEach { element ->
+                switchRegex.findAll(element.data()).forEach { match ->
+                    resolveUrl(match.groupValues.getOrNull(1))?.let(embedCandidates::add)
+                }
+            }
+
+            embedCandidates.forEach { url ->
+                if (streamVisited.add(url)) {
+                    loadExtractor(url, referer, subtitleCallback, callback)
+                }
+            }
+
+            document.select("#gmr-id-download a[href], .gmr-download-list a[href]").forEach { anchor ->
+                val link = resolveUrl(anchor.attr("href")) ?: return@forEach
+                if (downloadVisited.add(link)) {
+                    if (!streamVisited.contains(link)) {
+                        loadExtractor(link, referer, subtitleCallback, callback)
+                    }
+                    val host = runCatching { URI(link).host?.removePrefix("www.") }.getOrNull()
+                    if (host == null || host !in fallbackHostBlacklist) {
+                        val displayName = anchor.text().ifBlank { host ?: "Download" }
+                        callback(
+                                ExtractorLink(
+                                        source = name,
+                                        name = "$displayName (Download)",
+                                        url = link,
+                                        referer = referer,
+                                        quality = Qualities.Unknown.value,
+                                        isM3u8 = link.contains(".m3u8", true)
+                                )
+                        )
+                    }
+                }
+            }
+        }
+
+        val pageUrls = buildList {
+            add(data)
+            baseDocument.select("ul.muvipro-player-tabs li a[href]")
+                    .mapNotNull { resolveUrl(it.attr("href")) }
+                    .forEach { add(it) }
+        }.distinct()
+
+        pageUrls.amap { pageUrl ->
+            val document = if (pageUrl.equals(data, ignoreCase = true)) baseDocument else app.get(pageUrl).document
+            handlePage(document)
+        }
+
+        return streamVisited.isNotEmpty() || downloadVisited.isNotEmpty()
     }
 
     private fun Element.getImageAttr(): String {
@@ -225,6 +278,18 @@ class DutaMovie : MainAPI() {
                 ?: this?.attr("src")
     }
 
+
+    private fun String?.toRatingInt(): Int? {
+        if (this.isNullOrBlank()) return null
+        val normalized = this.replace(',', '.').trim()
+        val percentValue = normalized.removeSuffix("%").toIntOrNull()
+        if (normalized.endsWith("%") && percentValue != null) {
+            return percentValue
+        }
+        val value = normalized.toFloatOrNull() ?: return null
+        return (value * 10).roundToInt()
+    }
+
     private fun String?.fixImageQuality(): String? {
         if (this == null) return null
         val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues?.get(0) ?: return this
@@ -235,3 +300,16 @@ class DutaMovie : MainAPI() {
         return URI(url).let { "${it.scheme}://${it.host}" }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
