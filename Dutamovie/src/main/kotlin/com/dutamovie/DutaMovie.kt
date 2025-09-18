@@ -234,16 +234,12 @@ class DutaMovie : MainAPI() {
                     val host = runCatching { URI(link).host?.removePrefix("www.") }.getOrNull()
                     if (host == null || host !in fallbackHostBlacklist) {
                         val displayName = anchor.text().ifBlank { host ?: "Download" }
-                        @Suppress("DEPRECATION")
                         callback(
-                                ExtractorLink(
-                                        source = name,
-                                        name = "$displayName (Download)",
-                                        url = link,
-                                        referer = referer,
-                                        quality = Qualities.Unknown.value,
-                                        isM3u8 = link.contains(".m3u8", true)
-                                )
+                                newExtractorLink(name, "$displayName (Download)", link) {
+                                    this.referer = referer
+                                    this.quality = Qualities.Unknown.value
+                                    this.isM3u8 = link.contains(".m3u8", true)
+                                }
                         )
                     }
                 }
@@ -280,6 +276,33 @@ class DutaMovie : MainAPI() {
     }
 
 
+    private inline fun newExtractorLink(
+            source: String,
+            name: String,
+            url: String,
+            block: ExtractorLinkBuilder.() -> Unit
+    ): ExtractorLink {
+        val builder = ExtractorLinkBuilder(source, name, url)
+        builder.block()
+        return builder.build()
+    }
+
+    private class ExtractorLinkBuilder(
+            private val source: String,
+            private val name: String,
+            private val url: String
+    ) {
+        var referer: String = ""
+        var quality: Int = Qualities.Unknown.value
+        var isM3u8: Boolean = false
+        var headers: Map<String, String> = emptyMap()
+        var extractorData: String? = null
+
+        @Suppress("DEPRECATION")
+        fun build(): ExtractorLink {
+            return ExtractorLink(source, name, url, referer, quality, isM3u8, headers, extractorData)
+        }
+    }
     private fun String?.toRatingInt(): Int? {
         if (this.isNullOrBlank()) return null
         val normalized = this.replace(',', '.').trim()
@@ -301,6 +324,9 @@ class DutaMovie : MainAPI() {
         return URI(url).let { "${it.scheme}://${it.host}" }
     }
 }
+
+
+
 
 
 
