@@ -1,19 +1,25 @@
-
 package com.dramaid
 
+import android.content.Context
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
-import android.content.Context
+
+// Import extractor2 kamu
+import com.dramaid.extractors.GdriveWebId
 import com.dramaid.extractors.Vanfem
 import com.dramaid.extractors.Filelions
 import com.dramaid.extractors.Gcam
 
 @CloudstreamPlugin
-class DramaidPlugin: Plugin() {
+class DramaidPlugin : Plugin() {
     override fun load(context: Context) {
-        // All providers should be added in this manner. Please don't edit the providers list directly.
+        // Provider utama
         registerMainAPI(Dramaid())
-    
+
+        // **Wajib** daftar extractor agar dipanggil loadExtractor()
+        registerExtractorAPI(GdriveWebId())  // <-- Tambahkan ini
+
+        // Extractor lain yang kamu gunakan
         registerExtractorAPI(Vanfem())
         registerExtractorAPI(Filelions())
         registerExtractorAPI(Gcam())
