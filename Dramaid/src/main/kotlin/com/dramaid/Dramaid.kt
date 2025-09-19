@@ -3,9 +3,7 @@ package com.dramaid
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
-import com.dramaid.utils.newExtractorLink
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
@@ -126,65 +124,6 @@ open class Dramaid : MainAPI() {
         }
     }
 
-    // ==== API Response Models ====
-    private data class ApiResponse(
-        @JsonProperty("sources") val sources: List<Source>?,
-        @JsonProperty("tracks") val tracks: List<Track>?
-    )
-
-    private data class Source(
-        @JsonProperty("file") val file: String?,
-        @JsonProperty("label") val label: String?,
-        @JsonProperty("type") val type: String?
-    )
-
-    private data class Track(
-        @JsonProperty("file") val file: String?,
-        @JsonProperty("label") val label: String?
-    )
-
-    // === invokeDriveSource ===
-    private suspend fun invokeDriveSource(
-        url: String,
-        subCallback: (SubtitleFile) -> Unit,
-        sourceCallback: (ExtractorLink) -> Unit
-    ) {
-        val id = url.substringAfterLast("/")
-        val apiUrl = "https://miku.gdrive.web.id/api/"
-
-        val payload = mapOf(
-            "query" to mapOf(
-                "source" to "db",
-                "id" to id,
-                "download" to ""
-            )
-        )
-
-        val json = app.post(apiUrl, json = payload).parsedSafe<ApiResponse>() ?: return
-
-        json.sources?.forEach { src ->
-            val videoUrl = src.file ?: return@forEach
-            sourceCallback(
-                newExtractorLink(
-                    this.name,
-                    src.label ?: "GDrive",
-                    videoUrl
-                ) {
-                    referer = url
-                    quality = getQualityFromName(src.label ?: "")
-                    isM3u8 = videoUrl.endsWith(".m3u8")
-                }
-            )
-        }
-
-        json.tracks?.forEach { tr ->
-            subCallback.invoke(
-                SubtitleFile(tr.label ?: "Subtitle", tr.file ?: return@forEach)
-            )
-        }
-    }
-
-    // === loadLinks ===
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -195,21 +134,15 @@ open class Dramaid : MainAPI() {
 
         val sources = document.select("#pembed iframe, .mirror > option").mapNotNull {
             val src = if (it.hasAttr("value")) {
-                Jsoup.parse(base64Decode(it.attr("value")))
-                    .select("iframe").attr("src")
+                Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
             } else {
                 it.attr("src")
             }
             fixUrlNull(src)
         }
 
-        sources.amap {
-            when {
-                it.contains("gdrive.web.id") -> {
-                    invokeDriveSource(it, subtitleCallback, callback)
-                }
-                else -> loadExtractor(it, "$mainUrl/", subtitleCallback, callback)
-            }
+        sources.amap { link ->
+            loadExtractor(link, "$mainUrl/", subtitleCallback, callback)
         }
 
         return true
