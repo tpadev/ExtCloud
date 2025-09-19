@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.dramaid.utils.newExtractorLink
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
@@ -158,14 +159,15 @@ open class Dramaid : MainAPI() {
         json.sources?.forEach {
             val videoUrl = it.file ?: return@forEach
             sourceCallback(
-                ExtractorLink(
-                    source = "GDrive",
-                    name = it.label ?: "Default",
-                    url = videoUrl,
-                    referer = url,
-                    quality = getQualityFromName(it.label ?: ""),
-                    isM3u8 = videoUrl.contains(".m3u8")
-                )
+                newExtractorLink(
+                    this.name,
+                    "GDrive",
+                    videoUrl
+                ) {
+                    this.referer = url
+                    this.quality = getQualityFromName(it.label ?: "")
+                    this.isM3u8 = videoUrl.contains(".m3u8")
+                }
             )
         }
 
