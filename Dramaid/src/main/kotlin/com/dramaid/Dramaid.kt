@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
-import com.dramaid.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
@@ -135,8 +135,7 @@ open class Dramaid : MainAPI() {
 
     private data class Source(
         @JsonProperty("file") val file: String?,
-        @JsonProperty("label") val label: String?,
-        @JsonProperty("type") val type: String?
+        @JsonProperty("label") val label: String?
     )
 
     private data class Track(
@@ -144,33 +143,43 @@ open class Dramaid : MainAPI() {
         @JsonProperty("label") val label: String?
     )
 
-    // === invokeDriveSource pakai endpoint /api/ ===
+    // === invokeDriveSource ===
     private suspend fun invokeDriveSource(
         url: String,
         subCallback: (SubtitleFile) -> Unit,
         sourceCallback: (ExtractorLink) -> Unit
     ) {
         val id = url.substringAfterLast("/")
-        val apiUrl = "https://miku.gdrive.web.id/api/"
+        val endpoints = listOf(
+            "https://miku.gdrive.web.id/api/",
+            "https://backup.gdrive.web.id/api/"
+        )
 
-        val json = app.post(apiUrl, data = mapOf("id" to id))
-            .parsedSafe<ApiResponse>() ?: return
+        for (apiUrl in endpoints) {
+            val json = app.post(apiUrl, data = mapOf("id" to id))
+                .parsedSafe<ApiResponse>() ?: continue
 
-        json.sources?.forEach { src ->
-            val videoUrl = src.file ?: return@forEach
-            sourceCallback(
-                newExtractorLink(this.name, src.label ?: "GDrive", videoUrl) {
-                    referer = url
-                    quality = getQualityFromName(src.label ?: "")
-                    isM3u8 = videoUrl.endsWith(".m3u8")
-                }
-            )
-        }
+            json.sources?.forEach { src ->
+                val videoUrl = src.file ?: return@forEach
+                sourceCallback(
+                    newExtractorLink(
+                        name,
+                        src.label ?: "GDrive",
+                        videoUrl
+                    ) {
+                        referer = url
+                        quality = getQualityFromName(src.label ?: "")
+                        isM3u8 = videoUrl.endsWith(".m3u8")
+                    }
+                )
+            }
 
-        json.tracks?.forEach { tr ->
-            subCallback.invoke(
-                SubtitleFile(tr.label ?: "Subtitle", tr.file ?: return@forEach)
-            )
+            json.tracks?.forEach { tr ->
+                subCallback(
+                    SubtitleFile(tr.label ?: "Subtitle", tr.file ?: return@forEach)
+                )
+            }
+            break
         }
     }
 
