@@ -35,7 +35,7 @@ class GdriveWebId : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        // ambil ID dari embed url, amanin biar gak kena error val
+        // Ambil ID sekali jalan, tanpa reassign
         val id = url.substringAfterLast("/").substringBefore("?")
 
         val payload = mapOf(
