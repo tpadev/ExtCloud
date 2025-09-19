@@ -2,13 +2,15 @@ package com.dramaid
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaType
 
 open class Dramaid : MainAPI() {
     override var mainUrl = "https://dramaid.nl"
@@ -42,8 +44,8 @@ open class Dramaid : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val doc = app.get("$mainUrl/series/?page=$page${request.data}").document
-        val home = doc.select("article[itemscope=itemscope]").mapNotNull {
+        val document = app.get("$mainUrl/series/?page=$page${request.data}").document
+        val home = document.select("article[itemscope=itemscope]").mapNotNull {
             it.toSearchResult()
         }
         return newHomePageResponse(request.name, home)
@@ -68,33 +70,39 @@ open class Dramaid : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val doc = app.get("$mainUrl/?s=$query").document
-        return doc.select("article[itemscope=itemscope]").mapNotNull {
+        val document = app.get("$mainUrl/?s=$query").document
+        return document.select("article[itemscope=itemscope]").mapNotNull {
             it.toSearchResult()
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val doc = app.get(url).document
-        val title = doc.selectFirst("h1.entry-title")?.text()?.trim() ?: ""
-        val poster = fixUrlNull(doc.select("div.thumb img:last-child").attr("src"))
-        val tags = doc.select(".genxed > a").map { it.text() }
-        val type = doc.selectFirst(".info-content .spe span:contains(Tipe:)")?.ownText()
+        val document = app.get(url).document
+
+        val title = document.selectFirst("h1.entry-title")?.text()?.trim() ?: ""
+        val poster = fixUrlNull(document.select("div.thumb img:last-child").attr("src"))
+        val tags = document.select(".genxed > a").map { it.text() }
+        val type = document.selectFirst(".info-content .spe span:contains(Tipe:)")?.ownText()
         val year = Regex("\\d, ([0-9]*)").find(
-            doc.selectFirst(".info-content > .spe > span > time")!!.text().trim()
-        )?.groupValues?.get(1)?.toIntOrNull()
+            document.selectFirst(".info-content > .spe > span > time")!!.text().trim()
+        )?.groupValues?.get(1).toString().toIntOrNull()
         val status = getStatus(
-            doc.select(".info-content > .spe > span:nth-child(1)")
+            document.select(".info-content > .spe > span:nth-child(1)")
                 .text().trim().replace("Status: ", "")
         )
-        val description = doc.select(".entry-content > p").text().trim()
+        val description = document.select(".entry-content > p").text().trim()
 
-        val episodes = doc.select(".eplister > ul > li").mapNotNull { ep ->
-            val anchor = ep.selectFirst("a") ?: return@mapNotNull null
+        val episodes = document.select(".eplister > ul > li").mapNotNull { episodeElement ->
+            val anchor = episodeElement.selectFirst("a") ?: return@mapNotNull null
             val link = fixUrl(anchor.attr("href"))
-            val episodeTitle = ep.selectFirst("a > .epl-title")?.text() ?: anchor.text()
+            val episodeTitle = episodeElement.selectFirst("a > .epl-title")?.text() ?: anchor.text()
+
             val episodeNumber = Regex("""(?:Episode|Eps)\s*(\d+)""", RegexOption.IGNORE_CASE)
-                .find(episodeTitle)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                .find(episodeTitle)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.toIntOrNull()
+
             newEpisode(link) {
                 this.name = episodeTitle
                 this.episode = episodeNumber
@@ -102,12 +110,15 @@ open class Dramaid : MainAPI() {
         }.reversed()
 
         val recommendations =
-            doc.select(".listupd > article[itemscope=itemscope]").mapNotNull { rec ->
+            document.select(".listupd > article[itemscope=itemscope]").mapNotNull { rec ->
                 rec.toSearchResult()
             }
 
         return newTvSeriesLoadResponse(
-            title, url, getType(type), episodes = episodes
+            title,
+            url,
+            getType(type),
+            episodes = episodes
         ) {
             posterUrl = poster
             this.year = year
@@ -118,7 +129,7 @@ open class Dramaid : MainAPI() {
         }
     }
 
-    // === JSON Response ===
+    // === DATA CLASS untuk API JSON ===
     private data class ApiResponse(
         @JsonProperty("sources") val sources: List<Source>?,
         @JsonProperty("tracks") val tracks: List<Track>?
@@ -126,7 +137,8 @@ open class Dramaid : MainAPI() {
 
     private data class Source(
         @JsonProperty("file") val file: String?,
-        @JsonProperty("label") val label: String?
+        @JsonProperty("label") val label: String?,
+        @JsonProperty("type") val type: String?
     )
 
     private data class Track(
@@ -134,27 +146,19 @@ open class Dramaid : MainAPI() {
         @JsonProperty("label") val label: String?
     )
 
-    // === API Call ===
+    // === invokeDriveSource pakai endpoint /api/ ===
     private suspend fun invokeDriveSource(
         url: String,
         subCallback: (SubtitleFile) -> Unit,
         sourceCallback: (ExtractorLink) -> Unit
     ) {
         val id = url.substringAfterLast("/").substringBefore("?")
-
-        val payload = """
-            {
-              "query": {
-                "source": "db",
-                "id": "$id",
-                "download": ""
-              }
-            }
-        """.trimIndent()
+        val payload = """{"query":{"source":"db","id":"$id","download":""}}"""
+        val body = payload.toRequestBody("application/json".toMediaType())
 
         val json = app.post(
             "https://miku.gdrive.web.id/api/",
-            requestBody = payload,
+            requestBody = body,
             headers = mapOf("Content-Type" to "application/json")
         ).parsedSafe<ApiResponse>() ?: return
 
@@ -186,19 +190,23 @@ open class Dramaid : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val doc = app.get(data).document
-        val sources = doc.select("#pembed iframe, .mirror > option").mapNotNull {
-            val src = if (it.hasAttr("value"))
+        val document = app.get(data).document
+
+        val sources = document.select("#pembed iframe, .mirror > option").mapNotNull {
+            val src = if (it.hasAttr("value")) {
                 Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
-            else it.attr("src")
+            } else {
+                it.attr("src")
+            }
             fixUrlNull(src)
         }
 
         sources.amap {
-            if (it.contains("gdrive.web.id")) {
-                invokeDriveSource(it, subtitleCallback, callback)
-            } else {
-                loadExtractor(it, "$mainUrl/", subtitleCallback, callback)
+            when {
+                it.contains("gdrive.web.id") -> {
+                    invokeDriveSource(it, subtitleCallback, callback)
+                }
+                else -> loadExtractor(it, "$mainUrl/", subtitleCallback, callback)
             }
         }
 
