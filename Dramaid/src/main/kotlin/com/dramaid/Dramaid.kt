@@ -71,43 +71,43 @@ open class Dramaid : MainAPI() {
     // ========= Ambil link dari API =========
 
     private suspend fun invokeDriveSource(
-        url: String,
-        subCallback: (SubtitleFile) -> Unit,
-        sourceCallback: (ExtractorLink) -> Unit
-    ) {
-        val id = url.substringAfterLast("/").substringBefore("?")
+    url: String,
+    subCallback: (SubtitleFile) -> Unit,
+    sourceCallback: (ExtractorLink) -> Unit
+) {
+    val id = url.substringAfterLast("/").substringBefore("?")
 
-        val payload = mapOf(
-            "query" to mapOf(
-                "source" to "db",
-                "id" to id,
-                "download" to ""
+    val apiUrl = "https://miku.gdrive.web.id/api/"
+    val payload = mapOf(
+        "query" to mapOf(
+            "source" to "db",
+            "id" to id,
+            "download" to ""
+        )
+    )
+
+    val json = app.post(apiUrl, data = payload, json = true)
+        .parsedSafe<ApiResponse>() ?: return
+
+    json.sources?.forEach { src ->
+        val videoUrl = src.file ?: return@forEach
+        sourceCallback(
+            ExtractorLink(
+                source = this.name,
+                name = src.label ?: "GDrive",
+                url = videoUrl,
+                referer = url,
+                quality = getQualityFromName(src.label ?: ""),
+                isM3u8 = videoUrl.endsWith(".m3u8")
             )
         )
-
-        val json = app.post("https://miku.gdrive.web.id/api/", data = payload)
-            .parsedSafe<ApiResponse>() ?: return
-
-        json.sources?.forEach { src ->
-            val videoUrl = src.file ?: return@forEach
-            sourceCallback(
-                ExtractorLink(
-                    source = name,
-                    name = src.label ?: "GDrive",
-                    url = videoUrl,
-                    referer = url,
-                    quality = getQualityFromName(src.label ?: ""),
-                    type = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.MP4
-                )
-            )
-        }
-
-        json.tracks?.forEach { track ->
-            val file = track.file ?: return@forEach
-            subCallback(SubtitleFile(track.label ?: "Subtitle", file))
-        }
     }
 
+    json.tracks?.forEach { track ->
+        val file = track.file ?: return@forEach
+        subCallback(SubtitleFile(track.label ?: "Subtitle", file))
+    }
+}
     // ========= loadLinks =========
 
     override suspend fun loadLinks(
