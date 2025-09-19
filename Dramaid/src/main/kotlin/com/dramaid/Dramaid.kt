@@ -3,7 +3,6 @@ package com.dramaid
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -43,8 +42,8 @@ open class Dramaid : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/series/?page=$page${request.data}").document
-        val home = document.select("article[itemscope=itemscope]").mapNotNull {
+        val doc = app.get("$mainUrl/series/?page=$page${request.data}").document
+        val home = doc.select("article[itemscope=itemscope]").mapNotNull {
             it.toSearchResult()
         }
         return newHomePageResponse(request.name, home)
@@ -69,29 +68,28 @@ open class Dramaid : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$mainUrl/?s=$query").document
-        return document.select("article[itemscope=itemscope]").mapNotNull {
+        val doc = app.get("$mainUrl/?s=$query").document
+        return doc.select("article[itemscope=itemscope]").mapNotNull {
             it.toSearchResult()
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
-
-        val title = document.selectFirst("h1.entry-title")?.text()?.trim() ?: ""
-        val poster = fixUrlNull(document.select("div.thumb img:last-child").attr("src"))
-        val tags = document.select(".genxed > a").map { it.text() }
-        val type = document.selectFirst(".info-content .spe span:contains(Tipe:)")?.ownText()
+        val doc = app.get(url).document
+        val title = doc.selectFirst("h1.entry-title")?.text()?.trim() ?: ""
+        val poster = fixUrlNull(doc.select("div.thumb img:last-child").attr("src"))
+        val tags = doc.select(".genxed > a").map { it.text() }
+        val type = doc.selectFirst(".info-content .spe span:contains(Tipe:)")?.ownText()
         val year = Regex("\\d, ([0-9]*)").find(
-            document.selectFirst(".info-content > .spe > span > time")!!.text().trim()
-        )?.groupValues?.get(1).toString().toIntOrNull()
+            doc.selectFirst(".info-content > .spe > span > time")!!.text().trim()
+        )?.groupValues?.get(1)?.toIntOrNull()
         val status = getStatus(
-            document.select(".info-content > .spe > span:nth-child(1)")
+            doc.select(".info-content > .spe > span:nth-child(1)")
                 .text().trim().replace("Status: ", "")
         )
-        val description = document.select(".entry-content > p").text().trim()
+        val description = doc.select(".entry-content > p").text().trim()
 
-        val episodes = document.select(".eplister > ul > li").mapNotNull { ep ->
+        val episodes = doc.select(".eplister > ul > li").mapNotNull { ep ->
             val anchor = ep.selectFirst("a") ?: return@mapNotNull null
             val link = fixUrl(anchor.attr("href"))
             val episodeTitle = ep.selectFirst("a > .epl-title")?.text() ?: anchor.text()
@@ -104,7 +102,7 @@ open class Dramaid : MainAPI() {
         }.reversed()
 
         val recommendations =
-            document.select(".listupd > article[itemscope=itemscope]").mapNotNull { rec ->
+            doc.select(".listupd > article[itemscope=itemscope]").mapNotNull { rec ->
                 rec.toSearchResult()
             }
 
@@ -136,7 +134,7 @@ open class Dramaid : MainAPI() {
         @JsonProperty("label") val label: String?
     )
 
-    // === Call API ===
+    // === API Call ===
     private suspend fun invokeDriveSource(
         url: String,
         subCallback: (SubtitleFile) -> Unit,
@@ -144,16 +142,21 @@ open class Dramaid : MainAPI() {
     ) {
         val id = url.substringAfterLast("/").substringBefore("?")
 
-        val payload = mapOf(
-            "query" to mapOf(
-                "source" to "db",
-                "id" to id,
-                "download" to ""
-            )
-        )
+        val payload = """
+            {
+              "query": {
+                "source": "db",
+                "id": "$id",
+                "download": ""
+              }
+            }
+        """.trimIndent()
 
-        val json = app.post("https://miku.gdrive.web.id/api/", data = payload, json = true)
-            .parsedSafe<ApiResponse>() ?: return
+        val json = app.post(
+            "https://miku.gdrive.web.id/api/",
+            requestBody = payload,
+            headers = mapOf("Content-Type" to "application/json")
+        ).parsedSafe<ApiResponse>() ?: return
 
         json.sources?.forEach { src ->
             val videoUrl = src.file ?: return@forEach
@@ -163,9 +166,9 @@ open class Dramaid : MainAPI() {
                     src.label ?: "GDrive",
                     videoUrl
                 ) {
-                    this.referer = url
-                    this.quality = getQualityFromName(src.label ?: "")
-                    this.isM3u8 = videoUrl.endsWith(".m3u8")
+                    referer = url
+                    quality = getQualityFromName(src.label ?: "")
+                    isM3u8 = videoUrl.endsWith(".m3u8")
                 }
             )
         }
@@ -183,9 +186,10 @@ open class Dramaid : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
-        val sources = document.select("#pembed iframe, .mirror > option").mapNotNull {
-            val src = if (it.hasAttr("value")) Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
+        val doc = app.get(data).document
+        val sources = doc.select("#pembed iframe, .mirror > option").mapNotNull {
+            val src = if (it.hasAttr("value"))
+                Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
             else it.attr("src")
             fixUrlNull(src)
         }
