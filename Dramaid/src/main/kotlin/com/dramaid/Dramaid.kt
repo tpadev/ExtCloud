@@ -146,17 +146,17 @@ open class Dramaid : MainAPI() {
 
     // === invokeDriveSource pakai endpoint /api/ ===
     private suspend fun invokeDriveSource(
-        iframeUrl: String,
+        url: String,
         subCallback: (SubtitleFile) -> Unit,
         sourceCallback: (ExtractorLink) -> Unit
     ) {
-        val id = iframeUrl.substringAfterLast("/")
+        val id = url.substringAfterLast("/")
         val apiUrl = "https://miku.gdrive.web.id/api/"
 
-        val response = app.post(apiUrl, data = mapOf("id" to id))
+        val json = app.post(apiUrl, data = mapOf("id" to id))
             .parsedSafe<ApiResponse>() ?: return
 
-        response.sources?.forEach { src ->
+        json.sources?.forEach { src ->
             val videoUrl = src.file ?: return@forEach
             sourceCallback(
                 newExtractorLink(
@@ -164,14 +164,14 @@ open class Dramaid : MainAPI() {
                     src.label ?: "GDrive",
                     videoUrl
                 ) {
-                    referer = iframeUrl
+                    referer = url
                     quality = getQualityFromName(src.label ?: "")
                     isM3u8 = videoUrl.endsWith(".m3u8")
                 }
             )
         }
 
-        response.tracks?.forEach { tr ->
+        json.tracks?.forEach { tr ->
             subCallback.invoke(
                 SubtitleFile(tr.label ?: "Subtitle", tr.file ?: return@forEach)
             )
