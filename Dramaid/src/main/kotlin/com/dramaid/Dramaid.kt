@@ -9,8 +9,6 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.MediaType.Companion.toMediaType
 
 open class Dramaid : MainAPI() {
     override var mainUrl = "https://dramaid.nl"
@@ -152,15 +150,12 @@ open class Dramaid : MainAPI() {
         subCallback: (SubtitleFile) -> Unit,
         sourceCallback: (ExtractorLink) -> Unit
     ) {
-        val id = url.substringAfterLast("/").substringBefore("?")
-        val payload = """{"query":{"source":"db","id":"$id","download":""}}"""
-        val body = payload.toRequestBody("application/json".toMediaType())
+        val id = url.substringAfterLast("/")
+        val apiUrl = "https://miku.gdrive.web.id/api/"
 
-        val json = app.post(
-            "https://miku.gdrive.web.id/api/",
-            requestBody = body,
-            headers = mapOf("Content-Type" to "application/json")
-        ).parsedSafe<ApiResponse>() ?: return
+        // Cloudstream 4.x masih pakai data=Map<String,String>
+        val json = app.post(apiUrl, data = mapOf("id" to id))
+            .parsedSafe<ApiResponse>() ?: return
 
         json.sources?.forEach { src ->
             val videoUrl = src.file ?: return@forEach
@@ -177,9 +172,10 @@ open class Dramaid : MainAPI() {
             )
         }
 
-        json.tracks?.forEach { track ->
-            val file = track.file ?: return@forEach
-            subCallback(SubtitleFile(track.label ?: "Subtitle", file))
+        json.tracks?.forEach { tr ->
+            subCallback.invoke(
+                SubtitleFile(tr.label ?: "Subtitle", tr.file ?: return@forEach)
+            )
         }
     }
 
@@ -194,7 +190,8 @@ open class Dramaid : MainAPI() {
 
         val sources = document.select("#pembed iframe, .mirror > option").mapNotNull {
             val src = if (it.hasAttr("value")) {
-                Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
+                Jsoup.parse(base64Decode(it.attr("value")))
+                    .select("iframe").attr("src")
             } else {
                 it.attr("src")
             }
