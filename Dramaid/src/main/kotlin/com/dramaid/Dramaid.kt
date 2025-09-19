@@ -164,7 +164,7 @@ open class Dramaid : MainAPI() {
                     url = videoUrl,
                     referer = url,
                     quality = getQualityFromName(it.label ?: ""),
-                    type = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.MP4
+                    isM3u8 = videoUrl.contains(".m3u8")
                 )
             )
         }
