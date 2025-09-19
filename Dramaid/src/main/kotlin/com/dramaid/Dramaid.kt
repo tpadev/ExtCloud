@@ -4,9 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 open class Dramaid : MainAPI() {
@@ -126,58 +126,57 @@ open class Dramaid : MainAPI() {
         }
     }
 
-    private data class Sources(
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String,
-        @JsonProperty("type") val type: String,
-        @JsonProperty("default") val default: Boolean?
+    // === DATA CLASS untuk API JSON ===
+    private data class ApiResponse(
+        @JsonProperty("sources") val sources: List<Source>?,
+        @JsonProperty("tracks") val tracks: List<Track>?
     )
 
-    private data class Tracks(
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String,
-        @JsonProperty("kind") val type: String,
-        @JsonProperty("default") val default: Boolean?
+    private data class Source(
+        @JsonProperty("file") val file: String?,
+        @JsonProperty("label") val label: String?,
+        @JsonProperty("type") val type: String?
     )
 
-    @Suppress("DEPRECATION", "DEPRECATION_ERROR")
+    private data class Track(
+        @JsonProperty("file") val file: String?,
+        @JsonProperty("label") val label: String?
+    )
+
+    // === invokeDriveSource: pakai endpoint /api/ ===
     private suspend fun invokeDriveSource(
         url: String,
-        name: String,
         subCallback: (SubtitleFile) -> Unit,
         sourceCallback: (ExtractorLink) -> Unit
     ) {
-        val server = app.get(url).document.selectFirst("script:containsData(sources:)")?.data()
-            ?: return
+        val id = url.substringAfterLast("/") // ambil ID dari /embed/{id}
+        val apiUrl = "https://miku.gdrive.web.id/api/"
 
-        val sources = "[${server.substringAfter("sources:[")
-            .substringBefore("],")}]"
-        val tracks = "[${server.substringAfter("tracks:[")
-            .substringBefore("],")}]"
+        val json = app.post(apiUrl, data = mapOf("id" to id))
+            .parsedSafe<ApiResponse>() ?: return
 
-        tryParseJson<List<Sources>>(sources)?.forEach {
+        json.sources?.forEach {
+            val videoUrl = it.file ?: return@forEach
             sourceCallback(
                 ExtractorLink(
-                    source = "GDrivePlayer",
-                    name = this.name,
-                    url = fixUrl(it.file),
+                    source = "GDrive",
+                    name = it.label ?: "Default",
+                    url = videoUrl,
                     referer = url,
-                    quality = getQualityFromName(it.label),
-                    type = ExtractorLinkType.VIDEO
+                    quality = getQualityFromName(it.label ?: ""),
+                    type = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.MP4
                 )
             )
         }
 
-        tryParseJson<List<Tracks>>(tracks)?.map {
+        json.tracks?.forEach {
             subCallback.invoke(
-                SubtitleFile(
-                    it.label,
-                    it.file
-                )
+                SubtitleFile(it.label ?: "Subtitle", it.file ?: return@forEach)
             )
         }
     }
 
+    // === loadLinks ===
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -186,14 +185,16 @@ open class Dramaid : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
 
-        // ambil iframe dari player
-        val sources = document.select("#pembed iframe")
-            .mapNotNull { fixUrl(it.attr("src")) }
+        val sources = document.select("#pembed iframe, .mirror > option").mapNotNull {
+            val src = if (it.hasAttr("value")) Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
+            else it.attr("src")
+            fixUrlNull(src)
+        }
 
         sources.amap {
             when {
-                it.contains("gdriveplayer") || it.contains("gdrive.cam") -> {
-                    invokeDriveSource(it, this.name, subtitleCallback, callback)
+                it.contains("gdrive.web.id") -> {
+                    invokeDriveSource(it, subtitleCallback, callback)
                 }
                 else -> loadExtractor(it, "$mainUrl/", subtitleCallback, callback)
             }
