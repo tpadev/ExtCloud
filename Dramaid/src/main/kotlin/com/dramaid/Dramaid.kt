@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.dramaid.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -158,14 +157,14 @@ open class Dramaid : MainAPI() {
 
         tryParseJson<List<Sources>>(sources)?.forEach {
             sourceCallback(
-                newExtractorLink(
-                    this.name,
-                    "GDrivePlayer",
-                    fixUrl(it.file)
-                ) {
-                    this.referer = url
-                    this.quality = getQualityFromName(it.label)
-                }
+                ExtractorLink(
+                    source = "GDrivePlayer",
+                    name = this.name,
+                    url = fixUrl(it.file),
+                    referer = url,
+                    quality = getQualityFromName(it.label),
+                    type = ExtractorLinkType.VIDEO
+                )
             )
         }
 
