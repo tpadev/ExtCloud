@@ -35,8 +35,8 @@ class GdriveWebId : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        // Ambil ID dari embed url
-        val id = url.substringAfterLast("/")
+        // ambil ID dari embed url, amanin biar gak kena error val
+        val id = url.substringAfterLast("/").substringBefore("?")
 
         val payload = mapOf(
             "query" to mapOf(
@@ -65,8 +65,9 @@ class GdriveWebId : ExtractorApi() {
         }
 
         json.tracks?.forEach { tr ->
+            val subUrl = tr.file ?: return@forEach
             subtitleCallback(
-                SubtitleFile(tr.label ?: "Subtitle", tr.file ?: return@forEach)
+                SubtitleFile(tr.label ?: "Subtitle", subUrl)
             )
         }
     }
