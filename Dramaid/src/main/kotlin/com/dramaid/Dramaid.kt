@@ -160,14 +160,13 @@ open class Dramaid : MainAPI() {
             val videoUrl = src.file ?: return@forEach
             sourceCallback(
                 newExtractorLink(
-                    this.name,
-                    src.label ?: "GDrive",
-                    videoUrl
-                ) {
-                    referer = url
-                    quality = getQualityFromName(src.label ?: "")
-                    isM3u8 = videoUrl.endsWith(".m3u8")
-                }
+                    this.name,                 // source
+                    src.label ?: "GDrive",     // name
+                    videoUrl,                  // url
+                    url,                       // referer
+                    getQualityFromName(src.label ?: ""), // quality
+                    videoUrl.endsWith(".m3u8")           // isM3u8
+                )
             )
         }
 
