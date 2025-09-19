@@ -35,8 +35,9 @@ class GdriveWebId : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        // Ambil ID sekali jalan, tanpa reassign
-        val id = url.substringAfterLast("/").substringBefore("?")
+        // pakai var biar aman kalau mau diproses ulang
+        var id = url.substringAfterLast("/")
+        id = id.substringBefore("?")
 
         val payload = mapOf(
             "query" to mapOf(
