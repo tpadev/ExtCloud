@@ -6,12 +6,9 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 
 @CloudstreamPlugin
-class DramaidProviderPlugin: Plugin() {
+class IdlixProviderPlugin: Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
-        registerMainAPI(DramaidProvider())
-        registerExtractorAPI(Vanfem())
-        registerExtractorAPI(Filelions())
-        registerExtractorAPI(Gcam())
+        registerMainAPI(IdlixProvider())
     }
 }

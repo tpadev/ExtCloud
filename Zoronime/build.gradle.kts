@@ -1,12 +1,12 @@
 // use an integer for version numbers
-version = 12
+version = 1
 
 
 cloudstream {
     language = "id"
     // All of these properties are optional, you can safely remove them
 
-    description = "Include: Oppadrama"
+    // description = "Lorem Ipsum"
      authors = listOf("Hexated")
 
     /**
@@ -18,9 +18,10 @@ cloudstream {
      * */
     status = 1 // will be 3 if unspecified
     tvTypes = listOf(
-        "AsianDrama",
-        "Movie",
+        "AnimeMovie",
+        "OVA",
+        "Anime",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=dramaid.asia&sz=%size%"
+    iconUrl = "https://zoronime.com/wp-content/themes/zoronime/favicon.png?v=0.06"
 }
