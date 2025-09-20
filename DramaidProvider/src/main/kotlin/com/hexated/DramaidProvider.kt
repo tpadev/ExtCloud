@@ -1,14 +1,13 @@
-package com.dramaid
+package com.hexated
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
-open class Dramaid : MainAPI() {
-    override var mainUrl = "https://dramaid.nl"
+open class DramaidProvider : MainAPI() {
+    override var mainUrl = "https://dramaid.icu"
     override var name = "DramaId"
     override val hasMainPage = true
     override var lang = "id"
@@ -47,11 +46,11 @@ open class Dramaid : MainAPI() {
     }
 
     private fun getProperDramaLink(uri: String): String {
-        return if (uri.contains("-episode-")) {
-            "$mainUrl/series/" + Regex("$mainUrl/(.+)-ep.+").find(uri)?.groupValues?.get(1)
-        } else {
-            uri
-        }
+        return if (uri.contains("-episode-", true) || uri.contains("-ep", true)) {
+            val slug = Regex("$mainUrl/([^/]+)-(?:episode|ep)[^/]*", RegexOption.IGNORE_CASE)
+                .find(uri)?.groupValues?.getOrNull(1)
+            if (!slug.isNullOrBlank()) "$mainUrl/series/$slug" else uri
+        } else uri
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
@@ -87,21 +86,13 @@ open class Dramaid : MainAPI() {
         )
         val description = document.select(".entry-content > p").text().trim()
 
-        val episodes = document.select(".eplister > ul > li").mapNotNull { episodeElement ->
-            val anchor = episodeElement.selectFirst("a") ?: return@mapNotNull null
-            val link = fixUrl(anchor.attr("href"))
-            val episodeTitle = episodeElement.selectFirst("a > .epl-title")?.text() ?: anchor.text()
-
-            val episodeNumber = Regex("""(?:Episode|Eps)\s*(\d+)""", RegexOption.IGNORE_CASE)
-                .find(episodeTitle)
-                ?.groupValues
-                ?.getOrNull(1)
-                ?.toIntOrNull()
-
-            newEpisode(link) {
-                this.name = episodeTitle
-                this.episode = episodeNumber
-            }
+        val episodes = document.select(".eplister > ul > li").mapNotNull {
+            val name = it.selectFirst("a > .epl-title")?.text()
+            val link = fixUrl(it.selectFirst("a")?.attr("href") ?: return@mapNotNull null)
+            Episode(
+                link,
+                name,
+            )
         }.reversed()
 
         val recommendations =
@@ -122,6 +113,7 @@ open class Dramaid : MainAPI() {
             this.tags = tags
             this.recommendations = recommendations
         }
+
     }
 
     override suspend fun loadLinks(
@@ -132,19 +124,33 @@ open class Dramaid : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
 
-        val sources = document.select("#pembed iframe, .mirror > option").mapNotNull {
-            val src = if (it.hasAttr("value")) {
-                Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
-            } else {
-                it.attr("src")
-            }
-            fixUrlNull(src)
+        // Old path: options contain base64 encoded iframes
+        val optionSources = document.select(".mobius > .mirror > option").mapNotNull {
+            fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src"))
         }
 
-        sources.amap { link ->
-            loadExtractor(link, "$mainUrl/", subtitleCallback, callback)
+        // New path: iframe is rendered inside #embed_holder / player-embed
+        val iframeSources = document.select("#embed_holder iframe, .player-embed iframe, #pem-embed iframe, iframe#pem-embed, iframe.player-embed")
+            .mapNotNull { el ->
+                val src = el.attr("data-src").ifBlank { el.attr("src") }
+                if (src.isBlank()) null else fixUrl(src)
+            }
+
+        val all = (if (optionSources.isNotEmpty()) optionSources else iframeSources).distinct()
+        // Prefer only gdrive-based embeds to avoid unused host extractors (e.g., KrakenFiles)
+        val sources = all.filter { it.contains("gdrive.web.id") || it.contains("gdrive.cam") }
+
+        sources.apmap { src ->
+            // Use our specific extractor for gdrive.web.id, otherwise fallback
+            if (src.contains("gdrive.web.id")) {
+                GdriveWeb().getUrl(src, mainUrl, subtitleCallback, callback)
+            } else {
+                loadExtractor(src, "$mainUrl/", subtitleCallback, callback)
+            }
         }
 
         return true
     }
+
 }
+
