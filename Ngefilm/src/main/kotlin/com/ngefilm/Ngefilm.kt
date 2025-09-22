@@ -35,7 +35,6 @@ class Ngefilm : MainAPI() {
         val quality = this.selectFirst(".mli-quality")?.text()?.trim()
         return newMovieSearchResponse(title, link.attr("href"), TvType.Movie) {␊
             this.posterUrl = poster␊
-            if (!quality.isNullOrBlank()) addQuality(quality)
         }␊
     }
 
