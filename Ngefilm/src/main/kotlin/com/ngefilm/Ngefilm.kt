@@ -3,7 +3,6 @@ package com.ngefilm
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
-import org.jsoup.nodes.Element
 
 class Ngefilm : MainAPI() {
     override var mainUrl = "https://new18.ngefilm.site"
@@ -19,65 +18,70 @@ class Ngefilm : MainAPI() {
         "$mainUrl/country/indonesia/" to "Film Indonesia",
     )
 
+    // --- Ambil list film/series di halaman utama ---
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val doc = app.get(request.data).document
-        val items = doc.select("div.ml-item").mapNotNull {
-            val link = it.selectFirst("a") ?: return@mapNotNull null
-            val title = it.selectFirst("h2")?.text() ?: return@mapNotNull null
-            val poster = it.selectFirst("img")?.getImageAttr()
-            val qualityStr = it.selectFirst(".mli-quality")?.text()
-            val quality = getQualityFromString(qualityStr)
+        val url = if (page == 1) request.data else "${request.data}/page/$page"
+        val doc = app.get(url).document
 
-            newMovieSearchResponse(title, link.attr("href"), TvType.Movie) {
+        val items = doc.select("#gmr-main-load .ml-item").mapNotNull {
+            val link = it.selectFirst("a")?.attr("href") ?: return@mapNotNull null
+            val title = it.selectFirst("h2")?.text()
+                ?: it.selectFirst("h3")?.text()
+                ?: return@mapNotNull null
+            val poster = it.selectFirst("img")?.attr("data-original")
+                ?: it.selectFirst("img")?.attr("src")
+            val quality = it.selectFirst(".mli-quality")?.text()
+            val trailer = it.selectFirst("a[href*=\"youtube\"]")?.attr("href")
+
+            newMovieSearchResponse(title, link, TvType.Movie) {
                 this.posterUrl = poster
-                this.quality = quality
+                this.quality = getQualityFromString(quality)
+                addTrailer(trailer)
             }
         }
+
         return newHomePageResponse(request.name, items)
     }
 
+    // --- Load detail film/series ---
     override suspend fun load(url: String): LoadResponse? {
         val doc = app.get(url).document
         val title = doc.selectFirst("h1")?.text() ?: return null
-        val poster = doc.selectFirst(".thumb img")?.getImageAttr()
+        val poster = doc.selectFirst(".thumb img")?.attr("src")
         val plot = doc.selectFirst(".desc")?.text()
         val year = doc.selectFirst("span[itemprop=dateCreated]")?.text()?.toIntOrNull()
-        val trailer = doc.selectFirst("a[href*=\"youtube\"]")?.attr("href")
-        val type = if (doc.select("div.gmr-listseries a").isNotEmpty()) TvType.TvSeries else TvType.Movie
+        val isSeries = doc.select("div.gmr-listseries a").isNotEmpty()
 
-        return when (type) {
-            TvType.Movie -> {
-                val episodes = doc.select("ul.muvipro-player-tabs li a").mapIndexed { idx, el ->
-                    newEpisode(fixUrl(el.attr("href"))) {
-                        name = "Server ${idx + 1}"
-                        posterUrl = poster
-                    }
-                }
-                newMovieLoadResponse(title, url, TvType.Movie, episodes) {
-                    this.posterUrl = poster
-                    this.year = year
-                    this.plot = plot
-                    addTrailer(trailer)
+        val trailer = doc.selectFirst("iframe[src*=\"youtube\"]")?.attr("src")
+
+        return if (isSeries) {
+            val episodes = doc.select("div.gmr-listseries a").mapIndexed { idx, el ->
+                newEpisode(el.attr("href")) {
+                    name = el.text().ifBlank { "Episode ${idx + 1}" }
                 }
             }
-            TvType.TvSeries -> {
-                val episodes = doc.select("div.gmr-listseries a").mapIndexed { idx, el ->
-                    newEpisode(fixUrl(el.attr("href"))) {
-                        name = el.text().ifBlank { "Episode ${idx + 1}" }
-                        posterUrl = poster
-                    }
-                }
-                newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                    this.posterUrl = poster
-                    this.year = year
-                    this.plot = plot
-                    addTrailer(trailer)
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+                this.posterUrl = poster
+                this.year = year
+                this.plot = plot
+                addTrailer(trailer)
+            }
+        } else {
+            val servers = doc.select("ul.muvipro-player-tabs li a").mapIndexed { idx, el ->
+                newEpisode(el.attr("href")) {
+                    name = "Server ${idx + 1}"
                 }
             }
-            else -> null
+            newMovieLoadResponse(title, url, TvType.Movie, servers) {
+                this.posterUrl = poster
+                this.year = year
+                this.plot = plot
+                addTrailer(trailer)
+            }
         }
     }
 
+    // --- Ambil link video ---
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -85,9 +89,8 @@ class Ngefilm : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val doc = app.get(data).document
-        val serverLinks = doc.select("ul.muvipro-player-tabs li a")
-            .mapNotNull { it.attr("href").takeIf { h -> h.isNotBlank() } }
-            .map { fixUrl(it) }
+
+        val serverLinks = doc.select("ul.muvipro-player-tabs li a").map { it.attr("href") }
 
         if (serverLinks.isNotEmpty()) {
             serverLinks.forEach { link ->
@@ -104,11 +107,5 @@ class Ngefilm : MainAPI() {
             }
         }
         return true
-    }
-
-    private fun Element.getImageAttr(): String? {
-        return this.attr("data-src")
-            .ifBlank { this.attr("data-lazy-src") }
-            .ifBlank { this.attr("src") }
     }
 }
