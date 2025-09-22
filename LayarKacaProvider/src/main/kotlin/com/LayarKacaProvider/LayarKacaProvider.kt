@@ -6,11 +6,12 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
+import java.net.URI
 
 class LayarKacaProvider : MainAPI() {
-    // Domain baru
-    override var mainUrl = "https://tv.lk21official.love"
-    private var seriesUrl = "https://tv1.nontondrama.my"
+
+    override var mainUrl = "https://lk21.de"
+    private var seriesUrl = "https://series.lk21.de"
     private var searchUrl = "https://search.lk21.party"
 
     override var name = "LayarKaca"
@@ -24,10 +25,10 @@ class LayarKacaProvider : MainAPI() {
 
     override val mainPage = mainPageOf(
         "$mainUrl/populer/page/" to "Film Terpopuler",
-        "$mainUrl/rating/page/" to "IMDb Rating",
-        "$mainUrl/most-commented/page/" to "Komentar Terbanyak",
+        "$mainUrl/rating/page/" to "Film Berdasarkan IMDb Rating",
+        "$mainUrl/most-commented/page/" to "Film Dengan Komentar Terbanyak",
         "$seriesUrl/latest-series/page/" to "Series Terbaru",
-        "$seriesUrl/series/asian/page/" to "Drama Asia",
+        "$seriesUrl/series/asian/page/" to "Film Asian Terbaru",
         "$mainUrl/latest/page/" to "Film Upload Terbaru",
     )
 
@@ -36,34 +37,28 @@ class LayarKacaProvider : MainAPI() {
         request: MainPageRequest
     ): HomePageResponse {
         val document = app.get(request.data + page).document
-        val home = document.select("article figure").mapNotNull { it.toSearchResult() }
+        val home = document.select("article figure").mapNotNull {
+            it.toSearchResult()
+        }
         return newHomePageResponse(request.name, home)
     }
 
-    private fun Element.toSearchResult(): SearchResponse? {
-        val title = selectFirst("h3")?.ownText()?.trim() ?: return null
-        val href = fixUrl(selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(select("img").attr("src"))
-        val type = if (selectFirst("span.episode") == null) TvType.Movie else TvType.TvSeries
-
-        return if (type == TvType.TvSeries) {
-    val episode = this.selectFirst("span.episode strong")?.text()?.filter { it.isDigit() }
-        ?.toIntOrNull()
-    newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-        this.posterUrl = posterUrl
-        this.year = null
+    private suspend fun getProperLink(url: String): String {
+        if (url.startsWith(seriesUrl)) return url
+        val res = app.get(url).document
+        return if (res.select("title").text().contains("Nontondrama", true)) {
+            res.selectFirst("a#openNow")?.attr("href")
+                ?: res.selectFirst("div.links a")?.attr("href")
+                ?: url
+        } else {
+            url
+        }
     }
-} else {
-    val quality = this.select("div.quality").text().trim()
-    newMovieSearchResponse(title, href, TvType.Movie) {
-        this.posterUrl = posterUrl
-        addQuality(quality)
-    }
-}
 
     override suspend fun search(query: String): List<SearchResponse> {
         val res = app.get("$searchUrl/search.php?s=$query").text
         val results = mutableListOf<SearchResponse>()
+
         val root = JSONObject(res)
         val arr = root.getJSONArray("data")
 
@@ -72,9 +67,8 @@ class LayarKacaProvider : MainAPI() {
             val title = item.getString("title")
             val slug = item.getString("slug")
             val type = item.getString("type")
-            val posterUrl = "https://poster.lk21.party/wp-content/uploads/" +
-                item.optString("poster")
-
+            val posterUrl =
+                "https://poster.lk21.party/wp-content/uploads/" + item.optString("poster")
             when (type) {
                 "series" -> results.add(
                     newTvSeriesSearchResponse(title, "$seriesUrl/$slug", TvType.TvSeries) {
@@ -88,32 +82,42 @@ class LayarKacaProvider : MainAPI() {
                 )
             }
         }
+
         return results
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
-        val title = document.selectFirst("div.movie-info h1")?.text()?.trim().orEmpty()
+        val fixUrl = getProperLink(url)
+        val document = app.get(fixUrl).document
+        val baseUrl = fetchURL(fixUrl)
+
+        val title = document.selectFirst("div.movie-info h1")?.text()?.trim().toString()
         val poster = document.select("meta[property=og:image]").attr("content")
         val tags = document.select("div.tag-list span").map { it.text() }
-        val year = document.select("span.year").text().toIntOrNull()
-        val description = document.selectFirst("div.meta-info")?.text()?.trim()
-            ?.substringBefore("Subtitle")
-        val trailer = document.selectFirst("ul.action-left li a[href*=youtube]")
-            ?.attr("href")
+
+        val year = Regex("\\d, (\\d+)").find(
+            document.select("div.movie-info h1").text().trim()
+        )?.groupValues?.get(1).toString().toIntOrNull()
+
+        val tvType =
+            if (document.selectFirst("#season-data") != null) TvType.TvSeries else TvType.Movie
+
+        val description =
+            document.selectFirst("div.meta-info")?.text()?.trim()?.substringBefore("Subtitle")
+
+        val trailer = document.selectFirst("ul.action-left > li:nth-child(3) > a")?.attr("href")
         val rating = document.selectFirst("div.info-tag strong")?.text()?.toRatingInt()
 
         val recommendations = document.select("li.slider article").map {
-            val recName = it.selectFirst("h3")?.text()?.trim().orEmpty()
-            val recHref = fixUrl(it.selectFirst("a")!!.attr("href"))
-            val recPosterUrl = fixUrl(it.selectFirst("img")?.attr("src").orEmpty())
+            val recName = it.selectFirst("h3")?.text()?.trim().toString()
+            val recHref = baseUrl + it.selectFirst("a")!!.attr("href")
+            val recPosterUrl = fixUrl(it.selectFirst("img")?.attr("src").toString())
             newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
                 this.posterUrl = recPosterUrl
             }
         }
 
-        return if (url.startsWith(seriesUrl)) {
-            // SERIES
+        return if (tvType == TvType.TvSeries) {
             val json = document.selectFirst("script#season-data")?.data()
             val episodes = mutableListOf<Episode>()
             if (json != null) {
@@ -122,7 +126,7 @@ class LayarKacaProvider : MainAPI() {
                     val seasonArr = root.getJSONArray(seasonKey)
                     for (i in 0 until seasonArr.length()) {
                         val ep = seasonArr.getJSONObject(i)
-                        val href = fixUrl("$seriesUrl/${ep.getString("slug")}")
+                        val href = fixUrl("$baseUrl/" + ep.getString("slug"))
                         val episodeNo = ep.optInt("episode_no")
                         val seasonNo = ep.optInt("s")
                         episodes.add(
@@ -145,7 +149,6 @@ class LayarKacaProvider : MainAPI() {
                 addTrailer(trailer)
             }
         } else {
-            // MOVIE
             newMovieLoadResponse(title, url, TvType.Movie, url) {
                 this.posterUrl = poster
                 this.year = year
@@ -165,20 +168,63 @@ class LayarKacaProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
+
         val players = document.select("ul#player-list > li a").mapNotNull {
-            it.attr("data-url").ifBlank { it.attr("href") }.takeIf { u -> u.isNotBlank() }
+            val url = it.attr("data-url").ifBlank { it.attr("href") }
+            url.takeIf { u -> u.isNotBlank() }?.let { fixUrl(it) }
         }
 
         val blacklist = listOf("short.icu", "abbys")
 
         players.amap { realUrl ->
-            if (blacklist.any { realUrl.contains(it, ignoreCase = true) }) {
+            if (blacklist.any { realUrl.contains(it, ignoreCase = true) })) {
                 Log.d("Layarkaca", "Skip blacklisted: $realUrl")
                 return@amap
             }
+
             Log.d("Layarkaca", "Process: $realUrl")
             loadExtractor(realUrl, data, subtitleCallback, callback)
         }
+
         return true
+    }
+}
+
+// =====================================================
+// Helper functions
+// =====================================================
+
+private fun Element.toSearchResult(): SearchResponse? {
+    val title = this.selectFirst("h3")?.ownText()?.trim() ?: return null
+    val href = fixUrl(this.selectFirst("a")!!.attr("href"))
+    val posterUrl = fixUrlNull(this.select("img").attr("src"))
+    val type =
+        if (this.selectFirst("span.episode") == null) TvType.Movie else TvType.TvSeries
+
+    return if (type == TvType.TvSeries) {
+        newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+            this.posterUrl = posterUrl
+        }
+    } else {
+        val quality = this.select("div.quality").text().trim()
+        newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = posterUrl
+            addQuality(quality)
+        }
+    }
+}
+
+private suspend fun String.getIframe(): String {
+    return app.get(this).document.select("div.embed-container iframe").attr("src")
+}
+
+private suspend fun fetchURL(url: String): String {
+    val res = app.get(url, allowRedirects = false)
+    val href = res.headers["location"]
+    return if (href != null) {
+        val it = URI(href)
+        "${it.scheme}://${it.host}"
+    } else {
+        url
     }
 }
