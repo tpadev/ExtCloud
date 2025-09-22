@@ -7,13 +7,12 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
-import android.util.Base64
 
 class LayarKacaProvider : MainAPI() {
 
     override var mainUrl = "https://lk21.de"
     private var seriesUrl = "https://series.lk21.de"
-    private var searchurl= "https://search.lk21.party"
+    private var searchUrl = "https://search.lk21.party"
 
     override var name = "LayarKaca"
     override val hasMainPage = true
@@ -23,6 +22,9 @@ class LayarKacaProvider : MainAPI() {
         TvType.TvSeries,
         TvType.AsianDrama
     )
+
+    // Worker proxy untuk bypass poster.lk21.party
+    private val proxyPoster = "https://poster-proxy.pendtagram.workers.dev"
 
     override val mainPage = mainPageOf(
         "$mainUrl/populer/page/" to "Film Terpopuler",
@@ -59,23 +61,33 @@ class LayarKacaProvider : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h3")?.ownText()?.trim() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
+
+        // Poster pakai proxy kalau dari poster.lk21.party
+        val rawPoster = this.select("img").attr("src")
+        val posterUrl = fixUrlNull(rawPoster)
+            ?.replace("https://poster.lk21.party", proxyPoster)
+
         val type =
             if (this.selectFirst("span.episode") == null) TvType.Movie else TvType.TvSeries
+
         return if (type == TvType.TvSeries) {
+            val episode = this.selectFirst("span.episode strong")?.text()?.filter { it.isDigit() }
+                ?.toIntOrNull()
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                this.posterUrl = null // biarkan kosong, isi di load()
+                this.posterUrl = posterUrl
+                this.addSub(episode)
             }
         } else {
             val quality = this.select("div.quality").text().trim()
             newMovieSearchResponse(title, href, TvType.Movie) {
-                this.posterUrl = null
-                addQuality(quality)
+                this.posterUrl = posterUrl
+                this.addQuality(quality)
             }
         }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val res = app.get("$searchurl/search.php?s=$query").text
+        val res = app.get("$searchUrl/search.php?s=$query").text
         val results = mutableListOf<SearchResponse>()
 
         val root = JSONObject(res)
@@ -87,15 +99,18 @@ class LayarKacaProvider : MainAPI() {
             val slug = item.getString("slug")
             val type = item.getString("type")
 
+            // Proxy poster
+            val posterUrl = "$proxyPoster/wp-content/uploads/" + item.optString("poster")
+
             when (type) {
                 "series" -> results.add(
                     newTvSeriesSearchResponse(title, "$seriesUrl/$slug", TvType.TvSeries) {
-                        this.posterUrl = null
+                        this.posterUrl = posterUrl
                     }
                 )
                 "movie" -> results.add(
                     newMovieSearchResponse(title, "$mainUrl/$slug", TvType.Movie) {
-                        this.posterUrl = null
+                        this.posterUrl = posterUrl
                     }
                 )
             }
@@ -108,17 +123,18 @@ class LayarKacaProvider : MainAPI() {
         val fixUrl = getProperLink(url)
         val document = app.get(fixUrl).document
         val baseurl = fetchURL(fixUrl)
-
         val title = document.selectFirst("div.movie-info h1")?.text()?.trim().toString()
 
-        // Poster dengan bypass
+        // Poster pakai proxy
         val rawPoster = document.select("meta[property=og:image]").attr("content")
-        val poster = getBypassedPoster(rawPoster)
+        val poster = rawPoster.replace("https://poster.lk21.party", proxyPoster)
 
         val tags = document.select("div.tag-list span").map { it.text() }
+
         val year = Regex("\\d, (\\d+)").find(
             document.select("div.movie-info h1").text().trim()
         )?.groupValues?.get(1).toString().toIntOrNull()
+
         val tvType = if (document.selectFirst("#season-data") != null) TvType.TvSeries else TvType.Movie
         val description = document.selectFirst("div.meta-info")?.text()?.trim()?.substringBefore("Subtitle")
         val trailer = document.selectFirst("ul.action-left > li:nth-child(3) > a")?.attr("href")
@@ -127,7 +143,8 @@ class LayarKacaProvider : MainAPI() {
         val recommendations = document.select("li.slider article").map {
             val recName = it.selectFirst("h3")?.text()?.trim().toString()
             val recHref = baseurl + it.selectFirst("a")!!.attr("href")
-            val recPosterUrl = fixUrl(it.selectFirst("img")?.attr("src").toString())
+            val recPosterRaw = it.selectFirst("img")?.attr("src").toString()
+            val recPosterUrl = fixUrl(recPosterRaw).replace("https://poster.lk21.party", proxyPoster)
             newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
                 this.posterUrl = recPosterUrl
             }
@@ -184,6 +201,7 @@ class LayarKacaProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
+
         val players = document.select("ul#player-list > li a").mapNotNull {
             val url = it.attr("data-url").ifBlank { it.attr("href") }
             url.takeIf { u -> u.isNotBlank() }?.let { fixUrl(it) }
@@ -193,52 +211,26 @@ class LayarKacaProvider : MainAPI() {
 
         players.amap { realUrl ->
             if (blacklist.any { realUrl.contains(it, ignoreCase = true) }) {
-                Log.d("LayarKaca", "Skip blacklisted: $realUrl")
+                Log.d("Layarkaca", "Skip blacklisted: $realUrl")
                 return@amap
             }
 
-            Log.d("LayarKaca", "Process: $realUrl")
+            Log.d("Layarkaca", "Process: $realUrl")
             loadExtractor(realUrl, data, subtitleCallback, callback)
         }
+
         return true
     }
-}
 
-// ====================== Helper ======================
-private suspend fun fetchURL(url: String): String {
-    val res = app.get(url, allowRedirects = false)
-    val href = res.headers["location"]
-    return if (href != null) {
-        val it = URI(href)
-        "${it.scheme}://${it.host}"
-    } else {
-        url
-    }
-}
+    private suspend fun fetchURL(url: String): String {
+        val res = app.get(url, allowRedirects = false)
+        val href = res.headers["location"]
 
-// Poster bypass: coba akses ulang pakai referer, kalau gagal fallback base64
-private suspend fun getBypassedPoster(posterUrl: String?): String? {
-    if (posterUrl.isNullOrBlank()) return null
-    return try {
-        val res = app.get(
-            posterUrl,
-            headers = mapOf(
-                "Referer" to "https://lk21.de",
-                "User-Agent" to "Mozilla/5.0"
-            ),
-            allowRedirects = true
-        )
-        res.url // pakai url final
-    } catch (e: Exception) {
-        try {
-            val bytes = app.get(
-                posterUrl,
-                headers = mapOf("Referer" to "https://lk21.de")
-            ).body.bytes()
-            val base64 = Base64.encodeToString(bytes, Base64.DEFAULT)
-            "data:image/jpeg;base64,$base64"
-        } catch (e2: Exception) {
-            null
+        return if (href != null) {
+            val it = URI(href)
+            "${it.scheme}://${it.host}"
+        } else {
+            url
         }
     }
 }
