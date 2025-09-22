@@ -6,7 +6,6 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
-import java.net.URI
 
 class LayarKacaProvider : MainAPI() {
 
@@ -54,7 +53,6 @@ class LayarKacaProvider : MainAPI() {
             url
         }
     }
-
 
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h3")?.ownText()?.trim() ?: return null
@@ -111,43 +109,42 @@ class LayarKacaProvider : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val fixUrl = getProperLink(url)
         val document = app.get(fixUrl).document
-        val baseurl=fetchURL(fixUrl)
-        val title = document.selectFirst("div.movie-info h1")?.text()?.trim().toString()
-        val poster = document.select("meta[property=og:image]").attr("content")
-        val tags = document.select("div.tag-list span").map { it.text() }
+        val titleFull = document.selectFirst("div.movie-info h1")?.text()?.trim().orEmpty()
+        val title = titleFull.substringBefore("(").trim()
+        val year = Regex("\\((\\d{4})\\)").find(titleFull)?.groupValues?.get(1)?.toIntOrNull()
 
-        val year = Regex("\\d, (\\d+)").find(
-            document.select("div.movie-info h1").text().trim()
-        )?.groupValues?.get(1).toString().toIntOrNull()
-        val tvType = if (document.selectFirst("#season-data") != null) TvType.TvSeries else TvType.Movie
-        val description = document.selectFirst("div.meta-info")?.text()?.trim()?.substringBefore("Subtitle")
-        val trailer = document.selectFirst("ul.action-left > li:nth-child(3) > a")?.attr("href")
+        val poster = document.select("meta[property=og:image]").attr("content")
+        val description = document.selectFirst("div.synopsis")?.text()
+        val tags = document.select("div.tag-list a").map { it.text() }
         val rating = document.selectFirst("div.info-tag strong")?.text()?.toRatingInt()
+        val trailer = document.selectFirst("ul.action-left a.yt-lightbox")?.attr("href")
+            ?: document.selectFirst("div.trailer-series iframe")?.attr("src")
 
         val recommendations = document.select("li.slider article").map {
-            val recName = it.selectFirst("h3")?.text()?.trim().toString()
-            val recHref = baseurl+it.selectFirst("a")!!.attr("href")
-            val recPosterUrl = fixUrl(it.selectFirst("img")?.attr("src").toString())
+            val recName = it.selectFirst("h3")?.text()?.trim().orEmpty()
+            val recHref = fixUrl(it.selectFirst("a")!!.attr("href"))
+            val recPosterUrl = fixUrl(it.selectFirst("img")?.attr("src").orEmpty())
             newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
                 this.posterUrl = recPosterUrl
             }
         }
 
-        return if (tvType == TvType.TvSeries) {
-            val json = document.selectFirst("script#season-data")?.data()
+        return if (document.selectFirst("#season-data") != null) {
+            // Series
             val episodes = mutableListOf<Episode>()
+            val json = document.selectFirst("script#season-data")?.data()
             if (json != null) {
                 val root = JSONObject(json)
                 root.keys().forEach { seasonKey ->
                     val seasonArr = root.getJSONArray(seasonKey)
                     for (i in 0 until seasonArr.length()) {
                         val ep = seasonArr.getJSONObject(i)
-                        val href = fixUrl("$baseurl/"+ep.getString("slug"))
+                        val epUrl = fixUrl(ep.getString("slug"))
                         val episodeNo = ep.optInt("episode_no")
                         val seasonNo = ep.optInt("s")
                         episodes.add(
-                            newEpisode(href) {
-                                this.name = "Episode $episodeNo"
+                            newEpisode(epUrl) {
+                                this.name = ep.optString("title", "Episode $episodeNo")
                                 this.season = seasonNo
                                 this.episode = episodeNo
                             }
@@ -165,6 +162,7 @@ class LayarKacaProvider : MainAPI() {
                 addTrailer(trailer)
             }
         } else {
+            // Movie
             newMovieLoadResponse(title, url, TvType.Movie, url) {
                 this.posterUrl = poster
                 this.year = year
@@ -178,34 +176,31 @@ class LayarKacaProvider : MainAPI() {
     }
 
     override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val document = app.get(data).document
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val doc = app.get(data).document
 
-    // Ambil semua link dari server player
-    val players = document.select("ul#player-list > li a").mapNotNull {
-        // Prioritas pakai data-url, kalau kosong fallback ke href
-        val url = it.attr("data-url").ifBlank { it.attr("href") }
-        url.takeIf { u -> u.isNotBlank() }?.let { fixUrl(it) }
-    }
-
-    // Blacklist domain yang tidak ada extractor / tidak mau dipakai
-    val blacklist = listOf("short.icu", "abbys")
-
-    players.amap { realUrl ->
-        if (blacklist.any { realUrl.contains(it, ignoreCase = true) }) {
-            Log.d("Layarkaca", "Skip blacklisted: $realUrl")
-            return@amap
+        // ambil semua link player
+        val players = doc.select("ul#player-list li a").mapNotNull {
+            it.attr("data-url").ifBlank { it.attr("href") }
+        }.ifEmpty {
+            listOfNotNull(doc.selectFirst("div.main-player")?.attr("data-iframe_url"))
         }
 
-        Log.d("Layarkaca", "Process: $realUrl")
-        loadExtractor(realUrl, data, subtitleCallback, callback)
+        val blacklist = listOf("short.icu", "abbys")
+
+        players.amap { link ->
+            if (blacklist.any { link.contains(it, ignoreCase = true) }) {
+                Log.d("Layarkaca", "Skip blacklisted: $link")
+                return@amap
+            }
+            Log.d("Layarkaca", "Process: $link")
+            loadExtractor(link, data, subtitleCallback, callback)
+        }
+
+        return true
     }
-
-    return true
-}
-
 }
