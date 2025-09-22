@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
+import android.util.Base64
 
 class LayarKacaProvider : MainAPI() {
 
@@ -62,7 +63,7 @@ class LayarKacaProvider : MainAPI() {
             if (this.selectFirst("span.episode") == null) TvType.Movie else TvType.TvSeries
         return if (type == TvType.TvSeries) {
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                this.posterUrl = null // jangan pakai lk21.party (sering blocked)
+                this.posterUrl = null // biarkan kosong, isi di load()
             }
         } else {
             val quality = this.select("div.quality").text().trim()
@@ -89,7 +90,7 @@ class LayarKacaProvider : MainAPI() {
             when (type) {
                 "series" -> results.add(
                     newTvSeriesSearchResponse(title, "$seriesUrl/$slug", TvType.TvSeries) {
-                        this.posterUrl = null // biarkan kosong
+                        this.posterUrl = null
                     }
                 )
                 "movie" -> results.add(
@@ -109,13 +110,15 @@ class LayarKacaProvider : MainAPI() {
         val baseurl = fetchURL(fixUrl)
 
         val title = document.selectFirst("div.movie-info h1")?.text()?.trim().toString()
-        val poster = document.select("meta[property=og:image]").attr("content")
-        val tags = document.select("div.tag-list span").map { it.text() }
 
+        // Poster dengan bypass
+        val rawPoster = document.select("meta[property=og:image]").attr("content")
+        val poster = getBypassedPoster(rawPoster)
+
+        val tags = document.select("div.tag-list span").map { it.text() }
         val year = Regex("\\d, (\\d+)").find(
             document.select("div.movie-info h1").text().trim()
         )?.groupValues?.get(1).toString().toIntOrNull()
-
         val tvType = if (document.selectFirst("#season-data") != null) TvType.TvSeries else TvType.Movie
         val description = document.selectFirst("div.meta-info")?.text()?.trim()?.substringBefore("Subtitle")
         val trailer = document.selectFirst("ul.action-left > li:nth-child(3) > a")?.attr("href")
@@ -205,11 +208,37 @@ class LayarKacaProvider : MainAPI() {
 private suspend fun fetchURL(url: String): String {
     val res = app.get(url, allowRedirects = false)
     val href = res.headers["location"]
-
     return if (href != null) {
         val it = URI(href)
         "${it.scheme}://${it.host}"
     } else {
         url
+    }
+}
+
+// Poster bypass: coba akses ulang pakai referer, kalau gagal fallback base64
+private suspend fun getBypassedPoster(posterUrl: String?): String? {
+    if (posterUrl.isNullOrBlank()) return null
+    return try {
+        val res = app.get(
+            posterUrl,
+            headers = mapOf(
+                "Referer" to "https://lk21.de",
+                "User-Agent" to "Mozilla/5.0"
+            ),
+            allowRedirects = true
+        )
+        res.url // pakai url final
+    } catch (e: Exception) {
+        try {
+            val bytes = app.get(
+                posterUrl,
+                headers = mapOf("Referer" to "https://lk21.de")
+            ).body.bytes()
+            val base64 = Base64.encodeToString(bytes, Base64.DEFAULT)
+            "data:image/jpeg;base64,$base64"
+        } catch (e2: Exception) {
+            null
+        }
     }
 }
