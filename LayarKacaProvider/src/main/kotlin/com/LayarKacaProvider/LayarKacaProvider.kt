@@ -47,20 +47,19 @@ class LayarKacaProvider : MainAPI() {
         val type = if (selectFirst("span.episode") == null) TvType.Movie else TvType.TvSeries
 
         return if (type == TvType.TvSeries) {
-            val episode = selectFirst("span.episode strong")
-                ?.text()?.filter { it.isDigit() }?.toIntOrNull()
-            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                this.posterUrl = posterUrl
-                addSub(episode)
-            }
-        } else {
-            val quality = select("div.quality").text().trim()
-            newMovieSearchResponse(title, href, TvType.Movie) {
-                this.posterUrl = posterUrl
-                addQuality(quality)
-            }
-        }
+    val episode = this.selectFirst("span.episode strong")?.text()?.filter { it.isDigit() }
+        ?.toIntOrNull()
+    newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+        this.posterUrl = posterUrl
+        this.year = null
     }
+} else {
+    val quality = this.select("div.quality").text().trim()
+    newMovieSearchResponse(title, href, TvType.Movie) {
+        this.posterUrl = posterUrl
+        addQuality(quality)
+    }
+}
 
     override suspend fun search(query: String): List<SearchResponse> {
         val res = app.get("$searchUrl/search.php?s=$query").text
