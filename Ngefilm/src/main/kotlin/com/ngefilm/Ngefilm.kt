@@ -36,7 +36,6 @@ class Ngefilm : MainAPI() {
             newMovieSearchResponse(title, link, TvType.Movie) {
                 this.posterUrl = poster
                 this.quality = getQualityFromString(quality)
-                addTrailer(trailer)
             }
         }
 
