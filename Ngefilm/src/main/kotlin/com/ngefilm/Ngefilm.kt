@@ -23,21 +23,20 @@ class Ngefilm : MainAPI() {
 
     // ambil list di mainpage
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val doc = app.get(request.data).document
-        val items = doc.select("div.ml-item").mapNotNull { it.toSearchResult() }
-        return newHomePageResponse(request.name, items)
-    }
+    val doc = app.get(request.data).document
+    val items = doc.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
+    return newHomePageResponse(request.name, items)
+}
 
-    private fun Element.toSearchResult(): SearchResponse? {
+private fun Element.toSearchResult(): SearchResponse? {
     val link = this.selectFirst("a") ?: return null
-    val title = this.selectFirst("h2.entry-title, h3.entry-title, .item-article a")
-        ?.text()?.trim() ?: return null
+    val title = this.selectFirst("h2.entry-title a")?.text()?.trim() ?: return null
     val poster = fixUrlNull(this.selectFirst("img")?.getImageAttr())
     val qualityText = this.selectFirst(".gmr-quality-item, .mli-quality")?.text()?.trim()
 
     return newMovieSearchResponse(title, link.attr("href"), TvType.Movie) {
         this.posterUrl = poster
-        this.quality = getQualityFromString(qualityText) // ✅ fix
+        this.quality = getQualityFromString(qualityText) // pakai helper biar aman
     }
 }
 
