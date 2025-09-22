@@ -1,7 +1,6 @@
 package com.layarKacaProvider
 
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
-import com.lagradost.cloudstream3.extractors.Filemoon
 import com.lagradost.cloudstream3.extractors.VidHidePro6
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
@@ -14,7 +13,6 @@ class LayarKacaProviderPlugin : BasePlugin() {
 
         // Extractors bawaan Cloudstream
         registerExtractorAPI(EmturbovidExtractor())   // emturbovid.com
-        registerExtractorAPI(Filemoon())              // filemoon.sx
         registerExtractorAPI(VidHidePro6())           // vidhide.pro
 
         // Extractors custom
