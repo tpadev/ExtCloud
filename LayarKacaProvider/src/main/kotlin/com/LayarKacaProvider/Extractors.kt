@@ -8,6 +8,8 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
+import org.jsoup.Jsoup
+import java.net.URI
 
 // =====================================================
 // Base extractor Hownetwork
@@ -23,7 +25,6 @@ open class Hownetwork : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        // ambil id dari ?id=...
         val id = url.substringAfter("id=")
         val domain = URI(url).host ?: "stream.hownetwork.xyz"
 
@@ -64,9 +65,6 @@ open class Hownetwork : ExtractorApi() {
     }
 }
 
-// =====================================================
-// Variasi turunan Hownetwork (cloud domain)
-// =====================================================
 class Cloudhownetwork : Hownetwork() {
     override var mainUrl = "https://cloud.hownetwork.xyz"
 }
@@ -90,4 +88,37 @@ class Furher2 : Filesim() {
 class Turbovidhls : Filesim() {
     override val name = "Turbovidhls"
     override var mainUrl = "https://turbovidhls.com"
+}
+
+// =====================================================
+// Filemoon extractor
+// =====================================================
+class Filemoon : ExtractorApi() {
+    override val name = "Filemoon"
+    override val mainUrl = "https://filemoon.sx"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val doc = app.get(url).document.toString()
+
+        // ambil file dari sources:[{file:"..."}]
+        val regex = Regex("""sources:\s*\[\{.*?"file":"(.*?)".*?\}\]""")
+        val fileUrl = regex.find(doc)?.groupValues?.get(1)
+
+        if (fileUrl != null) {
+            callback.invoke(
+                newExtractorLink(
+                    this.name,
+                    this.name,
+                    fileUrl,
+                    INFER_TYPE
+                )
+            )
+        }
+    }
 }
