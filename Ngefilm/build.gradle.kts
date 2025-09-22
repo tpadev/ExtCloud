@@ -1,13 +1,14 @@
 // use an integer for version numbers
-version = 5
+version = 1
 
 
 cloudstream {
-    language = "id"
+
     // All of these properties are optional, you can safely remove them
 
-    // description = "Lorem Ipsum"
-    authors = listOf("Hexated, Phisher98")
+    description = "Ngefilm"
+    language = "id"
+    authors = listOf("Hexated", "TeKuma25")
 
     /**
      * Status int as the following:
@@ -23,8 +24,5 @@ cloudstream {
         "Movie",
     )
 
-
-    iconUrl = "https://www.google.com/s2/favicons?domain=tv7.lk21.am.in&sz=%size%"
-
-    isCrossPlatform = true
+    iconUrl = "https://new.ngefilm.site/wp-content/uploads/2022/06/20220602_221251.png"
 }
