@@ -30,15 +30,17 @@ class Ngefilm : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
     val link = this.selectFirst("a") ?: return null
-    val title = this.selectFirst("h2.entry-title, h3.entry-title, .item-article a")?.text()?.trim() ?: return null
+    val title = this.selectFirst("h2.entry-title, h3.entry-title, .item-article a")
+        ?.text()?.trim() ?: return null
     val poster = fixUrlNull(this.selectFirst("img")?.getImageAttr())
-    val quality = this.selectFirst(".gmr-quality-item, .mli-quality")?.text()?.trim()
+    val qualityText = this.selectFirst(".gmr-quality-item, .mli-quality")?.text()?.trim()
 
     return newMovieSearchResponse(title, link.attr("href"), TvType.Movie) {
         this.posterUrl = poster
-        this.quality = quality
+        this.quality = getQualityFromString(qualityText) // ✅ fix
     }
 }
+
 
 
     override suspend fun search(query: String): List<SearchResponse> {
