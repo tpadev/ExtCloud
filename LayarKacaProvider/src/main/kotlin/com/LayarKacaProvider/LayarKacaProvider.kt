@@ -58,17 +58,16 @@ class LayarKacaProvider : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h3")?.ownText()?.trim() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.select("img").attr("src"))
         val type =
             if (this.selectFirst("span.episode") == null) TvType.Movie else TvType.TvSeries
         return if (type == TvType.TvSeries) {
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                this.posterUrl = posterUrl
+                this.posterUrl = null // jangan pakai lk21.party (sering blocked)
             }
         } else {
             val quality = this.select("div.quality").text().trim()
             newMovieSearchResponse(title, href, TvType.Movie) {
-                this.posterUrl = posterUrl
+                this.posterUrl = null
                 addQuality(quality)
             }
         }
@@ -86,16 +85,16 @@ class LayarKacaProvider : MainAPI() {
             val title = item.getString("title")
             val slug = item.getString("slug")
             val type = item.getString("type")
-            val posterUrl = "https://poster.lk21.party/wp-content/uploads/" + item.optString("poster")
+
             when (type) {
                 "series" -> results.add(
                     newTvSeriesSearchResponse(title, "$seriesUrl/$slug", TvType.TvSeries) {
-                        this.posterUrl = posterUrl
+                        this.posterUrl = null // biarkan kosong
                     }
                 )
                 "movie" -> results.add(
                     newMovieSearchResponse(title, "$mainUrl/$slug", TvType.Movie) {
-                        this.posterUrl = posterUrl
+                        this.posterUrl = null
                     }
                 )
             }
@@ -203,10 +202,6 @@ class LayarKacaProvider : MainAPI() {
 }
 
 // ====================== Helper ======================
-private suspend fun String.getIframe(): String {
-    return app.get(this).document.select("div.embed-container iframe").attr("src")
-}
-
 private suspend fun fetchURL(url: String): String {
     val res = app.get(url, allowRedirects = false)
     val href = res.headers["location"]
