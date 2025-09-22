@@ -8,7 +8,6 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
-import org.jsoup.Jsoup
 import java.net.URI
 
 // =====================================================
@@ -65,12 +64,15 @@ open class Hownetwork : ExtractorApi() {
     }
 }
 
+// =====================================================
+// Variasi turunan Hownetwork (cloud domain)
+// =====================================================
 class Cloudhownetwork : Hownetwork() {
     override var mainUrl = "https://cloud.hownetwork.xyz"
 }
 
 // =====================================================
-// Furher extractor (turunan dari Filesim)
+// Furher extractors (turunan dari Filesim)
 // =====================================================
 class Furher : Filesim() {
     override val name = "Furher"
@@ -89,16 +91,3 @@ class Turbovidhls : Filesim() {
     override val name = "Turbovidhls"
     override var mainUrl = "https://turbovidhls.com"
 }
-
-// =====================================================
-// Filemoon extractor
-// =====================================================
-/**
- * Extractor untuk filemoon (turunan dari Filesim bawaan Cloudstream)
- */
-class FileMoon : Filesim() {
-    override val name = "FileMoon"
-    override var mainUrl = "https://filemoon.sx"
-}
-
-
