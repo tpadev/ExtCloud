@@ -2,6 +2,7 @@ package com.ngefilm.extractors
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.httpsify
 
 /**
  * Host custom yang bukan bawaan CS3:

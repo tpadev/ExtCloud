@@ -1,4 +1,4 @@
-package com.lagradost.cloudstream3.ngefilm
+package com.ngefilm
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
@@ -19,7 +19,6 @@ class Ngefilm : MainAPI() {
         "$mainUrl/country/indonesia/" to "Film Indonesia",
     )
 
-    // Ambil list film/series di main page
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val doc = app.get(request.data).document
         val items = doc.select("div.ml-item").mapNotNull {
@@ -28,26 +27,22 @@ class Ngefilm : MainAPI() {
             val poster = it.selectFirst("img")?.getImageAttr()
             val qualityStr = it.selectFirst(".mli-quality")?.text()
             val quality = getQualityFromString(qualityStr)
-            val rating = it.selectFirst(".starstruck-rating")?.text()?.toIntOrNull()
-            val trailer = it.selectFirst("a[href*=\"youtube\"]")?.attr("href")
 
             newMovieSearchResponse(title, link.attr("href"), TvType.Movie) {
                 this.posterUrl = poster
                 this.quality = quality
-                this.rating = rating
-                addTrailer(trailer)
             }
         }
         return newHomePageResponse(request.name, items)
     }
 
-    // Load detail film/series
     override suspend fun load(url: String): LoadResponse? {
         val doc = app.get(url).document
         val title = doc.selectFirst("h1")?.text() ?: return null
         val poster = doc.selectFirst(".thumb img")?.getImageAttr()
         val plot = doc.selectFirst(".desc")?.text()
         val year = doc.selectFirst("span[itemprop=dateCreated]")?.text()?.toIntOrNull()
+        val trailer = doc.selectFirst("a[href*=\"youtube\"]")?.attr("href")
         val type = if (doc.select("div.gmr-listseries a").isNotEmpty()) TvType.TvSeries else TvType.Movie
 
         return when (type) {
@@ -62,6 +57,7 @@ class Ngefilm : MainAPI() {
                     this.posterUrl = poster
                     this.year = year
                     this.plot = plot
+                    addTrailer(trailer)
                 }
             }
             TvType.TvSeries -> {
@@ -75,13 +71,13 @@ class Ngefilm : MainAPI() {
                     this.posterUrl = poster
                     this.year = year
                     this.plot = plot
+                    addTrailer(trailer)
                 }
             }
             else -> null
         }
     }
 
-    // Ambil link video dari server/episode
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -110,7 +106,6 @@ class Ngefilm : MainAPI() {
         return true
     }
 
-    // helper buat gambar
     private fun Element.getImageAttr(): String? {
         return this.attr("data-src")
             .ifBlank { this.attr("data-lazy-src") }
