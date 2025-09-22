@@ -1,8 +1,9 @@
-package com.lagradost.cloudstream3.ngefilm
+package com.lagradost.cloudstream3.movieproviders
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
+import org.jsoup.nodes.Element
 
 class Ngefilm : MainAPI() {
     override var mainUrl = "https://new18.ngefilm.site"
@@ -25,15 +26,16 @@ class Ngefilm : MainAPI() {
             val link = it.selectFirst("a") ?: return@mapNotNull null
             val title = it.selectFirst("h2")?.text() ?: return@mapNotNull null
             val poster = it.selectFirst("img")?.getImageAttr()
-            val quality = it.selectFirst(".mli-quality")?.text()
-            val rating = it.selectFirst(".starstruck-rating")?.text()?.toDoubleOrNull()
-            val trailer = it.selectFirst("a[href*=\"youtube\"]")?.attr("href") // trailer di kartu film
+            val qualityStr = it.selectFirst(".mli-quality")?.text()
+            val quality = getQualityFromString(qualityStr)
+            val rating = it.selectFirst(".starstruck-rating")?.text()?.toIntOrNull()
+            val trailer = it.selectFirst("a[href*=\"youtube\"]")?.attr("href")
 
             newMovieSearchResponse(title, link.attr("href"), TvType.Movie) {
                 this.posterUrl = poster
                 this.quality = quality
                 this.rating = rating
-                this.trailerUrl = trailer
+                addTrailer(trailer)
             }
         }
         return newHomePageResponse(request.name, items)
@@ -51,10 +53,10 @@ class Ngefilm : MainAPI() {
         return when (type) {
             TvType.Movie -> {
                 val episodes = doc.select("ul.muvipro-player-tabs li a").mapIndexed { idx, el ->
-                    Episode(
-                        data = fixUrl(el.attr("href")),
+                    newEpisode(fixUrl(el.attr("href"))) {
                         name = "Server ${idx + 1}"
-                    )
+                        posterUrl = poster
+                    }
                 }
                 newMovieLoadResponse(title, url, TvType.Movie, episodes) {
                     this.posterUrl = poster
@@ -63,13 +65,12 @@ class Ngefilm : MainAPI() {
                 }
             }
             TvType.TvSeries -> {
-                val episodes = doc.select("div.gmr-listseries a")
-                    .mapIndexed { idx, el ->
-                        Episode(
-                            data = fixUrl(el.attr("href")),
-                            name = el.text().ifBlank { "Episode ${idx + 1}" }
-                        )
+                val episodes = doc.select("div.gmr-listseries a").mapIndexed { idx, el ->
+                    newEpisode(fixUrl(el.attr("href"))) {
+                        name = el.text().ifBlank { "Episode ${idx + 1}" }
+                        posterUrl = poster
                     }
+                }
                 newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                     this.posterUrl = poster
                     this.year = year
@@ -88,12 +89,11 @@ class Ngefilm : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val doc = app.get(data).document
-
         val serverLinks = doc.select("ul.muvipro-player-tabs li a")
-            .map { fixUrl(it.attr("href")) }
+            .mapNotNull { it.attr("href").takeIf { h -> h.isNotBlank() } }
+            .map { fixUrl(it) }
 
         if (serverLinks.isNotEmpty()) {
-            // Series episode -> punya daftar server
             serverLinks.forEach { link ->
                 val serverDoc = app.get(link).document
                 val iframe = serverDoc.selectFirst("iframe")?.attr("src")
@@ -102,12 +102,18 @@ class Ngefilm : MainAPI() {
                 }
             }
         } else {
-            // Movie / server langsung
             val iframe = doc.selectFirst("iframe")?.attr("src")
             if (!iframe.isNullOrBlank()) {
                 loadExtractor(iframe, data, subtitleCallback, callback)
             }
         }
         return true
+    }
+
+    // helper buat gambar
+    private fun Element.getImageAttr(): String? {
+        return this.attr("data-src")
+            .ifBlank { this.attr("data-lazy-src") }
+            .ifBlank { this.attr("src") }
     }
 }
