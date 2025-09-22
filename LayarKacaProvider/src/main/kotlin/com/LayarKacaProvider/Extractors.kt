@@ -93,32 +93,12 @@ class Turbovidhls : Filesim() {
 // =====================================================
 // Filemoon extractor
 // =====================================================
-class Filemoon : ExtractorApi() {
-    override val name = "Filemoon"
-    override val mainUrl = "https://filemoon.sx"
-    override val requiresReferer = false
-
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val doc = app.get(url).document.toString()
-
-        // ambil file dari sources:[{file:"..."}]
-        val regex = Regex("""sources:\s*\[\{.*?"file":"(.*?)".*?\}\]""")
-        val fileUrl = regex.find(doc)?.groupValues?.get(1)
-
-        if (fileUrl != null) {
-            callback.invoke(
-                newExtractorLink(
-                    this.name,
-                    this.name,
-                    fileUrl,
-                    INFER_TYPE
-                )
-            )
-        }
-    }
+/**
+ * Extractor untuk filemoon (turunan dari Filesim bawaan Cloudstream)
+ */
+class FileMoon : Filesim() {
+    override val name = "FileMoon"
+    override var mainUrl = "https://filemoon.sx"
 }
+
+
