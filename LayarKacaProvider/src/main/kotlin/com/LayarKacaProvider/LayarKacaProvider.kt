@@ -71,17 +71,14 @@ class LayarKacaProvider : MainAPI() {
             if (this.selectFirst("span.episode") == null) TvType.Movie else TvType.TvSeries
 
         return if (type == TvType.TvSeries) {
-            val episode = this.selectFirst("span.episode strong")?.text()?.filter { it.isDigit() }
-                ?.toIntOrNull()
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
-                this.addSub(episode)
             }
         } else {
             val quality = this.select("div.quality").text().trim()
             newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
-                this.addQuality(quality)
+                addQuality(quality)
             }
         }
     }
