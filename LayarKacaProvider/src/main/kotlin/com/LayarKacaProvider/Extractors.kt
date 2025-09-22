@@ -24,13 +24,15 @@ open class Hownetwork : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+        // ambil id dari ?id=...
         val id = url.substringAfter("id=")
         val domain = URI(url).host ?: "stream.hownetwork.xyz"
 
         val res = app.post(
             "https://$domain/api.php?id=$id",
             data = mapOf(
-                "r" to "https://playeriframe.shop/",
+                // fix pakai .sbs (bukan shop)
+                "r" to "https://playeriframe.sbs/",
                 "d" to domain,
             ),
             referer = url,
