@@ -33,9 +33,9 @@ class Ngefilm : MainAPI() {
         val title = this.selectFirst("h2")?.text()?.trim() ?: return null
         val poster = fixUrlNull(this.selectFirst("img")?.getImageAttr())
         val quality = this.selectFirst(".mli-quality")?.text()?.trim()
-        return newMovieSearchResponse(title, link.attr("href"), TvType.Movie) {␊
-            this.posterUrl = poster␊
-        }␊
+        return newMovieSearchResponse(title, link.attr("href"), TvType.Movie) {
+            this.posterUrl = poster
+        }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
