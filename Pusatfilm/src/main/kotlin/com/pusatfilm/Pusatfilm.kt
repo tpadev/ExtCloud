@@ -12,7 +12,7 @@ import java.net.URI
 
 class Pusatfilm : MainAPI() {
 
-    override var mainUrl = "https://v1.pusatfilm21info.net/"
+    override var mainUrl = "https://v1.pusatfilm21info.net"
 
     override var name = "Pusatfilm"
     override val hasMainPage = true
