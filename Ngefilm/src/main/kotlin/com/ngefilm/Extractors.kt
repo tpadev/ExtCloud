@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.loadExtractor
 
 // =================== PlayerNgefilm21 ===================
 class PlayerNgefilm21 : ExtractorApi() {
@@ -23,20 +24,9 @@ class PlayerNgefilm21 : ExtractorApi() {
     ) {
         val doc = app.get(httpsify(url), referer = referer ?: mainUrl).document
 
-        // cek source langsung
         val m3u8 = doc.selectFirst("source[src*=.m3u8]")?.attr("src")
         if (!m3u8.isNullOrBlank()) {
             M3u8Helper.generateM3u8(name, m3u8, url).forEach(callback)
-            return
-        }
-
-        val mp4 = doc.selectFirst("source[src*=.mp4]")?.attr("src")
-        if (!mp4.isNullOrBlank()) {
-            callback(
-                newExtractorLink(
-                    name, name, httpsify(mp4), referer = url, quality = Qualities.P720.value
-                )
-            )
             return
         }
 
