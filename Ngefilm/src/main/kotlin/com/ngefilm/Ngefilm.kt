@@ -23,10 +23,24 @@ class Ngefilm : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val doc = app.get(request.data).document
-        val items = doc.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
-        return newHomePageResponse(request.name, items)
+    val doc = app.get(request.data).document
+    val homeLists = mutableListOf<HomePageList>()
+
+    // Coba ambil highlight dari carousel paling atas
+    val highlights = doc.select("div.gmr-box-content.gmr-box-archive.text-center article.has-post-thumbnail, article.has-post-thumbnail")
+        .take(5)  // atur berapa banyak highlight
+        .mapNotNull { it.toSearchResult() }
+
+    if (highlights.isNotEmpty()) {
+        homeLists.add(HomePageList("Highlight", highlights))
     }
+
+    // Ambil list film utama / ‘upload terbaru’
+    val items = doc.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
+    homeLists.add(HomePageList(request.name, items))
+
+    return newHomePageResponse(homeLists)
+}
 
     private fun Element.toSearchResult(): SearchResponse? {
         val link = this.selectFirst("h2.entry-title a") ?: return null
