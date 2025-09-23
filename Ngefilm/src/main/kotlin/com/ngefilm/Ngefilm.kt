@@ -49,12 +49,24 @@ private fun Element.toSearchResult(): SearchResponse? {
 
    override suspend fun load(url: String): LoadResponse? {
     val doc = app.get(url).document
-    val title = doc.selectFirst("h1")?.text()?.trim() ?: return null
+
+    val title = doc.selectFirst("h1.entry-title")?.text()?.trim() ?: return null
     val poster = fixUrlNull(doc.selectFirst(".thumb img")?.getImageAttr())
-    val plot = doc.selectFirst("[itemprop=description]")?.text()?.trim()
     val year = doc.selectFirst("span[itemprop=dateCreated]")?.text()?.toIntOrNull()
-    val type = if (doc.select("div.gmr-listseries a").isNotEmpty()) TvType.TvSeries else TvType.Movie
-    val trailer = doc.selectFirst("a[href*=\"youtube\"]")?.attr("href")
+
+    // ✅ ambil sinopsis (hanya paragraf pertama, tanpa "Oleh:Ngefilm..." dsb.)
+    val plot = doc.selectFirst("div.entry-content.entry-content-single p")
+        ?.ownText()
+        ?.trim()
+
+    // ✅ ambil trailer yang benar, pakai tombol trailer-popup
+    val trailer = doc.selectFirst("a.gmr-trailer-popup")?.attr("href")
+
+    val type = if (doc.select("div.gmr-listseries a").isNotEmpty()) {
+        TvType.TvSeries
+    } else {
+        TvType.Movie
+    }
 
     return when (type) {
         TvType.Movie -> {
@@ -66,16 +78,13 @@ private fun Element.toSearchResult(): SearchResponse? {
             }
         }
         TvType.TvSeries -> {
-            val episodes = doc.select("div.gmr-listseries a")
-                .filter { !it.text().contains("Pilih", ignoreCase = true) } // skip "Pilih Episode"
-                .mapIndexed { idx, el ->
-                    newEpisode(fixUrl(el.attr("href"))) {
-                        this.name = el.text().ifBlank { "Episode ${idx + 1}" }
-                        this.season = null
-                        this.episode = idx + 1
-                    }
+            val episodes = doc.select("div.gmr-listseries a").mapIndexed { idx, el ->
+                newEpisode(fixUrl(el.attr("href"))) {
+                    this.name = el.text().ifBlank { "Episode ${idx + 1}" }
+                    this.season = null
+                    this.episode = idx + 1
                 }
-
+            }
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.year = year
@@ -86,7 +95,6 @@ private fun Element.toSearchResult(): SearchResponse? {
         else -> null
     }
 }
-
 
     override suspend fun loadLinks(
         data: String,
