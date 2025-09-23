@@ -101,6 +101,7 @@ class Ngefilm : MainAPI() {
                             this.name = el.text().ifBlank { "Episode ${idx + 1}" }
                             this.season = null
                             this.episode = idx + 1
+this.posterUrl = poster
                         }
                     }
 
