@@ -104,10 +104,29 @@ private fun Element.toSearchResult(): SearchResponse? {
         .mapNotNull { it.getIframeAttr() }
 
     iframes.forEach { iframe ->
-        loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
+        val fixed = httpsify(iframe)
+
+        when {
+            fixed.contains("playerngefilm21", true) -> {
+                PlayerNgefilm21().getUrl(fixed, data, subtitleCallback, callback)
+            }
+            fixed.contains("bingezove", true) -> {
+                BingeZove().getUrl(fixed, data, subtitleCallback, callback)
+            }
+            fixed.contains("bangjago", true) -> {
+                Bangjago().getUrl(fixed, data, subtitleCallback, callback)
+            }
+            fixed.contains("hglink", true) -> {
+                Hglink().getUrl(fixed, data, subtitleCallback, callback)
+            }
+            else -> {
+                // biarin extractor bawaan Cloudstream yang handle
+                loadExtractor(fixed, data, subtitleCallback, callback)
+            }
+        }
     }
 
-    // 2. Ambil link server (Doodstream, VidHide, dll)
+    // 2. Ambil link server fallback (Doodstream, VidHide, dll)
     val serverLinks = doc.select("ul.muvipro-player-tabs li a")
         .map { fixUrl(it.attr("href")) }
 
@@ -115,12 +134,31 @@ private fun Element.toSearchResult(): SearchResponse? {
         val serverDoc = app.get(link).document
         val iframe = serverDoc.selectFirst("iframe")?.getIframeAttr()
         if (!iframe.isNullOrBlank()) {
-            loadExtractor(httpsify(iframe), link, subtitleCallback, callback)
+            val fixed = httpsify(iframe)
+
+            when {
+                fixed.contains("playerngefilm21", true) -> {
+                    PlayerNgefilm21().getUrl(fixed, link, subtitleCallback, callback)
+                }
+                fixed.contains("bingezove", true) -> {
+                    BingeZove().getUrl(fixed, link, subtitleCallback, callback)
+                }
+                fixed.contains("bangjago", true) -> {
+                    Bangjago().getUrl(fixed, link, subtitleCallback, callback)
+                }
+                fixed.contains("hglink", true) -> {
+                    Hglink().getUrl(fixed, link, subtitleCallback, callback)
+                }
+                else -> {
+                    loadExtractor(fixed, link, subtitleCallback, callback)
+                }
+            }
         }
     }
 
     return true
 }
+
 
     // Helpers
     private fun Element.getImageAttr(): String {
