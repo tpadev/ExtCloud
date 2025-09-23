@@ -1,13 +1,12 @@
 package com.ngefilm
 
-import com.lagradost.cloudstream3.plugins.BasePlugin
+import android.content.Context
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-
+import com.lagradost.cloudstream3.plugins.Plugin
 
 @CloudstreamPlugin
-class NgefilmProvider : BasePlugin() {
-    override fun load() {
-        // Main provider
+class Ngefilm : Plugin() {
+    override fun load(context: Context) {
         registerMainAPI(Ngefilm())
 
         // Custom extractors (host yang belum bawaan CS3)
@@ -15,8 +14,5 @@ class NgefilmProvider : BasePlugin() {
         registerExtractorAPI(Bangjago())
         registerExtractorAPI(Hglink())
         registerExtractorAPI(BingeZove())
-
-        // NOTE: Host populer (termasuk KrakenFiles, Streamtape, Dood, dst)
-        // sudah ada extractor bawaan Cloudstream — tidak perlu daftar lagi.
     }
 }
