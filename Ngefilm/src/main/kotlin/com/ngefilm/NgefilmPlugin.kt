@@ -2,10 +2,7 @@ package com.ngefilm
 
 import com.lagradost.cloudstream3.plugins.BasePlugin
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.ngefilm.extractors.Bangjago
-import com.ngefilm.extractors.BingeZove
-import com.ngefilm.extractors.Hglink
-import com.ngefilm.extractors.PlayerNgefilm21
+
 
 @CloudstreamPlugin
 class NgefilmProvider : BasePlugin() {
