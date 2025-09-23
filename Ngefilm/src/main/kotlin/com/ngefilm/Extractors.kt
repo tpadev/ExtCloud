@@ -22,19 +22,15 @@ class PlayerNgefilm21 : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val doc = app.get(httpsify(url), referer = referer ?: mainUrl).document
-
-        val m3u8 = doc.selectFirst("source[src*=.m3u8]")?.attr("src")
-        if (!m3u8.isNullOrBlank()) {
-            M3u8Helper.generateM3u8(name, m3u8, url).forEach(callback)
-            return
-        }
-
-        val iframe = doc.selectFirst("iframe")?.attr("src")
-        if (!iframe.isNullOrBlank()) {
-            loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
-        }
+        val res = app.get(url,referer=referer).text
+        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(res)?.groupValues?.getOrNull(1)
+        M3u8Helper.generateM3u8(
+            name,
+            m3u8 ?: return,
+            mainUrl
+        ).forEach(callback)
     }
+
 }
 
 // =================== Bangjago ===================
