@@ -3,6 +3,7 @@ package com.ngefilm
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
+import com.ngefilm.extractors.*
 import org.jsoup.nodes.Element
 import java.net.URI
 
@@ -99,34 +100,32 @@ private fun Element.toSearchResult(): SearchResponse? {
 ): Boolean {
     val doc = app.get(data).document
 
-    // 1. Ambil iframe langsung dari halaman utama
+    // ambil iframe utama
     val iframes = doc.select("div.gmr-pagi-player iframe")
         .mapNotNull { it.getIframeAttr() }
 
     iframes.forEach { iframe ->
         val fixed = httpsify(iframe)
-
         when {
             fixed.contains("playerngefilm21", true) -> {
-                PlayerNgefilm21().getUrl(fixed, data, subtitleCallback, callback)
+                PlayerNgefilm21().getUrl(fixed, null, subtitleCallback, callback)
             }
             fixed.contains("bingezove", true) -> {
-                BingeZove().getUrl(fixed, data, subtitleCallback, callback)
+                BingeZove().getUrl(fixed, null, subtitleCallback, callback)
             }
             fixed.contains("bangjago", true) -> {
-                Bangjago().getUrl(fixed, data, subtitleCallback, callback)
+                Bangjago().getUrl(fixed, null, subtitleCallback, callback)
             }
             fixed.contains("hglink", true) -> {
-                Hglink().getUrl(fixed, data, subtitleCallback, callback)
+                Hglink().getUrl(fixed, null, subtitleCallback, callback)
             }
             else -> {
-                // biarin extractor bawaan Cloudstream yang handle
                 loadExtractor(fixed, data, subtitleCallback, callback)
             }
         }
     }
 
-    // 2. Ambil link server fallback (Doodstream, VidHide, dll)
+    // fallback → server links
     val serverLinks = doc.select("ul.muvipro-player-tabs li a")
         .map { fixUrl(it.attr("href")) }
 
@@ -134,30 +133,13 @@ private fun Element.toSearchResult(): SearchResponse? {
         val serverDoc = app.get(link).document
         val iframe = serverDoc.selectFirst("iframe")?.getIframeAttr()
         if (!iframe.isNullOrBlank()) {
-            val fixed = httpsify(iframe)
-
-            when {
-                fixed.contains("playerngefilm21", true) -> {
-                    PlayerNgefilm21().getUrl(fixed, link, subtitleCallback, callback)
-                }
-                fixed.contains("bingezove", true) -> {
-                    BingeZove().getUrl(fixed, link, subtitleCallback, callback)
-                }
-                fixed.contains("bangjago", true) -> {
-                    Bangjago().getUrl(fixed, link, subtitleCallback, callback)
-                }
-                fixed.contains("hglink", true) -> {
-                    Hglink().getUrl(fixed, link, subtitleCallback, callback)
-                }
-                else -> {
-                    loadExtractor(fixed, link, subtitleCallback, callback)
-                }
-            }
+            loadExtractor(httpsify(iframe), link, subtitleCallback, callback)
         }
     }
 
     return true
 }
+
 
 
     // Helpers
