@@ -94,7 +94,6 @@ class Ngefilm : MainAPI() {
                     this.posterUrl = poster
                     this.year = year
                     this.plot = plot
-                    addTrailer(trailer)
                     this.recommendations = recommendations
                 }
             }
