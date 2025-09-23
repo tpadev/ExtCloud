@@ -92,34 +92,35 @@ private fun Element.toSearchResult(): SearchResponse? {
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val doc = app.get(data).document
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val doc = app.get(data).document
 
-        // cek apakah ini halaman episode (ada daftar server)
-        val serverLinks = doc.select("ul.muvipro-player-tabs li a").map { fixUrl(it.attr("href")) }
+    // 1. Ambil iframe langsung dari halaman utama
+    val iframes = doc.select("div.gmr-pagi-player iframe")
+        .mapNotNull { it.getIframeAttr() }
 
-        if (serverLinks.isNotEmpty()) {
-            serverLinks.forEach { link ->
-                val serverDoc = app.get(link).document
-                val iframe = serverDoc.selectFirst("iframe")?.getIframeAttr()
-                if (!iframe.isNullOrBlank()) {
-                    loadExtractor(httpsify(iframe), link, subtitleCallback, callback)
-                }
-            }
-        } else {
-            // movie → iframe langsung
-            val iframe = doc.selectFirst("iframe")?.getIframeAttr()
-            if (!iframe.isNullOrBlank()) {
-                loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
-            }
-        }
-        return true
+    iframes.forEach { iframe ->
+        loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
     }
 
+    // 2. Ambil link server (Doodstream, VidHide, dll)
+    val serverLinks = doc.select("ul.muvipro-player-tabs li a")
+        .map { fixUrl(it.attr("href")) }
+
+    serverLinks.forEach { link ->
+        val serverDoc = app.get(link).document
+        val iframe = serverDoc.selectFirst("iframe")?.getIframeAttr()
+        if (!iframe.isNullOrBlank()) {
+            loadExtractor(httpsify(iframe), link, subtitleCallback, callback)
+        }
+    }
+
+    return true
+}
 
     // Helpers
     private fun Element.getImageAttr(): String {
