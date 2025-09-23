@@ -11,6 +11,8 @@ import java.net.URI
 
 class Ngefilm : MainAPI() {
     override var mainUrl = "https://new18.ngefilm.site"
+
+    private var directUrl: String? = null
     override var name = "Ngefilm"
     override val hasMainPage = true
     override var lang = "id"
@@ -54,7 +56,7 @@ private fun Element.toSearchResult(): SearchResponse? {
         val fetch = app.get(url)
         directUrl = getBaseUrl(fetch.url)
         val document = fetch.document
-        
+
         val doc = app.get(url).document
         val title = doc.selectFirst("h1")?.text()?.trim() ?: return null
         val poster = fixUrlNull(doc.selectFirst(".thumb img")?.getImageAttr())
