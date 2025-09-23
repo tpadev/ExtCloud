@@ -103,7 +103,8 @@ private fun Element.toSearchResult(): SearchResponse? {
 
     // gabung iframe langsung + server links
     val allLinks = buildList {
-        addAll(doc.select("div.gmr-pagi-player iframe").map { fixUrl(it.attr("href")) })
+        addAll(doc.select("d").map { fixUrl(it.attr("href")) })
+        addAll(doc.select("ul.muvipro-player-tabs li a, div.gmr-embed-responsive iframe").map { fixUrl(it.attr("href")) })
     }
 
     allLinks.forEach { link ->
