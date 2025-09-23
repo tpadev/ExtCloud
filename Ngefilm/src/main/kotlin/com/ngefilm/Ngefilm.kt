@@ -51,6 +51,10 @@ private fun Element.toSearchResult(): SearchResponse? {
     }
 
    override suspend fun load(url: String): LoadResponse? {
+        val fetch = app.get(url)
+        directUrl = getBaseUrl(fetch.url)
+        val document = fetch.document
+        
         val doc = app.get(url).document
         val title = doc.selectFirst("h1")?.text()?.trim() ?: return null
         val poster = fixUrlNull(doc.selectFirst(".thumb img")?.getImageAttr())
