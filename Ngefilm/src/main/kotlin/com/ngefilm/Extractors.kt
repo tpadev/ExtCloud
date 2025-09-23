@@ -1,27 +1,15 @@
 package com.ngefilm
 
-import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.httpsify
+import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.M3u8Helper
+import com.lagradost.cloudstream3.utils.Qualities
 
-
-/**
- * Custom Extractors untuk host Ngefilm:
- * - PlayerNgefilm21
- * - Bangjago
- * - Hglink
- * - BingeZove
- *
- * Pola:
- * - Jika halaman mengandung langsung .m3u8 → gunakan M3u8Helper
- * - Jika halaman embed hanya proxy (iframe) → ambil src → lempar ke loadExtractor
- */
-
+// =================== PlayerNgefilm21 ===================
 class PlayerNgefilm21 : ExtractorApi() {
     override val name = "PlayerNgefilm21"
     override val mainUrl = "https://playerngefilm21.rpmlive.online"
@@ -33,22 +21,33 @@ class PlayerNgefilm21 : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val html = app.get(httpsify(url), referer = referer ?: mainUrl).text
+        val doc = app.get(httpsify(url), referer = referer ?: mainUrl).document
 
-        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""", RegexOption.IGNORE_CASE).find(html)?.value
+        // cek source langsung
+        val m3u8 = doc.selectFirst("source[src*=.m3u8]")?.attr("src")
         if (!m3u8.isNullOrBlank()) {
             M3u8Helper.generateM3u8(name, m3u8, url).forEach(callback)
             return
         }
 
-        val iframe = Regex("""<iframe[^>]+src=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-            .find(html)?.groupValues?.getOrNull(1)
+        val mp4 = doc.selectFirst("source[src*=.mp4]")?.attr("src")
+        if (!mp4.isNullOrBlank()) {
+            callback(
+                newExtractorLink(
+                    name, name, httpsify(mp4), referer = url, quality = Qualities.P720.value
+                )
+            )
+            return
+        }
+
+        val iframe = doc.selectFirst("iframe")?.attr("src")
         if (!iframe.isNullOrBlank()) {
             loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
         }
     }
 }
 
+// =================== Bangjago ===================
 class Bangjago : ExtractorApi() {
     override val name = "Bangjago"
     override val mainUrl = "https://bangjago.upns.blog"
@@ -60,22 +59,22 @@ class Bangjago : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val html = app.get(httpsify(url), referer = referer ?: mainUrl).text
+        val doc = app.get(httpsify(url), referer = referer ?: mainUrl).document
 
-        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""", RegexOption.IGNORE_CASE).find(html)?.value
+        val m3u8 = doc.selectFirst("source[src*=.m3u8]")?.attr("src")
         if (!m3u8.isNullOrBlank()) {
             M3u8Helper.generateM3u8(name, m3u8, url).forEach(callback)
             return
         }
 
-        val iframe = Regex("""<iframe[^>]+src=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-            .find(html)?.groupValues?.getOrNull(1)
+        val iframe = doc.selectFirst("iframe")?.attr("src")
         if (!iframe.isNullOrBlank()) {
             loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
         }
     }
 }
 
+// =================== Hglink ===================
 class Hglink : ExtractorApi() {
     override val name = "Hglink"
     override val mainUrl = "https://hglink.to"
@@ -87,22 +86,22 @@ class Hglink : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val html = app.get(httpsify(url), referer = referer ?: mainUrl).text
+        val doc = app.get(httpsify(url), referer = referer ?: mainUrl).document
 
-        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""", RegexOption.IGNORE_CASE).find(html)?.value
+        val m3u8 = doc.selectFirst("source[src*=.m3u8]")?.attr("src")
         if (!m3u8.isNullOrBlank()) {
             M3u8Helper.generateM3u8(name, m3u8, url).forEach(callback)
             return
         }
 
-        val iframe = Regex("""<iframe[^>]+src=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-            .find(html)?.groupValues?.getOrNull(1)
+        val iframe = doc.selectFirst("iframe")?.attr("src")
         if (!iframe.isNullOrBlank()) {
             loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
         }
     }
 }
 
+// =================== BingeZove ===================
 class BingeZove : ExtractorApi() {
     override val name = "BingeZove"
     override val mainUrl = "https://bingezove.com"
@@ -114,16 +113,15 @@ class BingeZove : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val html = app.get(httpsify(url), referer = referer ?: mainUrl).text
+        val doc = app.get(httpsify(url), referer = referer ?: mainUrl).document
 
-        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8[^\s'"]*""", RegexOption.IGNORE_CASE).find(html)?.value
+        val m3u8 = doc.selectFirst("source[src*=.m3u8]")?.attr("src")
         if (!m3u8.isNullOrBlank()) {
             M3u8Helper.generateM3u8(name, m3u8, url).forEach(callback)
             return
         }
 
-        val iframe = Regex("""<iframe[^>]+src=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-            .find(html)?.groupValues?.getOrNull(1)
+        val iframe = doc.selectFirst("iframe")?.attr("src")
         if (!iframe.isNullOrBlank()) {
             loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
         }
