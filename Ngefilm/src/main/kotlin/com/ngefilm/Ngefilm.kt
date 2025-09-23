@@ -48,53 +48,49 @@ private fun Element.toSearchResult(): SearchResponse? {
     }
 
    override suspend fun load(url: String): LoadResponse? {
-    val doc = app.get(url).document
+        val doc = app.get(url).document
+        val title = doc.selectFirst("h1")?.text()?.trim() ?: return null
+        val poster = fixUrlNull(doc.selectFirst(".thumb img")?.getImageAttr())
 
-    val title = doc.selectFirst("h1.entry-title")?.text()?.trim() ?: return null
-    val poster = fixUrlNull(doc.selectFirst(".thumb img")?.getImageAttr())
-    val year = doc.selectFirst("span[itemprop=dateCreated]")?.text()?.toIntOrNull()
+        val rawPlot = doc.selectFirst("div.entry-content.entry-content-single p")?.text()?.trim()
+        val plot = rawPlot?.substringBefore("Oleh:")?.trim()
 
-    // ✅ ambil sinopsis (hanya paragraf pertama, tanpa "Oleh:Ngefilm..." dsb.)
-    val plot = doc.selectFirst("div.entry-content.entry-content-single p")
-        ?.ownText()
-        ?.trim()
+        val year = doc.selectFirst("span[itemprop=dateCreated]")?.text()?.toIntOrNull()
+        val type = if (doc.select("div.gmr-listseries a").isNotEmpty()) TvType.TvSeries else TvType.Movie
 
-    // ✅ ambil trailer yang benar, pakai tombol trailer-popup
-    val trailer = doc.selectFirst("a.gmr-trailer-popup")?.attr("href")
+        val trailer = doc.selectFirst("a.gmr-trailer-popup")?.attr("href")
+            ?: doc.selectFirst("div.gmr-embed-responsive iframe")?.attr("src")
 
-    val type = if (doc.select("div.gmr-listseries a").isNotEmpty()) {
-        TvType.TvSeries
-    } else {
-        TvType.Movie
-    }
-
-    return when (type) {
-        TvType.Movie -> {
-            newMovieLoadResponse(title, url, TvType.Movie, url) {
-                this.posterUrl = poster
-                this.year = year
-                this.plot = plot
-                addTrailer(trailer)
-            }
-        }
-        TvType.TvSeries -> {
-            val episodes = doc.select("div.gmr-listseries a").mapIndexed { idx, el ->
-                newEpisode(fixUrl(el.attr("href"))) {
-                    this.name = el.text().ifBlank { "Episode ${idx + 1}" }
-                    this.season = null
-                    this.episode = idx + 1
+        return when (type) {
+            TvType.Movie -> {
+                newMovieLoadResponse(title, url, TvType.Movie, url) {
+                    this.posterUrl = poster
+                    this.year = year
+                    this.plot = plot
+                    addTrailer(trailer)
                 }
             }
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                this.posterUrl = poster
-                this.year = year
-                this.plot = plot
-                addTrailer(trailer)
+            TvType.TvSeries -> {
+                val episodes = doc.select("div.gmr-listseries a")
+                    .filter { !it.text().contains("Pilih", ignoreCase = true) }
+                    .mapIndexed { idx, el ->
+                        newEpisode(fixUrl(el.attr("href"))) {
+                            this.name = el.text().ifBlank { "Episode ${idx + 1}" }
+                            this.season = null
+                            this.episode = idx + 1
+                        }
+                    }
+
+                newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+                    this.posterUrl = poster
+                    this.year = year
+                    this.plot = plot
+                    addTrailer(trailer)
+                }
             }
+            else -> null
         }
-        else -> null
     }
-}
 
     override suspend fun loadLinks(
         data: String,
