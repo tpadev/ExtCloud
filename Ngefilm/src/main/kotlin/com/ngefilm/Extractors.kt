@@ -20,7 +20,7 @@ import com.lagradost.cloudstream3.utils.*
 class PlayerNgefilm21 : ExtractorApi() {
     override val name = "PlayerNgefilm21"
     override val mainUrl = "https://playerngefilm21.rpmlive.online"
-    override val requiresReferer = true
+    override val requiresReferer = false
 
     override suspend fun getUrl(
         url: String,
@@ -50,7 +50,7 @@ class PlayerNgefilm21 : ExtractorApi() {
 class Bangjago : ExtractorApi() {
     override val name = "Bangjago"
     override val mainUrl = "https://bangjago.upns.blog"
-    override val requiresReferer = true
+    override val requiresReferer = false
 
     override suspend fun getUrl(
         url: String,
@@ -78,7 +78,7 @@ class Bangjago : ExtractorApi() {
 class Hglink : ExtractorApi() {
     override val name = "Hglink"
     override val mainUrl = "https://hglink.to"
-    override val requiresReferer = true
+    override val requiresReferer = false
 
     override suspend fun getUrl(
         url: String,
@@ -106,7 +106,7 @@ class Hglink : ExtractorApi() {
 class BingeZove : ExtractorApi() {
     override val name = "BingeZove"
     override val mainUrl = "https://bingezove.com"
-    override val requiresReferer = true
+    override val requiresReferer = false
 
     override suspend fun getUrl(
         url: String,
