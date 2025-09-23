@@ -3,9 +3,17 @@ package com.ngefilm.extractors
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 
-// ===============================================
-// CUSTOM EXTRACTORS
-// ===============================================
+/**
+ * Custom Extractors:
+ * - PlayerNgefilm21
+ * - Bangjago
+ * - Hglink
+ * - BingeZove
+ *
+ * Pola:
+ * - Kalau ada langsung .m3u8 → generate pakai M3u8Helper
+ * - Kalau cuma iframe → ambil src → loadExtractor lagi
+ */
 
 class PlayerNgefilm21 : ExtractorApi() {
     override val name = "PlayerNgefilm21"
@@ -20,17 +28,18 @@ class PlayerNgefilm21 : ExtractorApi() {
     ) {
         val html = app.get(httpsify(url), referer = referer ?: mainUrl).text
 
-        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8""").find(html)?.value
+        // cari m3u8 langsung
+        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8(?:\?[^\s'"]+)?""")
+            .find(html)?.value
         if (!m3u8.isNullOrBlank()) {
             M3u8Helper.generateM3u8(name, m3u8, url).forEach(callback)
             return
         }
 
+        // fallback iframe
         val iframe = Regex("<iframe[^>]+src=[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
             .find(html)?.groupValues?.getOrNull(1)
-        if (!iframe.isNullOrBlank()) {
-            loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
-        }
+        if (!iframe.isNullOrBlank()) loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
     }
 }
 
@@ -47,7 +56,8 @@ class Bangjago : ExtractorApi() {
     ) {
         val html = app.get(httpsify(url), referer = referer ?: mainUrl).text
 
-        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8""").find(html)?.value
+        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8(?:\?[^\s'"]+)?""")
+            .find(html)?.value
         if (!m3u8.isNullOrBlank()) {
             M3u8Helper.generateM3u8(name, m3u8, url).forEach(callback)
             return
@@ -55,9 +65,7 @@ class Bangjago : ExtractorApi() {
 
         val iframe = Regex("<iframe[^>]+src=[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
             .find(html)?.groupValues?.getOrNull(1)
-        if (!iframe.isNullOrBlank()) {
-            loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
-        }
+        if (!iframe.isNullOrBlank()) loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
     }
 }
 
@@ -74,7 +82,8 @@ class Hglink : ExtractorApi() {
     ) {
         val html = app.get(httpsify(url), referer = referer ?: mainUrl).text
 
-        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8""").find(html)?.value
+        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8(?:\?[^\s'"]+)?""")
+            .find(html)?.value
         if (!m3u8.isNullOrBlank()) {
             M3u8Helper.generateM3u8(name, m3u8, url).forEach(callback)
             return
@@ -82,9 +91,7 @@ class Hglink : ExtractorApi() {
 
         val iframe = Regex("<iframe[^>]+src=[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
             .find(html)?.groupValues?.getOrNull(1)
-        if (!iframe.isNullOrBlank()) {
-            loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
-        }
+        if (!iframe.isNullOrBlank()) loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
     }
 }
 
@@ -101,7 +108,8 @@ class BingeZove : ExtractorApi() {
     ) {
         val html = app.get(httpsify(url), referer = referer ?: mainUrl).text
 
-        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8""").find(html)?.value
+        val m3u8 = Regex("""https?://[^\s'"]+\.m3u8(?:\?[^\s'"]+)?""")
+            .find(html)?.value
         if (!m3u8.isNullOrBlank()) {
             M3u8Helper.generateM3u8(name, m3u8, url).forEach(callback)
             return
@@ -109,8 +117,6 @@ class BingeZove : ExtractorApi() {
 
         val iframe = Regex("<iframe[^>]+src=[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
             .find(html)?.groupValues?.getOrNull(1)
-        if (!iframe.isNullOrBlank()) {
-            loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
-        }
+        if (!iframe.isNullOrBlank()) loadExtractor(httpsify(iframe), url, subtitleCallback, callback)
     }
 }

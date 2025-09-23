@@ -108,16 +108,16 @@ private fun Element.toSearchResult(): SearchResponse? {
         val fixed = httpsify(iframe)
         when {
             fixed.contains("playerngefilm21", true) -> {
-                PlayerNgefilm21().getUrl(fixed, null, subtitleCallback, callback)
+                PlayerNgefilm21().getUrl(fixed, data, subtitleCallback, callback)
             }
             fixed.contains("bingezove", true) -> {
-                BingeZove().getUrl(fixed, null, subtitleCallback, callback)
+                BingeZove().getUrl(fixed, data, subtitleCallback, callback)
             }
             fixed.contains("bangjago", true) -> {
-                Bangjago().getUrl(fixed, null, subtitleCallback, callback)
+                Bangjago().getUrl(fixed, data, subtitleCallback, callback)
             }
             fixed.contains("hglink", true) -> {
-                Hglink().getUrl(fixed, null, subtitleCallback, callback)
+                Hglink().getUrl(fixed, data, subtitleCallback, callback)
             }
             else -> {
                 loadExtractor(fixed, data, subtitleCallback, callback)
@@ -139,8 +139,6 @@ private fun Element.toSearchResult(): SearchResponse? {
 
     return true
 }
-
-
 
     // Helpers
     private fun Element.getImageAttr(): String {
