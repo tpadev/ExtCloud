@@ -39,10 +39,20 @@ class Pusatfilm : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
+        // Judul film
+        val title = this.selectFirst("h2.entry-title a, h3.entry-title a, .entry-title a")
+            ?.text()?.trim() ?: return null
+
+        // Link detail
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr()).fixImageQuality()
-        val quality = this.select("div.gmr-qual, div.gmr-quality-item > a").text().trim().replace("-", "")
+
+        // Poster
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.getImageAttr()).fixImageQuality()
+
+        // Kualitas (BluRay, WEB-DL, dll)
+        val quality = this.select("div.gmr-qual, div.gmr-quality-item, span.quality, .gmr-quality")
+            .text().trim().replace("-", "")
+
         return if (quality.isEmpty()) {
             val episode = Regex("Episode\\s?([0-9]+)")
                 .find(title)
@@ -63,7 +73,7 @@ class Pusatfilm : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$mainUrl/?s=$query&post_type[]=post&post_type[]=tv", timeout = 50L).document
+        val document = app.get("$mainUrl/?s=$query&post_type[]=post&post_type[]=tv", timeout = 60L).document
         return document.select("article.item").mapNotNull { it.toSearchResult() }
     }
 
@@ -71,24 +81,27 @@ class Pusatfilm : MainAPI() {
         val fetch = app.get(url)
         val document = fetch.document
 
-        val title = document.selectFirst("h1.entry-title")
+        val title = document.selectFirst("h1.entry-title, h1.title, h1")
             ?.text()
             ?.substringBefore("Season")
             ?.substringBefore("Episode")
             ?.trim()
             .toString()
 
-        val poster = fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
-        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a").map { it.text() }
-        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().trim().toIntOrNull()
-        val tvType = if (url.contains("/tv/")) TvType.TvSeries else TvType.Movie
-        val description = document.selectFirst("div[itemprop=description] > p")?.text()?.trim()
-        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
-        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.toRatingInt()
-        val actors = document.select("div.gmr-moviedata").last()?.select("span[itemprop=actors]")?.map { it.select("a").text() }
+        val poster = fixUrlNull(document.selectFirst("figure.pull-left img, .poster img")?.getImageAttr())
+        val tags = document.select("div.gmr-moviedata strong:contains(Genre), .genre a").map { it.text() }
+        val year = document.select("div.gmr-moviedata strong:contains(Year), .year a")
+            .text().trim().toIntOrNull()
+        val tvType = if (url.contains("/tv/") || url.contains("series")) TvType.TvSeries else TvType.Movie
+        val description = document.selectFirst("div[itemprop=description] p, .desc, .entry-content p")
+            ?.text()?.trim()
+        val trailer = document.selectFirst("a.gmr-trailer-popup, .trailer a")?.attr("href")
+        val rating = document.selectFirst("span[itemprop=ratingValue], .rating")?.text()?.toRatingInt()
+        val actors = document.select("div.gmr-moviedata, .cast")
+            .last()?.select("span[itemprop=actors], a")?.map { it.text() }
 
         return if (tvType == TvType.TvSeries) {
-            val episodes = document.select("div.vid-episodes a, div.gmr-listseries a")
+            val episodes = document.select("div.vid-episodes a, div.gmr-listseries a, .eps-list a")
                 .map { eps ->
                     val href = fixUrl(eps.attr("href"))
                     val name = eps.text()
@@ -131,7 +144,9 @@ class Pusatfilm : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        val iframeEl = document.selectFirst("div.gmr-embed-responsive iframe, div.movieplay iframe, iframe")
+        val iframeEl = document.selectFirst(
+            "div.gmr-embed-responsive iframe, div.movieplay iframe, div.player iframe, iframe"
+        )
         val iframe = listOf("src", "data-src", "data-litespeed-src")
             .firstNotNullOfOrNull { key -> iframeEl?.attr(key)?.takeIf { it.isNotBlank() } }
             ?.let { httpsify(it) }
