@@ -100,45 +100,23 @@ private fun Element.toSearchResult(): SearchResponse? {
 ): Boolean {
     val doc = app.get(data).document
 
-    // ambil iframe utama
-    val iframes = doc.select("div.gmr-pagi-player iframe")
-        .mapNotNull { it.getIframeAttr() }
-
-    iframes.forEach { iframe ->
-        val fixed = httpsify(iframe)
-        when {
-            fixed.contains("playerngefilm21", true) -> {
-                PlayerNgefilm21().getUrl(fixed, data, subtitleCallback, callback)
-            }
-            fixed.contains("bingezove", true) -> {
-                BingeZove().getUrl(fixed, data, subtitleCallback, callback)
-            }
-            fixed.contains("bangjago", true) -> {
-                Bangjago().getUrl(fixed, data, subtitleCallback, callback)
-            }
-            fixed.contains("hglink", true) -> {
-                Hglink().getUrl(fixed, data, subtitleCallback, callback)
-            }
-            else -> {
-                loadExtractor(fixed, data, subtitleCallback, callback)
-            }
-        }
+    // gabung iframe langsung + server links
+    val allLinks = buildList {
+        addAll(doc.select("div.gmr-pagi-player iframe").mapNotNull { it.getIframeAttr() })
+        addAll(doc.select("ul.muvipro-player-tabs li a").map { fixUrl(it.attr("href")) })
     }
 
-    // fallback → server links
-    val serverLinks = doc.select("ul.muvipro-player-tabs li a")
-        .map { fixUrl(it.attr("href")) }
-
-    serverLinks.forEach { link ->
-        val serverDoc = app.get(link).document
-        val iframe = serverDoc.selectFirst("iframe")?.getIframeAttr()
+    allLinks.forEach { link ->
+        val serverDoc = runCatching { app.get(link).document }.getOrNull()
+        val iframe = serverDoc?.selectFirst("iframe")?.getIframeAttr() ?: link
         if (!iframe.isNullOrBlank()) {
-            loadExtractor(httpsify(iframe), link, subtitleCallback, callback)
+            loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
         }
     }
 
     return true
 }
+
 
     // Helpers
     private fun Element.getImageAttr(): String {
