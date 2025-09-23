@@ -99,12 +99,27 @@ private fun Element.toSearchResult(): SearchResponse? {
 ): Boolean {
     val doc = app.get(data).document
 
-    // ambil semua iframe dari player
+    // 1. Ambil iframe langsung (paling cepat)
     val iframes = doc.select("div.gmr-pagi-player iframe")
         .mapNotNull { it.getIframeAttr() }
 
-    iframes.forEach { iframe ->
-        loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
+    if (iframes.isNotEmpty()) {
+        iframes.forEach { iframe ->
+            loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
+        }
+        return true
+    }
+
+    // 2. Fallback: ambil link server (kalau iframe langsung kosong)
+    val serverLinks = doc.select("ul.muvipro-player-tabs li a")
+        .map { fixUrl(it.attr("href")) }
+
+    serverLinks.forEach { link ->
+        val serverDoc = app.get(link).document
+        val iframe = serverDoc.selectFirst("iframe")?.getIframeAttr()
+        if (!iframe.isNullOrBlank()) {
+            loadExtractor(httpsify(iframe), link, subtitleCallback, callback)
+        }
     }
 
     return true
