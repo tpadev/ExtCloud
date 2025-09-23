@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 
 @CloudstreamPlugin
-class Ngefilm : Plugin() {
+class NgefilmPlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Ngefilm())
 
