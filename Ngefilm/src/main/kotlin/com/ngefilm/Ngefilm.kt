@@ -24,15 +24,8 @@ class Ngefilm : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val doc = app.get(request.data).document
-    val home = document.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
-        return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
-                isHorizontalImages = false
-            ),
-            hasNext = true
-        )
+    val homeLists = mutableListOf<HomePageList>()
+    return newHomePageResponse(homeLists)
 }
 
     private fun Element.toSearchResult(): SearchResponse? {
