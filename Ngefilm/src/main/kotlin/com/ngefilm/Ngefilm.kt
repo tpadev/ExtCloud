@@ -70,7 +70,7 @@ class Ngefilm : MainAPI() {
         val doc = fetch.document
 
         val title = doc.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster = fixUrlNull(doc.selectFirst(".thumb img")?.getImageAttr())
+        val poster = fixUrlNull(doc.selectFirst(".content-thumbnail img")?.getImageAttr())
         val rawPlot = doc.selectFirst("div.entry-content.entry-content-single p")?.text()?.trim()
         val plot = rawPlot?.substringBefore("Oleh:")?.trim()
         val year = doc.selectFirst("span[itemprop=dateCreated]")?.text()?.toIntOrNull()
