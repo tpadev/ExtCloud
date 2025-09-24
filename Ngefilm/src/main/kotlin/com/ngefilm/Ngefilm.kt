@@ -26,7 +26,7 @@ class Ngefilm : MainAPI() {
     val document = app.get("$mainUrl/${request.data}/page/$page", timeout = 50L).document
 
     // Ambil semua item dari halaman kategori
-    val home = document.select("div.ml-item").mapNotNull { it.toSearchResult() }
+    val home = document.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
