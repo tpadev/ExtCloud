@@ -71,10 +71,10 @@ override suspend fun load(url: String): LoadResponse? {
 
     val title = doc.selectFirst("h1")?.text()?.trim() ?: return null
 
-    // ✅ poster: samakan dengan yang dipakai di list
+    // ✅ Poster: pakai selector yg sama dengan homepage (content-thumbnail img),
+    // fallback ke og:image biar konsisten
     val poster = fixUrlNull(
         doc.selectFirst("div.content-thumbnail img")?.getImageAttr()
-            ?: doc.selectFirst(".thumb img")?.getImageAttr()
             ?: doc.selectFirst("meta[property=og:image]")?.attr("content")
     )
 
@@ -85,7 +85,7 @@ override suspend fun load(url: String): LoadResponse? {
     val trailer = doc.selectFirst("a.gmr-trailer-popup")?.attr("href")
         ?: doc.selectFirst("div.gmr-embed-responsive iframe")?.attr("src")
 
-    // ✅ rekomendasi: ambil dari artikel terkait
+    // ✅ Rekomendasi film terkait (optional, bisa dihapus kalau berat)
     val recommendations = doc.select("div.gmr-related-posts article").mapNotNull { rec ->
         val recTitle = rec.selectFirst("h2.entry-title a")?.text()?.trim() ?: return@mapNotNull null
         val recUrl = fixUrl(rec.selectFirst("a")?.attr("href") ?: return@mapNotNull null)
@@ -96,6 +96,7 @@ override suspend fun load(url: String): LoadResponse? {
     }
 
     return if (type == TvType.TvSeries) {
+        // ✅ Ambil semua episode
         val episodes = doc.select("div.gmr-listseries a")
             .filter { !it.text().contains("Pilih", ignoreCase = true) }
             .mapIndexed { idx, el ->
@@ -114,6 +115,7 @@ override suspend fun load(url: String): LoadResponse? {
             this.recommendations = recommendations
         }
     } else {
+        // ✅ Movie
         newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl = poster
             this.year = year
@@ -123,6 +125,7 @@ override suspend fun load(url: String): LoadResponse? {
         }
     }
 }
+
 
     override suspend fun loadLinks(
         data: String,
