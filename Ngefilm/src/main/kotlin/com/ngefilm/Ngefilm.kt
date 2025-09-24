@@ -23,21 +23,17 @@ class Ngefilm : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val document = app.get("$mainUrl/${request.data}/page/$page", timeout = 50L).document
-
-    // Ambil semua item dari halaman kategori
+    val doc = app.get(request.data).document
     val home = document.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
-
-    return newHomePageResponse(
-        list = HomePageList(
-            name = request.name,   // 👈 ini penting: pakai request.name
-            list = home,
-            isHorizontalImages = false // 👈 ini yang bikin Cloudstream render poster besar hero
-        ),
-        hasNext = true
-    )
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = false
+            ),
+            hasNext = true
+        )
 }
-
 
     private fun Element.toSearchResult(): SearchResponse? {
         val link = this.selectFirst("h2.entry-title a") ?: return null
