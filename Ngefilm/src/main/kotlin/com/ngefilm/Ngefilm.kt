@@ -64,58 +64,65 @@ class Ngefilm : MainAPI() {
         return doc.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
     }
 
-    override suspend fun load(url: String): LoadResponse? {
-        val fetch = app.get(url)
-        directUrl = getBaseUrl(fetch.url)
-        val doc = fetch.document
+override suspend fun load(url: String): LoadResponse? {
+    val fetch = app.get(url)
+    directUrl = getBaseUrl(fetch.url)
+    val doc = fetch.document
 
-        val title = doc.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster = fixUrlNull(doc.selectFirst(".content-thumbnail img")?.getImageAttr())
-        val rawPlot = doc.selectFirst("div.entry-content.entry-content-single p")?.text()?.trim()
-        val plot = rawPlot?.substringBefore("Oleh:")?.trim()
-        val year = doc.selectFirst("span[itemprop=dateCreated]")?.text()?.toIntOrNull()
-        val type = if (doc.select("div.gmr-listseries a").isNotEmpty()) TvType.TvSeries else TvType.Movie
-        val trailer = doc.selectFirst("a.gmr-trailer-popup")?.attr("href")
-            ?: doc.selectFirst("div.gmr-embed-responsive iframe")?.attr("src")
+    val title = doc.selectFirst("h1")?.text()?.trim() ?: return null
 
-        // ✅ Rekomendasi (Film Terkait)
-        val recommendation=doc.select("#gmr-main-load article.has-post-thumbnail, #gmr-main-load > article").mapNotNull {
-            it.toSearchResult()
+    // ✅ poster: samakan dengan yang dipakai di list
+    val poster = fixUrlNull(
+        doc.selectFirst("div.content-thumbnail img")?.getImageAttr()
+            ?: doc.selectFirst(".thumb img")?.getImageAttr()
+            ?: doc.selectFirst("meta[property=og:image]")?.attr("content")
+    )
+
+    val rawPlot = doc.selectFirst("div.entry-content.entry-content-single p")?.text()?.trim()
+    val plot = rawPlot?.substringBefore("Oleh:")?.trim()
+    val year = doc.selectFirst("span[itemprop=dateCreated]")?.text()?.toIntOrNull()
+    val type = if (doc.select("div.gmr-listseries a").isNotEmpty()) TvType.TvSeries else TvType.Movie
+    val trailer = doc.selectFirst("a.gmr-trailer-popup")?.attr("href")
+        ?: doc.selectFirst("div.gmr-embed-responsive iframe")?.attr("src")
+
+    // ✅ rekomendasi: ambil dari artikel terkait
+    val recommendations = doc.select("div.gmr-related-posts article").mapNotNull { rec ->
+        val recTitle = rec.selectFirst("h2.entry-title a")?.text()?.trim() ?: return@mapNotNull null
+        val recUrl = fixUrl(rec.selectFirst("a")?.attr("href") ?: return@mapNotNull null)
+        val recPoster = fixUrlNull(rec.selectFirst("img")?.getImageAttr())
+        newMovieSearchResponse(recTitle, recUrl, TvType.Movie) {
+            this.posterUrl = recPoster
         }
-
-        return if (type == TvType.TvSeries) {
-    // ✅ Series
-    val episodes = doc.select("div.gmr-listseries a")
-        .filter { !it.text().contains("Pilih", ignoreCase = true) }
-        .mapIndexed { idx, el ->
-            newEpisode(fixUrl(el.attr("href"))) {
-                this.name = el.text().ifBlank { "Episode ${idx + 1}" }
-                this.season = null
-                this.episode = idx + 1
-                this.posterUrl = poster
-            }
-        }
-
-    newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-        this.posterUrl = poster
-        this.year = year
-        this.plot = plot
-        this.recommendations=recommendation// kalau mau ringan, hapus recommendations
-        // this.recommendations = recommendations
     }
-} else {
-    // ✅ Movie
-    newMovieLoadResponse(title, url, TvType.Movie, url) {
-        this.posterUrl = poster
-        this.year = year
-        this.plot = plot
-        addTrailer(trailer)
-        this.recommendations=recommendation// sama di sini, recommendations opsional
-        // this.recommendations = recommendations
+
+    return if (type == TvType.TvSeries) {
+        val episodes = doc.select("div.gmr-listseries a")
+            .filter { !it.text().contains("Pilih", ignoreCase = true) }
+            .mapIndexed { idx, el ->
+                newEpisode(fixUrl(el.attr("href"))) {
+                    this.name = el.text().ifBlank { "Episode ${idx + 1}" }
+                    this.season = null
+                    this.episode = idx + 1
+                    this.posterUrl = poster
+                }
+            }
+
+        newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+            this.posterUrl = poster
+            this.year = year
+            this.plot = plot
+            this.recommendations = recommendations
+        }
+    } else {
+        newMovieLoadResponse(title, url, TvType.Movie, url) {
+            this.posterUrl = poster
+            this.year = year
+            this.plot = plot
+            addTrailer(trailer)
+            this.recommendations = recommendations
+        }
     }
 }
-
-    }
 
     override suspend fun loadLinks(
         data: String,
