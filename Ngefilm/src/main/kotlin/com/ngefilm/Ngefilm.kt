@@ -26,21 +26,31 @@ class Ngefilm : MainAPI() {
     val doc = app.get(request.data).document
     val homeLists = mutableListOf<HomePageList>()
 
-    // Coba ambil highlight dari carousel paling atas
-    val highlights = doc.select("div.gmr-box-content.gmr-box-archive.text-center article.has-post-thumbnail, article.has-post-thumbnail")
-        .take(5)  // atur berapa banyak highlight
-        .mapNotNull { it.toSearchResult() }
+    // ✅ Ambil data untuk hero/banner (slider besar)
+    val hero = doc.select("div.gmr-slider-content").mapNotNull { el ->
+        val link = el.selectFirst("a.gmr-slide-titlelink")?.attr("href") ?: return@mapNotNull null
+        val title = el.selectFirst("a.gmr-slide-titlelink")?.text()?.trim() ?: return@mapNotNull null
+        val poster = el.selectFirst("div.other-content-thumbnail img")?.getImageAttr()
+        val quality = el.selectFirst(".gmr-quality-item")?.text()?.trim()
 
-    if (highlights.isNotEmpty()) {
-        homeLists.add(HomePageList("Highlight", highlights))
+        newMovieSearchResponse(title, fixUrl(link), TvType.Movie) {
+            this.posterUrl = fixUrlNull(poster)
+            this.quality = getQualityFromString(quality)
+        }
     }
 
-    // Ambil list film utama / ‘upload terbaru’
+    if (hero.isNotEmpty()) {
+        // 👉 ini akan jadi poster besar di bagian atas
+        homeLists.add(HomePageList("Featured", hero))
+    }
+
+    // ✅ Ambil list film utama (Upload Terbaru)
     val items = doc.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
     homeLists.add(HomePageList(request.name, items))
 
     return newHomePageResponse(homeLists)
 }
+
 
     private fun Element.toSearchResult(): SearchResponse? {
         val link = this.selectFirst("h2.entry-title a") ?: return null
@@ -101,7 +111,7 @@ class Ngefilm : MainAPI() {
                             this.name = el.text().ifBlank { "Episode ${idx + 1}" }
                             this.season = null
                             this.episode = idx + 1
-this.posterUrl = poster
+                            this.posterUrl = poster
                         }
                     }
 
