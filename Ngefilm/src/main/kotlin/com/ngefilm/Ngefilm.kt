@@ -23,7 +23,7 @@ class Ngefilm : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    // bikin url page (biar bisa next page)
+    // bikin url dengan support pagination
     val url = if (request.data.startsWith("http")) {
         "${request.data}/page/$page"
     } else {
@@ -31,36 +31,21 @@ class Ngefilm : MainAPI() {
     }
 
     val doc = app.get(url).document
-    val homeLists = mutableListOf<HomePageList>()
 
-    // ✅ Hero slider khusus homepage page 1
-    if (page == 1 && request.data == "$mainUrl/") {
-        val hero = doc.select("div.gmr-slider-content").mapNotNull { el ->
-            val link = el.selectFirst("a.gmr-slide-titlelink")?.attr("href") ?: return@mapNotNull null
-            val title = el.selectFirst("a.gmr-slide-titlelink")?.text()?.trim() ?: return@mapNotNull null
-            val poster = el.selectFirst("div.other-content-thumbnail img")?.getImageAttr()
-            val quality = el.selectFirst(".gmr-quality-item")?.text()?.trim()
-
-            newMovieSearchResponse(title, fixUrl(link), TvType.Movie) {
-                this.posterUrl = fixUrlNull(poster)
-                this.quality = getQualityFromString(quality)
-            }
-        }
-
-        if (hero.isNotEmpty()) {
-            homeLists.add(HomePageList("Hero", hero, isHorizontalImages = false))
-        }
-    }
-
-    // ✅ Ambil film dari kategori (upload terbaru, drama, dll.)
+    // ambil semua card film dari kategori
     val items = doc.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
-    if (items.isNotEmpty()) {
-        homeLists.add(HomePageList(request.name, items))
-    }
 
-    // ⚡️ selalu true (biar bisa load halaman berikutnya terus)
-    return newHomePageResponse(homeLists, hasNext = true)
+    // bungkus jadi HomePageResponse
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = items,
+            isHorizontalImages = false
+        ),
+        hasNext = true // biar bisa load page 2, 3, dst.
+    )
 }
+
 
     private fun Element.toSearchResult(): SearchResponse? {
         val link = this.selectFirst("h2.entry-title a") ?: return null
