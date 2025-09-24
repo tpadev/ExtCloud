@@ -126,40 +126,27 @@ override suspend fun load(url: String): LoadResponse? {
     }
 }
 
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val document = app.get(data).document
 
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val document = app.get(data).document
-        val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
+    // Ambil semua tab server
+    document.select("ul.muvipro-player-tabs li a, ul.gmr-player-nav li a").apmap { ele ->
+        val serverUrl = fixUrl(ele.attr("href"))
+        val iframe = app.get(serverUrl).document
+            .selectFirst("div.gmr-embed-responsive iframe")
+            ?.getIframeAttr()?.let { httpsify(it) } ?: return@apmap
 
-        if (id.isNullOrEmpty()) {
-            document.select("ul.muvipro-player-tabs li a").apmap { ele ->
-                val iframe = app.get(fixUrl(ele.attr("href")))
-                    .document.selectFirst("div.gmr-embed-responsive iframe")
-                    ?.getIframeAttr()?.let { httpsify(it) } ?: return@apmap
-
-                loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
-            }
-        } else {
-            document.select("div.tab-content-ajax").apmap { ele ->
-                val server = app.post(
-                    "$directUrl/wp-admin/admin-ajax.php",
-                    data = mapOf(
-                        "action" to "muvipro_player_content",
-                        "tab" to ele.attr("id"),
-                        "post_id" to "$id"
-                    )
-                ).document.select("iframe").attr("src").let { httpsify(it) }
-
-                loadExtractor(server, "$directUrl/", subtitleCallback, callback)
-            }
-        }
-        return true
+        loadExtractor(iframe, serverUrl, subtitleCallback, callback)
     }
+
+    return true
+}
+
 
     // Helpers
     private fun Element.getImageAttr(): String {
