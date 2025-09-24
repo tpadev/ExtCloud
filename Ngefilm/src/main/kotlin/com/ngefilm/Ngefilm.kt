@@ -23,32 +23,19 @@ class Ngefilm : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val doc = app.get(request.data).document
-    val homeLists = mutableListOf<HomePageList>()
+    val document = app.get("$mainUrl/${request.data}/page/$page", timeout = 50L).document
 
-    // ✅ Ambil data untuk hero/banner (slider besar)
-    val hero = doc.select("div.gmr-slider-content").mapNotNull { el ->
-        val link = el.selectFirst("a.gmr-slide-titlelink")?.attr("href") ?: return@mapNotNull null
-        val title = el.selectFirst("a.gmr-slide-titlelink")?.text()?.trim() ?: return@mapNotNull null
-        val poster = el.selectFirst("div.other-content-thumbnail img")?.getImageAttr()
-        val quality = el.selectFirst(".gmr-quality-item")?.text()?.trim()
+    // Ambil semua item dari halaman kategori
+    val home = document.select("div.ml-item").mapNotNull { it.toSearchResult() }
 
-        newMovieSearchResponse(title, fixUrl(link), TvType.Movie) {
-            this.posterUrl = fixUrlNull(poster)
-            this.quality = getQualityFromString(quality)
-        }
-    }
-
-    if (hero.isNotEmpty()) {
-        // 👉 ini akan jadi poster besar di bagian atas
-        homeLists.add(HomePageList("Featured", hero))
-    }
-
-    // ✅ Ambil list film utama (Upload Terbaru)
-    val items = doc.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
-    homeLists.add(HomePageList(request.name, items))
-
-    return newHomePageResponse(homeLists)
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,   // 👈 ini penting: pakai request.name
+            list = home,
+            isHorizontalImages = false // 👈 ini yang bikin Cloudstream render poster besar hero
+        ),
+        hasNext = true
+    )
 }
 
 
