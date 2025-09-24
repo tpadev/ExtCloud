@@ -34,7 +34,7 @@ class Ngefilm : MainAPI() {
 
     // ambil item dari container yang benar (sesuai SS)
     val items = doc.select("#gmr-main-load article.has-post-thumbnail, #gmr-main-load > article")
-        .mapNotNull { it.toSearchResultListItem() }
+        .mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
