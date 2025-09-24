@@ -25,6 +25,25 @@ class Ngefilm : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val doc = app.get(request.data).document
     val homeLists = mutableListOf<HomePageList>()
+
+    // ✅ Ambil hero slider untuk poster besar di atas
+    val hero = doc.select("div.gmr-slider-content").mapNotNull { el ->
+        val link = el.selectFirst("a.gmr-slide-titlelink")?.attr("href") ?: return@mapNotNull null
+        val title = el.selectFirst("a.gmr-slide-titlelink")?.text()?.trim() ?: return@mapNotNull null
+        val poster = el.selectFirst("div.other-content-thumbnail img")?.getImageAttr()
+        val quality = el.selectFirst(".gmr-quality-item")?.text()?.trim()
+
+        newMovieSearchResponse(title, fixUrl(link), TvType.Movie) {
+            this.posterUrl = fixUrlNull(poster)
+            this.quality = getQualityFromString(quality)
+        }
+    }
+
+    if (hero.isNotEmpty()) {
+        // ⚡️ List pertama → otomatis jadi poster besar hero
+        homeLists.add(HomePageList(request.name, hero, isHorizontalImages = false))
+    }
+
     return newHomePageResponse(homeLists)
 }
 
