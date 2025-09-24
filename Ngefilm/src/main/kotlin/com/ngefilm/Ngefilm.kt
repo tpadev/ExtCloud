@@ -26,26 +26,35 @@ class Ngefilm : MainAPI() {
     val doc = app.get(request.data).document
     val homeLists = mutableListOf<HomePageList>()
 
-    // ✅ Ambil hero slider untuk poster besar di atas
-    val hero = doc.select("div.gmr-slider-content").mapNotNull { el ->
-        val link = el.selectFirst("a.gmr-slide-titlelink")?.attr("href") ?: return@mapNotNull null
-        val title = el.selectFirst("a.gmr-slide-titlelink")?.text()?.trim() ?: return@mapNotNull null
-        val poster = el.selectFirst("div.other-content-thumbnail img")?.getImageAttr()
-        val quality = el.selectFirst(".gmr-quality-item")?.text()?.trim()
+    // ✅ Ambil hero slider (poster besar di atas)
+    if (page == 1 && request.data == "$mainUrl/") {
+        val hero = doc.select("div.gmr-slider-content").mapNotNull { el ->
+            val link = el.selectFirst("a.gmr-slide-titlelink")?.attr("href") ?: return@mapNotNull null
+            val title = el.selectFirst("a.gmr-slide-titlelink")?.text()?.trim() ?: return@mapNotNull null
+            val poster = el.selectFirst("div.other-content-thumbnail img")?.getImageAttr()
+            val quality = el.selectFirst(".gmr-quality-item")?.text()?.trim()
 
-        newMovieSearchResponse(title, fixUrl(link), TvType.Movie) {
-            this.posterUrl = fixUrlNull(poster)
-            this.quality = getQualityFromString(quality)
+            newMovieSearchResponse(title, fixUrl(link), TvType.Movie) {
+                this.posterUrl = fixUrlNull(poster)
+                this.quality = getQualityFromString(quality)
+            }
+        }
+
+        if (hero.isNotEmpty()) {
+            // ⚡️ List pertama → Cloudstream render sebagai poster besar
+            homeLists.add(HomePageList("Hero", hero, isHorizontalImages = false))
         }
     }
 
-    if (hero.isNotEmpty()) {
-        // ⚡️ List pertama → otomatis jadi poster besar hero
-        homeLists.add(HomePageList(request.name, hero, isHorizontalImages = false))
+    // ✅ Ambil list sesuai kategori request (Upload Terbaru, Drama Korea, dll.)
+    val items = doc.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
+    if (items.isNotEmpty()) {
+        homeLists.add(HomePageList(request.name, items))
     }
 
     return newHomePageResponse(homeLists)
 }
+
 
     private fun Element.toSearchResult(): SearchResponse? {
         val link = this.selectFirst("h2.entry-title a") ?: return null
