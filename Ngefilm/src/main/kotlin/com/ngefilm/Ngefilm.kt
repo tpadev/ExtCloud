@@ -23,29 +23,28 @@ class Ngefilm : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    // bikin url dengan support pagination
-    val url = if (request.data.startsWith("http")) {
-        "${request.data}/page/$page"
-    } else {
-        "$mainUrl/${request.data}/page/$page"
+    // URL category (request.data kamu sudah full URL, jadi cukup append /page/N kalau > 1)
+    val url = if (page == 1) request.data else {
+        // pastikan ada trailing slash sebelum /page/N
+        val base = if (request.data.endsWith("/")) request.data else request.data + "/"
+        base + "page/$page"
     }
 
-    val doc = app.get(url).document
+    val doc = app.get(url, timeout = 50L).document
 
-    // ambil semua card film dari kategori
-    val items = doc.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
+    // ambil item dari container yang benar (sesuai SS)
+    val items = doc.select("#gmr-main-load article.has-post-thumbnail, #gmr-main-load > article")
+        .mapNotNull { it.toSearchResultListItem() }
 
-    // bungkus jadi HomePageResponse
     return newHomePageResponse(
         list = HomePageList(
             name = request.name,
             list = items,
             isHorizontalImages = false
         ),
-        hasNext = true // biar bisa load page 2, 3, dst.
+        hasNext = true // biar bisa lanjut page berikutnya
     )
 }
-
 
     private fun Element.toSearchResult(): SearchResponse? {
         val link = this.selectFirst("h2.entry-title a") ?: return null
