@@ -79,7 +79,7 @@ class Ngefilm : MainAPI() {
             ?: doc.selectFirst("div.gmr-embed-responsive iframe")?.attr("src")
 
         // ✅ Rekomendasi (Film Terkait)
-        val recommendation=document.select("#gmr-main-load article.has-post-thumbnail, #gmr-main-load > article").mapNotNull {
+        val recommendation=doc.select("#gmr-main-load article.has-post-thumbnail, #gmr-main-load > article").mapNotNull {
             it.toSearchResult()
         }
 
@@ -100,7 +100,7 @@ class Ngefilm : MainAPI() {
         this.posterUrl = poster
         this.year = year
         this.plot = plot
-        this.recommendation=recommendation// kalau mau ringan, hapus recommendations
+        this.recommendations=recommendation// kalau mau ringan, hapus recommendations
         // this.recommendations = recommendations
     }
 } else {
@@ -110,7 +110,7 @@ class Ngefilm : MainAPI() {
         this.year = year
         this.plot = plot
         addTrailer(trailer)
-        this.recommendation=recommendation// sama di sini, recommendations opsional
+        this.recommendations=recommendation// sama di sini, recommendations opsional
         // this.recommendations = recommendations
     }
 }
