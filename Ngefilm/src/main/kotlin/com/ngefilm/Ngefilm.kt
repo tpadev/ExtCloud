@@ -26,7 +26,7 @@ class Ngefilm : MainAPI() {
     val doc = app.get(request.data).document
     val homeLists = mutableListOf<HomePageList>()
 
-    // ✅ Ambil hero slider (poster besar di atas)
+    // ✅ Hero slider (poster besar di atas), hanya untuk halaman utama page 1
     if (page == 1 && request.data == "$mainUrl/") {
         val hero = doc.select("div.gmr-slider-content").mapNotNull { el ->
             val link = el.selectFirst("a.gmr-slide-titlelink")?.attr("href") ?: return@mapNotNull null
@@ -41,18 +41,19 @@ class Ngefilm : MainAPI() {
         }
 
         if (hero.isNotEmpty()) {
-            // ⚡️ List pertama → Cloudstream render sebagai poster besar
+            // 👉 list pertama akan otomatis jadi poster besar hero
             homeLists.add(HomePageList("Hero", hero, isHorizontalImages = false))
         }
     }
 
-    // ✅ Ambil list sesuai kategori request (Upload Terbaru, Drama Korea, dll.)
+    // ✅ Ambil kategori sesuai request.data (Upload Terbaru, Drama Korea, dll.)
     val items = doc.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
     if (items.isNotEmpty()) {
         homeLists.add(HomePageList(request.name, items))
     }
 
-    return newHomePageResponse(homeLists)
+    // ⚡️ Pagination tanpa batasan angka → selalu true
+    return newHomePageResponse(homeLists, hasNext = true)
 }
 
 
