@@ -23,10 +23,17 @@ class Ngefilm : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val doc = app.get(request.data).document
+    // bikin url page (biar bisa next page)
+    val url = if (request.data.startsWith("http")) {
+        "${request.data}/page/$page"
+    } else {
+        "$mainUrl/${request.data}/page/$page"
+    }
+
+    val doc = app.get(url).document
     val homeLists = mutableListOf<HomePageList>()
 
-    // ✅ Hero slider (poster besar di atas), hanya untuk halaman utama page 1
+    // ✅ Hero slider khusus homepage page 1
     if (page == 1 && request.data == "$mainUrl/") {
         val hero = doc.select("div.gmr-slider-content").mapNotNull { el ->
             val link = el.selectFirst("a.gmr-slide-titlelink")?.attr("href") ?: return@mapNotNull null
@@ -41,21 +48,19 @@ class Ngefilm : MainAPI() {
         }
 
         if (hero.isNotEmpty()) {
-            // 👉 list pertama akan otomatis jadi poster besar hero
             homeLists.add(HomePageList("Hero", hero, isHorizontalImages = false))
         }
     }
 
-    // ✅ Ambil kategori sesuai request.data (Upload Terbaru, Drama Korea, dll.)
-    val items = doc.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
+    // ✅ Ambil film dari kategori (upload terbaru, drama, dll.)
+    val items = doc.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
     if (items.isNotEmpty()) {
         homeLists.add(HomePageList(request.name, items))
     }
 
-    // ⚡️ Pagination tanpa batasan angka → selalu true
+    // ⚡️ selalu true (biar bisa load halaman berikutnya terus)
     return newHomePageResponse(homeLists, hasNext = true)
 }
-
 
     private fun Element.toSearchResult(): SearchResponse? {
         val link = this.selectFirst("h2.entry-title a") ?: return null
