@@ -144,7 +144,7 @@ override suspend fun loadLinks(
             ?.getIframeAttr()?.let { httpsify(it) } ?: return@apmap
 
         // Kirim iframe ke extractor (Bangjago, Bingezone, dsb)
-        loadExtractor(iframe, data, subtitleCallback, callback)
+        loadExtractor(iframe, serverUrl, subtitleCallback, callback)
     }
 
     return true
