@@ -12,5 +12,6 @@ class NgefilmPlugin : Plugin() {
         // Custom extractors (host yang belum bawaan CS3)
         registerExtractorAPI(PlayerNgefilm21())
         registerExtractorAPI(Bangjago())
+        registerExtractorAPI(Bingezone())
     }
 }
