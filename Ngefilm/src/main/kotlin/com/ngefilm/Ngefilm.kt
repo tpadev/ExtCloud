@@ -134,20 +134,21 @@ override suspend fun loadLinks(
 ): Boolean {
     val document = app.get(data).document
 
-    // Ambil semua tab server
-    document.select("ul.muvipro-player-tabs li a, ul.gmr-player-nav li a").apmap { ele ->
-        val serverUrl = fixUrl(ele.attr("href"))
+    // Cari semua tab server (ada 2 variasi class)
+    val serverTabs = document.select("ul.muvipro-player-tabs li a, ul.gmr-player-nav li a")
+
+    serverTabs.apmap { tab ->
+        val serverUrl = fixUrl(tab.attr("href"))
         val iframe = app.get(serverUrl).document
             .selectFirst("div.gmr-embed-responsive iframe")
             ?.getIframeAttr()?.let { httpsify(it) } ?: return@apmap
 
-        loadExtractor(iframe, serverUrl, subtitleCallback, callback)
+        // Kirim iframe ke extractor (Bangjago, Bingezone, dsb)
+        loadExtractor(iframe, data, subtitleCallback, callback)
     }
 
     return true
 }
-
-
     // Helpers
     private fun Element.getImageAttr(): String {
         return when {

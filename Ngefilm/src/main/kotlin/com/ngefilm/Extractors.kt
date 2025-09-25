@@ -2,7 +2,7 @@ package com.ngefilm
 
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
-import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
+import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.SubtitleFile
 
@@ -20,7 +20,7 @@ class Bangjago : ExtractorApi() {
         val masterUrl = Regex("""https.*?\.m3u8.*""")
             .find(page)?.value ?: return null
 
-        return generateM3u8(
+        return M3u8Helper.generateM3u8(
             name,
             masterUrl,
             mainUrl
@@ -43,7 +43,7 @@ class PlayerNgefilm21 : ExtractorApi() {
         val masterUrl = Regex("""https.*?\.m3u8.*""")
             .find(page)?.value ?: return null
 
-        return generateM3u8(
+        return M3u8Helper.generateM3u8(
             name,
             masterUrl,
             mainUrl
@@ -68,7 +68,7 @@ class Bingezone : ExtractorApi() {
             .find(page)?.value ?: return null
 
         // Generate daftar kualitas dari master.m3u8
-        return generateM3u8(
+        return M3u8Helper.generateM3u8(
             name,
             masterUrl,
             mainUrl
