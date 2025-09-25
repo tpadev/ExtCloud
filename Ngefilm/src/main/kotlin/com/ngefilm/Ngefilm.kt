@@ -2,6 +2,7 @@ package com.ngefilm
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import java.net.URI
@@ -127,28 +128,37 @@ override suspend fun load(url: String): LoadResponse? {
 }
 
 override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val document = app.get(data).document
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
 
-    // Cari semua tab server (ada 2 variasi class)
-    val serverTabs = document.select("ul.muvipro-player-tabs li a, ul.gmr-player-nav li a")
+        val document = app.get(data).document
+        val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
 
-    serverTabs.apmap { tab ->
-        val serverUrl = fixUrl(tab.attr("href"))
-        val iframe = app.get(serverUrl).document
-            .selectFirst("div.gmr-embed-responsive iframe")
-            ?.getIframeAttr()?.let { httpsify(it) } ?: return@apmap
+        if(id.isNullOrEmpty()) {
+            document.select("ul.muvipro-player-tabs li a").apmap { ele ->
+                val iframe = app.get(fixUrl(ele.attr("href"))).document.selectFirst("div.gmr-embed-responsive iframe")
+                    .getIframeAttr()?.let { httpsify(it) } ?: return@apmap
 
-        // Kirim iframe ke extractor (Bangjago, Bingezone, dsb)
-        loadExtractor(iframe, serverUrl, subtitleCallback, callback)
+                loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
+            }
+        } else {
+            document.select("div.tab-content-ajax").apmap { ele ->
+                val server = app.post(
+                    "$directUrl/wp-admin/admin-ajax.php",
+                    data = mapOf("action" to "muvipro_player_content", "tab" to ele.attr("id"), "post_id" to "$id")
+                ).document.select("iframe").attr("src").let { httpsify(it) }
+
+                loadExtractor(server, "$directUrl/", subtitleCallback, callback)
+
+            }
+        }
+
+        return true
+
     }
-
-    return true
-}
     // Helpers
     private fun Element.getImageAttr(): String {
         return when {
