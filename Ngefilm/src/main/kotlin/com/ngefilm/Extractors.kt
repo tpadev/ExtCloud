@@ -17,7 +17,7 @@ class Bangjago : ExtractorApi() {
         referer: String?
     ): List<ExtractorLink>? {
         val page = app.get(url, referer = referer).text
-        val masterUrl = Regex("""https.*?master\.m3u8.*""")
+        val masterUrl = Regex("""https.*?\.m3u8.*""")
             .find(page)?.value ?: return null
 
         return generateM3u8(
@@ -40,7 +40,7 @@ class PlayerNgefilm21 : ExtractorApi() {
         referer: String?
     ): List<ExtractorLink>? {
         val page = app.get(url, referer = referer).text
-        val masterUrl = Regex("""https.*?master\.m3u8.*""")
+        val masterUrl = Regex("""https.*?\.m3u8.*""")
             .find(page)?.value ?: return null
 
         return generateM3u8(
@@ -64,7 +64,7 @@ class Bingezone : ExtractorApi() {
         val page = app.get(url, referer = referer).text
 
         // Cari link master.m3u8
-        val masterUrl = Regex("""https.*?master\.m3u8.*""")
+        val masterUrl = Regex("""https.*?\.m3u8.*""")
             .find(page)?.value ?: return null
 
         // Generate daftar kualitas dari master.m3u8
