@@ -14,21 +14,20 @@ class Bangjago : ExtractorApi() {
 
     override suspend fun getUrl(
         url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
+        referer: String?
+    ): List<ExtractorLink>? {
         val page = app.get(url, referer = referer).text
-        val masterUrl = Regex("""https.*?cf-master\.txt.*""")
-            .find(page)?.value ?: return
+        val masterUrl = Regex("""https.*?master\.m3u8.*""")
+            .find(page)?.value ?: return null
 
-        M3u8Helper.generateM3u8(
+        return generateM3u8(
             name,
             masterUrl,
             mainUrl
-        ).forEach(callback)
+        )
     }
 }
+
 
 // -------------------- PlayerNgefilm21 --------------------
 class PlayerNgefilm21 : ExtractorApi() {
@@ -38,18 +37,41 @@ class PlayerNgefilm21 : ExtractorApi() {
 
     override suspend fun getUrl(
         url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
+        referer: String?
+    ): List<ExtractorLink>? {
         val page = app.get(url, referer = referer).text
-        val masterUrl = Regex("""https.*?cf-master\.txt.*""")
-            .find(page)?.value ?: return
+        val masterUrl = Regex("""https.*?master\.m3u8.*""")
+            .find(page)?.value ?: return null
 
-        M3u8Helper.generateM3u8(
+        return generateM3u8(
             name,
             masterUrl,
             mainUrl
-        ).forEach(callback)
+        )
+    }
+}
+
+class Bingezone : ExtractorApi() {
+    override val name = "Bingezone"
+    override val mainUrl = "https://bingezove.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?
+    ): List<ExtractorLink>? {
+        // Ambil halaman embed
+        val page = app.get(url, referer = referer).text
+
+        // Cari link master.m3u8
+        val masterUrl = Regex("""https.*?master\.m3u8.*""")
+            .find(page)?.value ?: return null
+
+        // Generate daftar kualitas dari master.m3u8
+        return generateM3u8(
+            name,
+            masterUrl,
+            mainUrl
+        )
     }
 }
