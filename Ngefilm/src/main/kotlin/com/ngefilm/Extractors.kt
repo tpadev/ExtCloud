@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.SubtitleFile
 class Bangjago : ExtractorApi() {
     override val name = "Bangjago"
     override val mainUrl = "https://bangjago.upns.blog"
-    override val requiresReferer = true
+    override val requiresReferer = false
 
     override suspend fun getUrl(
         url: String,
@@ -33,7 +33,7 @@ class Bangjago : ExtractorApi() {
 class PlayerNgefilm21 : ExtractorApi() {
     override val name = "PlayerNgefilm21"
     override val mainUrl = "https://playerngefilm21.rpmlive.online"
-    override val requiresReferer = true
+    override val requiresReferer = false
 
     override suspend fun getUrl(
         url: String,
@@ -54,7 +54,7 @@ class PlayerNgefilm21 : ExtractorApi() {
 class Bingezone : ExtractorApi() {
     override val name = "Bingezone"
     override val mainUrl = "https://bingezove.com"
-    override val requiresReferer = true
+    override val requiresReferer = false
 
     override suspend fun getUrl(
         url: String,
