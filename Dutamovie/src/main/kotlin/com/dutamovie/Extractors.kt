@@ -8,8 +8,6 @@ import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import com.lagradost.cloudstream3.utils.INFER_TYPE
-import com.lagradost.cloudstream3.utils.JsUnpacker
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import java.net.URI
@@ -79,18 +77,16 @@ class EmbedProx : ExtractorApi() {
     ): List<ExtractorLink> {
         val body = app.get(url).text
 
-        // cari link .m3u8 langsung
+        // cari link .m3u8 di dalam master.txt
         val regex = Regex("https?://[^\\s'\"]+\\.m3u8")
         val links = regex.findAll(body).map { it.value }.toList()
 
-        return links.map { link ->
-            newExtractorLink(
+        // generate extractorlink multi-quality
+        return links.flatMap { link ->
+            generateM3u8(
                 source = name,
-                name = "$name HLS",
-                url = link,
-                referer = mainUrl,
-                quality = Qualities.Unknown.value,
-                isM3u8 = true
+                streamUrl = link,
+                referer = mainUrl
             )
         }
     }
