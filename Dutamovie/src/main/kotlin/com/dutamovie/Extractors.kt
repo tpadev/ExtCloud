@@ -75,20 +75,25 @@ class EmbedProx : ExtractorApi() {
         url: String,
         referer: String?
     ): List<ExtractorLink> {
-        val body = app.get(url).text
+        // step 1: ambil halaman iframe
+        val doc = app.get(url).document
 
-        // cari link .m3u8 di dalam master.txt
-        val regex = Regex("https?://[^\\s'\"]+\\.m3u8")
-        val links = regex.findAll(body).map { it.value }.toList()
+        // step 2: cari parameter "data" untuk dipakai ke index.php
+        val dataParam = doc.selectFirst("script:containsData(index.php)")?.data()
+            ?.substringAfter("data=")?.substringBefore("&") ?: return emptyList()
 
-        // generate extractorlink multi-quality
-        return links.flatMap { link ->
-            generateM3u8(
-                source = name,
-                streamUrl = link,
-                referer = mainUrl
-            )
-        }
+        // step 3: request index.php untuk dapetin securedLink
+        val json = app.get("$mainUrl/player/index.php?data=$dataParam&action=getVideo").text
+
+        val masterUrl = Regex("\"securedLink\"\\s*:\\s*\"(.*?)\"")
+            .find(json)?.groupValues?.get(1) ?: return emptyList()
+
+        // step 4: ambil master.txt dan parse jadi list link .m3u8
+        return generateM3u8(
+            source = name,
+            streamUrl = masterUrl,
+            referer = mainUrl
+        )
     }
 }
 
