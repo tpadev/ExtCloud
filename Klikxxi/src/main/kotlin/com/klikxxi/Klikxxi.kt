@@ -7,9 +7,9 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import java.net.URI
 
-class KlikxxiFit : MainAPI() {
+class Klikxxi : MainAPI() {
 override var mainUrl = "https://klikxxi.fit"
-override var name = "Klikxxi.fit"
+override var name = "Klikxxi"
 override val hasMainPage = true
 override var lang = "id"
 override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
