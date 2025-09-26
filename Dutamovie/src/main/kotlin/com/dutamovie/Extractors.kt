@@ -65,35 +65,6 @@ open class Dingtezuni : ExtractorApi() {
 
 }
 
-class EmbedProx : ExtractorApi() {
-    override val name = "EmbedProx"
-    override val mainUrl = "https://embedpyrox.xyz"
-    override val requiresReferer = false
 
-    override suspend fun getUrl(
-        url: String,
-        referer: String?
-    ): List<ExtractorLink> {
-        // step 1: ambil halaman iframe
-        val doc = app.get(url).document
-
-        // step 2: cari parameter "data" untuk dipakai ke index.php
-        val dataParam = doc.selectFirst("script:containsData(index.php)")?.data()
-            ?.substringAfter("data=")?.substringBefore("&") ?: return emptyList()
-
-        // step 3: request index.php untuk dapetin securedLink
-        val json = app.get("$mainUrl/player/index.php?data=$dataParam&action=getVideo").text
-
-        val masterUrl = Regex("\"securedLink\"\\s*:\\s*\"(.*?)\"")
-            .find(json)?.groupValues?.get(1) ?: return emptyList()
-
-        // step 4: ambil master.txt dan parse jadi list link .m3u8
-        return generateM3u8(
-            source = name,
-            streamUrl = masterUrl,
-            referer = mainUrl
-        )
-    }
-}
 
 
