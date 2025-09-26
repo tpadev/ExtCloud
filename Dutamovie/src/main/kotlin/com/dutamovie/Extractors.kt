@@ -2,55 +2,12 @@ package com.dutamovie
 
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
-import com.lagradost.cloudstream3.utils.newExtractorLink
-import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 
-class EmbedProx : ExtractorApi() {
-    override val name = "EmbedProx"
-    override val mainUrl = "https://embedprox.xyz"
-    override val requiresReferer = false  // ✅ Embedprox tidak butuh referer
-
-    override suspend fun getUrl(
-        url: String,
-        referer: String?
-    ): List<ExtractorLink> {
-        val headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            "Accept" to "*/*"
-        )
-
-        // ambil isi master.txt
-        val body = app.get(url, headers = headers).text
-
-        // regex untuk ambil stream info (resolution + link)
-        val regex = Regex("#EXT-X-STREAM-INF.*RESOLUTION=(\\d+)x(\\d+).*\\n(https?://.*\\.m3u8)")
-
-        return regex.findAll(body).map { match ->
-            val height = match.groupValues[2].toIntOrNull() ?: 0
-            val quality = when {
-                height >= 1080 -> Qualities.P1080.value
-                height >= 720 -> Qualities.P720.value
-                height >= 480 -> Qualities.P480.value
-                else -> Qualities.Unknown.value
-            }
-            val link = match.groupValues[3]
-
-            // ✅ gunakan newExtractorLink, bukan constructor lama
-            newExtractorLink(
-                this.name,
-                "$name ${height}p",
-                link,
-                mainUrl,
-                quality,
-                isM3u8 = true
-            )
-        }.toList()
-    }
-}
 
 
 open class Dingtezuni : ExtractorApi() {
