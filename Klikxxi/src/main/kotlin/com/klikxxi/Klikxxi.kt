@@ -46,7 +46,7 @@ private fun Element.toSearchResult(): SearchResponse? {
         .ifBlank { linkElement.text().trim() }
     if (title.isBlank()) return null
 
-    val poster = selectFirst("img")?.getImageAttr()?.let { fixUrlNull(it) }
+    val poster = selectFirst("img")?.getImageAttr()?.fixImageQuality()?.let { fixUrlNull(it) }
     val quality = selectFirst(".gmr-quality-item")?.text()?.trim()
     val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
 
