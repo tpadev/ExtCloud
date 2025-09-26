@@ -9,7 +9,6 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.newExtractorLink
 import java.net.URI
 
 
@@ -66,7 +65,7 @@ open class Dingtezuni : ExtractorApi() {
 
 }
 
-open class EmbedProx : ExtractorApi() {
+class EmbedProx : ExtractorApi() {
     override val name = "EmbedProx"
     override val mainUrl = "https://embedpyrox.xyz"
     override val requiresReferer = false
