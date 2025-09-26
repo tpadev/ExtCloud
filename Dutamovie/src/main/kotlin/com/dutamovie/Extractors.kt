@@ -16,7 +16,7 @@ import java.net.URI
 
 
 
-open class Dingtezuni : ExtractorApi() {
+class Dingtezuni : ExtractorApi() {
     override val name = "Earnvids"
     override val mainUrl = "https://dingtezuni.com"
     override val requiresReferer = true
@@ -68,30 +68,32 @@ open class Dingtezuni : ExtractorApi() {
 
 }
 
-open class Embedprox : ExtractorApi() {
-    override var mainUrl = "https://embedpyrox.xyz"
-    override var name = "Embedprox"
+class EmbedProx : ExtractorApi() {
+    override val name = "EmbedProx"
+    override val mainUrl = "https://embedpyrox.xyz"
     override val requiresReferer = false
 
-    override fun getExtractorUrl(id: String): String {
-        return "$mainUrl/e/$id"
-    }
+    override suspend fun getUrl(
+        url: String,
+        referer: String?
+    ): List<ExtractorLink> {
+        val body = app.get(url).text
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val response = app.get(url).text
-        Regex("eval((.|\\n)*?)</script>").find(response)?.groupValues?.get(1)?.let { jsEval ->
-            JsUnpacker("eval$jsEval").unpack()?.let { unPacked ->
-                Regex("sources:\\[\\{src:\"(.*?)\"").find(unPacked)?.groupValues?.get(1)?.let { link ->
-                    return listOf(
-                        newExtractorLink(
-                            source = this.name,
-                            this.name,
-                            link,
-                        )
-                    )
-                }
-            }
+        // cari link .m3u8 langsung
+        val regex = Regex("https?://[^\\s'\"]+\\.m3u8")
+        val links = regex.findAll(body).map { it.value }.toList()
+
+        return links.map { link ->
+            newExtractorLink(
+                source = name,
+                name = "$name HLS",
+                url = link,
+                referer = mainUrl,
+                quality = Qualities.Unknown.value,
+                isM3u8 = true
+            )
         }
-        return null
     }
 }
+
+
