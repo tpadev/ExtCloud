@@ -2,10 +2,11 @@ package com.dutamovie
 
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
-import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.USER_AGENT
+import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 
 class EmbedProx : ExtractorApi() {
@@ -38,8 +39,9 @@ class EmbedProx : ExtractorApi() {
             }
             val link = match.groupValues[3]
 
-            ExtractorLink(
-                name,
+            // ✅ gunakan newExtractorLink, bukan constructor lama
+            newExtractorLink(
+                this.name,
                 "$name ${height}p",
                 link,
                 mainUrl,
@@ -49,6 +51,7 @@ class EmbedProx : ExtractorApi() {
         }.toList()
     }
 }
+
 
 open class Dingtezuni : ExtractorApi() {
     override val name = "Earnvids"
