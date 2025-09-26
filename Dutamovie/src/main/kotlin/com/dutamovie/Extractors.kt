@@ -14,7 +14,7 @@ import java.net.URI
 
 
 
-class Dingtezuni : ExtractorApi() {
+open class Dingtezuni : ExtractorApi() {
     override val name = "Earnvids"
     override val mainUrl = "https://dingtezuni.com"
     override val requiresReferer = true
@@ -66,7 +66,7 @@ class Dingtezuni : ExtractorApi() {
 
 }
 
-class EmbedProx : ExtractorApi() {
+open class EmbedProx : ExtractorApi() {
     override val name = "EmbedProx"
     override val mainUrl = "https://embedpyrox.xyz"
     override val requiresReferer = false
