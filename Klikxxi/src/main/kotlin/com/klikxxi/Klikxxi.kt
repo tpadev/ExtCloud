@@ -35,26 +35,19 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
 }
 
 private fun Element.toSearchResult(): SearchResponse? {
-    val linkElement = this.selectFirst("a[href]") ?: return null
+    val linkElement = this.selectFirst("div.content-thumbnail a[title][href]") ?: return null
     val href = fixUrl(linkElement.attr("href"))
-
-    val title = linkElement.attr("title")
-        .removePrefix("Permalink to: ")
-        .trim()
-        .ifBlank { linkElement.text().trim() }
+    val title = linkElement.attr("title").trim()
     if (title.isBlank()) return null
 
-    val posterUrl = this.selectFirst("img")?.attr("src")?.let { fixUrlNull(it) }
-    val quality = this.selectFirst(".gmr-quality-item")?.text()?.trim()
+    val posterUrl = this.selectFirst("div.content-thumbnail img")?.attr("src")?.let { fixUrlNull(it) }
+    val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
 
     return newMovieSearchResponse(title, href, TvType.Movie) {
         this.posterUrl = posterUrl
         if (!quality.isNullOrBlank()) addQuality(quality)
     }
 }
-
-
-
 
 
 override suspend fun search(query: String): List<SearchResponse> {
