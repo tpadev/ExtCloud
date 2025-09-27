@@ -171,7 +171,8 @@ private fun Element.getImageAttr(): String {
         this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
         this.hasAttr("data-srcset") -> this.attr("abs:data-srcset").substringBefore(" ")
         this.hasAttr("srcset") -> this.attr("abs:srcset").substringBefore(" ")
-        else -> this.attr("abs:src")
+        this.hasAttr("src") -> this.attr("abs:src")
+        else -> ""
     }
 }
 
