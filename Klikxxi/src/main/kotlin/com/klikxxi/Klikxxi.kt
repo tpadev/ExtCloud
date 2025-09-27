@@ -34,20 +34,39 @@ class Klikxxi : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val linkElement = this.selectFirst("div.content-thumbnail a[title][href]") ?: return null
+        val linkElement = this.selectFirst("a[href]") ?: return null
         val href = fixUrl(linkElement.attr("href"))
+
         val title = linkElement.attr("title")
             .removePrefix("Permalink to: ")
+            .ifBlank { linkElement.text() }
             .trim()
-            .ifBlank { linkElement.text().trim() }
         if (title.isBlank()) return null
 
-        val poster = this.getPosterUrl()
-        val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
+        // Ambil poster (srcset atau src)
+        var poster = this.selectFirst("img.wp-post-image, img")?.attr("srcset")
+            ?.substringBefore(" ")
+            ?: this.selectFirst("img.wp-post-image, img")?.attr("src")
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = poster
-            if (!quality.isNullOrBlank()) addQuality(quality)
+        if (poster.isNullOrBlank()) return null
+        if (poster.startsWith("//")) poster = "https:$poster"
+
+        // Hilangkan ukuran (contoh: -170x255)
+        poster = poster.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
+
+        val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
+        val typeText = this.selectFirst(".gmr-posttype-item")?.text()?.trim()
+        val isSeries = typeText.equals("TV Show", true)
+
+        return if (isSeries) {
+            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+                this.posterUrl = poster
+            }
+        } else {
+            newMovieSearchResponse(title, href, TvType.Movie) {
+                this.posterUrl = poster
+                if (!quality.isNullOrBlank()) addQuality(quality)
+            }
         }
     }
 
@@ -69,7 +88,8 @@ class Klikxxi : MainAPI() {
             .orEmpty()
 
         val poster = document.selectFirst("figure.pull-left img, div.gmr-movieposter img, .poster img")
-            ?.let { it.getPosterUrl() }
+            ?.attr("src")
+            ?.let { fixUrlNull(it) }
 
         val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")
             ?.text()
@@ -101,8 +121,7 @@ class Klikxxi : MainAPI() {
 
         return if (tvType == TvType.TvSeries) {
             val episodes = episodesElements.mapIndexedNotNull { index, epLink ->
-                val href = epLink.attr("href").takeIf { it.isNotBlank() }?.let { fixUrl(it) }
-                    ?: return@mapIndexedNotNull null
+                val href = epLink.attr("href").takeIf { it.isNotBlank() }?.let { fixUrl(it) } ?: return@mapIndexedNotNull null
                 val name = epLink.text().trim()
 
                 val season = Regex("S(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
@@ -169,29 +188,5 @@ class Klikxxi : MainAPI() {
         }
 
         return true
-    }
-
-    private fun Element.getPosterUrl(): String? {
-        var link = this.attr("srcset").substringBefore(" ")
-            .ifBlank { this.attr("src") }
-            .ifBlank { this.attr("data-src") }
-            .ifBlank { this.attr("data-lazy-src") }
-
-        if (link.isNullOrBlank()) return null
-
-        if (link.startsWith("//")) link = "https:$link"
-
-        link = link.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
-
-        return link
-    }
-
-    private fun Element?.getIframeAttr(): String? {
-        return this?.attr("data-litespeed-src").takeIf { it?.isNotEmpty() == true }
-            ?: this?.attr("src")
-    }
-
-    private fun getBaseUrl(url: String): String {
-        return URI(url).let { "${it.scheme}://${it.host}" }
     }
 }
