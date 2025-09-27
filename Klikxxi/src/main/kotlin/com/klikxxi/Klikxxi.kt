@@ -21,6 +21,17 @@ override val mainPage = mainPageOf(
     "category/korea" to "Korea Series"
 )
 
+override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+    val url = if (request.data.isEmpty()) {
+        "$mainUrl/page/$page/"
+    } else {
+        "$mainUrl/${request.data}/page/$page/"
+    }
+    val document = app.get(url).document
+    val home = document.select("#gmr-main-load div.gmr-item").mapNotNull { it.toSearchResult() }
+    return newHomePageResponse(HomePageList(request.name, home), hasNext = true)
+}
+
 
 private fun Element.toSearchResult(): SearchResponse? {
     val linkElement = selectFirst("a[href]") ?: return null
