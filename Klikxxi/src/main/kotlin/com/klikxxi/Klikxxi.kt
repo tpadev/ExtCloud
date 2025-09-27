@@ -15,15 +15,12 @@ override var lang = "id"
 override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
 override val mainPage = mainPageOf(
-// Film (advanced search list)
-"?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=&page=%d" to "Film",
-// Western series
-"category/western-series/page/%d/" to "Western Series",
-// India series
-"category/india-series/page/%d/" to "India Series",
-// Korea series
-"category/korea/page/%d/" to "Korea Series",
+    "Film" to "$mainUrl/?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=&page=%d",
+    "Western Series" to "$mainUrl/category/western-series/page/%d/",
+    "India Series" to "$mainUrl/category/india-series/page/%d/",
+    "Korea Series" to "$mainUrl/category/korea/page/%d/"
 )
+
 
 override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val url = if (page == 1) mainUrl else "$mainUrl/page/$page/"
