@@ -15,7 +15,7 @@ override var lang = "id"
 override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
 override val mainPage = mainPageOf(
-    "/?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=/page/%d/" to "Film",
+    "$mainUrl/page/%d/" to  "Film",
     "category/western-series/page/%d/" to "Western Series",
     "category/india-series/page/%d/" to "India Series",
     "category/korea/page/%d/" to "Korea Series"
@@ -31,6 +31,10 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
 private fun Element.toSearchResult(): SearchResponse? {
     val linkElement = selectFirst("a[href]") ?: return null
     val href = fixUrl(linkElement.attr("href"))
+    val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
+    val isSeries = typeText.equals("TV Show", true)
+
+    if (sectionName == "Film" && isSeries) return null
 
     // Judul ambil dari atribut <a title>
     val title = linkElement.attr("title")
