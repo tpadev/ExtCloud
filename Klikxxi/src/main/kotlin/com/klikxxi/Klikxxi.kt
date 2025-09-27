@@ -15,18 +15,25 @@ override var lang = "id"
 override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
 override val mainPage = mainPageOf(
-    "page" to "Film",
+    " to "Film",
     "category/western-series" to "Western Series",
     "category/india-series" to "India Series",
     "category/korea" to "Korea Series"
 )
 
 override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val url = "$mainUrl/${request.data}/page/$page/"
+    val url = if (request.data.isEmpty()) {
+        "$mainUrl/page/$page/"
+    } else {
+        "$mainUrl/${request.data}/page/$page/"
+    }
+
     val document = app.get(url).document
-    val home = document.select("article, div.gmr-item-movie").mapNotNull { it.toSearchResult() }
-    return newHomePageResponse(HomePageList(request.name, home), hasNext = true)
+    val items = document.select("article, div.gmr-item-movie").mapNotNull { it.toSearchResult() }
+
+    return newHomePageResponse(HomePageList(request.name, items), hasNext = true)
 }
+
 
 
 private fun Element.toSearchResult(): SearchResponse? {
