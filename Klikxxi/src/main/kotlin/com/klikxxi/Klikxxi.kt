@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
+import java.net.URI
 
 class Klikxxi : MainAPI() {
     override var mainUrl = "https://klikxxi.fit"
@@ -24,38 +25,33 @@ class Klikxxi : MainAPI() {
         val url = request.data.format(page)
         val document = app.get(url).document
 
-        val items = document.select("main#main article")
+        val items = document.select("main#main article, div.gmr-box-content")
             .mapNotNull { it.toSearchResult() }
 
         val hasNext = document.selectFirst("ul.page-numbers li a.next") != null
-
         return newHomePageResponse(HomePageList(request.name, items), hasNext)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val linkElement = this.selectFirst("a[href]") ?: return null
+        val linkElement = this.selectFirst("a[href][title]") ?: return null
         val href = fixUrl(linkElement.attr("href"))
-
         val title = linkElement.attr("title")
             .removePrefix("Permalink to: ")
             .ifBlank { linkElement.text() }
             .trim()
         if (title.isBlank()) return null
 
-        // --- ambil poster ---
-        var poster = this.selectFirst("img.wp-post-image, img")?.let { img ->
-            when {
-                img.hasAttr("data-src") -> img.attr("abs:data-src")
-                img.hasAttr("data-lazy-src") -> img.attr("abs:data-lazy-src")
-                img.hasAttr("srcset") -> img.attr("srcset").split(" ").firstOrNull()
-                else -> img.attr("src")
-            }
+        val imgElement = this.selectFirst("img")
+        var poster = when {
+            imgElement?.hasAttr("data-lazy-src") == true -> imgElement.attr("abs:data-lazy-src")
+            imgElement?.hasAttr("data-src") == true -> imgElement.attr("abs:data-src")
+            imgElement?.hasAttr("data-lazy-srcset") == true -> imgElement.attr("abs:data-lazy-srcset").substringBefore(" ")
+            imgElement?.hasAttr("srcset") == true -> imgElement.attr("abs:srcset").substringBefore(" ")
+            else -> imgElement?.attr("abs:src")
         }
 
-        if (!poster.isNullOrBlank()) {
-            if (poster.startsWith("//")) poster = "https:$poster"
-            poster = poster.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
-        }
+        // Hapus ukuran kecil -170x255, -152x228, dll agar dapat gambar full
+        poster = poster?.replace(Regex("-\\d+x\\d+(?=\\.\\w{3,4})"), "")
 
         val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
         val typeText = this.selectFirst(".gmr-posttype-item")?.text()?.trim()
@@ -75,7 +71,7 @@ class Klikxxi : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query").document
-        return document.select("main#main article")
+        return document.select("article.item-infinite, div.gmr-box-content")
             .mapNotNull { it.toSearchResult() }
     }
 
@@ -91,18 +87,33 @@ class Klikxxi : MainAPI() {
             .orEmpty()
 
         val poster = document.selectFirst("figure.pull-left img, div.gmr-movieposter img, .poster img")
-            ?.attr("src")
-            ?.let { fixUrlNull(it) }
+            ?.let { img ->
+                img.attr("data-lazy-src")?.let { fixUrlNull(it) }
+                    ?: img.attr("src")?.let { fixUrlNull(it) }
+            }
 
         val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")
             ?.text()
             ?.trim()
 
-        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a").map { it.text() }
-        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().toIntOrNull()
-        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
-        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.toRatingInt()
-        val actors = document.select("div.gmr-moviedata span[itemprop=actors] a").map { it.text() }.takeIf { it.isNotEmpty() }
+        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a")
+            .map { it.text() }
+
+        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a")
+            .text()
+            .toIntOrNull()
+
+        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")
+            ?.attr("href")
+
+        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")
+            ?.text()
+            ?.toRatingInt()
+
+        val actors = document.select("div.gmr-moviedata span[itemprop=actors] a")
+            .map { it.text() }
+            .takeIf { it.isNotEmpty() }
+
         val recommendations = document.select("div.gmr-related-post article, div.related-post article")
             .mapNotNull { it.toSearchResult() }
 
@@ -113,7 +124,6 @@ class Klikxxi : MainAPI() {
             val episodes = episodesElements.mapIndexedNotNull { index, epLink ->
                 val href = epLink.attr("href").takeIf { it.isNotBlank() }?.let { fixUrl(it) } ?: return@mapIndexedNotNull null
                 val name = epLink.text().trim()
-
                 val season = Regex("S(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
                 val episode = Regex("E(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
 
@@ -155,7 +165,6 @@ class Klikxxi : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         val postId = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
-
         if (postId.isNullOrBlank()) return false
 
         document.select("div.tab-content-ajax").forEach { tab ->
@@ -173,10 +182,17 @@ class Klikxxi : MainAPI() {
 
             val iframe = response.selectFirst("iframe")?.attr("src") ?: return@forEach
             val link = httpsify(iframe)
-
             loadExtractor(link, mainUrl, subtitleCallback, callback)
         }
-
         return true
+    }
+
+    private fun Element?.getIframeAttr(): String? {
+        return this?.attr("data-litespeed-src").takeIf { it?.isNotEmpty() == true }
+            ?: this?.attr("src")
+    }
+
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let { "${it.scheme}://${it.host}" }
     }
 }
