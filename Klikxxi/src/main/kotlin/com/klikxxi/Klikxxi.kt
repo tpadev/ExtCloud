@@ -25,9 +25,11 @@ class Klikxxi : MainAPI() {
         val url = request.data.format(page)
         val document = app.get(url).document
 
-        // gabung selector update terbaru + kategori
-        val items = document.select("main#main article, div.gmr-box-content")
-            .mapNotNull { it.toSearchResult() }
+        val items = if (request.name == "Update Terbaru") {
+            document.select("main#main article").mapNotNull { it.toSearchResult() }
+        } else {
+            document.select("div.gmr-box-content").mapNotNull { it.toSearchResult() }
+        }
 
         val hasNext = document.selectFirst("ul.page-numbers li a.next") != null
         return newHomePageResponse(HomePageList(request.name, items), hasNext)
@@ -72,8 +74,7 @@ class Klikxxi : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query").document
-        return document.select("article.item-infinite, div.gmr-box-content")
-            .mapNotNull { it.toSearchResult() }
+        return document.select("article.item-infinite").mapNotNull { it.toSearchResult() }
     }
 
     override suspend fun load(url: String): LoadResponse {
@@ -102,12 +103,9 @@ class Klikxxi : MainAPI() {
             .text()
             .toIntOrNull()
 
-        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")
-            ?.attr("href")
+        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
 
-        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")
-            ?.text()
-            ?.toRatingInt()
+        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.toRatingInt()
 
         val actors = document.select("div.gmr-moviedata span[itemprop=actors] a")
             .map { it.text() }
@@ -121,9 +119,9 @@ class Klikxxi : MainAPI() {
 
         return if (tvType == TvType.TvSeries) {
             val episodes = episodesElements.mapIndexedNotNull { index, epLink ->
-                val href = epLink.attr("href").takeIf { it.isNotBlank() }?.let { fixUrl(it) } ?: return@mapIndexedNotNull null
+                val href = epLink.attr("href").takeIf { it.isNotBlank() }?.let { fixUrl(it) }
+                    ?: return@mapIndexedNotNull null
                 val name = epLink.text().trim()
-
                 val season = Regex("S(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
                 val episode = Regex("E(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
 
@@ -165,6 +163,7 @@ class Klikxxi : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         val postId = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
+
         if (postId.isNullOrBlank()) return false
 
         document.select("div.tab-content-ajax").forEach { tab ->
@@ -182,8 +181,10 @@ class Klikxxi : MainAPI() {
 
             val iframe = response.selectFirst("iframe")?.attr("src") ?: return@forEach
             val link = httpsify(iframe)
+
             loadExtractor(link, mainUrl, subtitleCallback, callback)
         }
+
         return true
     }
 
@@ -191,8 +192,7 @@ class Klikxxi : MainAPI() {
         return when {
             this.hasAttr("data-src") -> this.attr("abs:data-src")
             this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
-            this.hasAttr("data-lazy-srcset") -> this.attr("abs:data-lazy-srcset").split(" ").firstOrNull() ?: ""
-            this.hasAttr("srcset") -> this.attr("abs:srcset").split(" ").firstOrNull() ?: ""
+            this.hasAttr("srcset") -> this.attr("abs:srcset").substringBefore(" ")
             else -> this.attr("abs:src")
         }
     }
