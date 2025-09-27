@@ -15,7 +15,7 @@ class Klikxxi : MainAPI() {
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     override val mainPage = mainPageOf(
-        "$mainUrl/?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=&page=%d" to "Update Terbaru",
+        "$mainUrl/?s=&search=advanced&post_type=movie&page=%d" to "Update Terbaru",
         "$mainUrl/tv/page/%d/" to "TV Series"
     )
 
@@ -23,7 +23,8 @@ class Klikxxi : MainAPI() {
         val url = request.data.format(page)
         val document = app.get(url).document
 
-        val items = document.select("main#main article, div.gmr-box-content")
+        // ✅ Ambil hanya article biar tidak dobel
+        val items = document.select("main#main article")
             .mapNotNull { it.toSearchResult() }
 
         val hasNext = document.selectFirst("ul.page-numbers li a.next") != null
@@ -94,7 +95,7 @@ class Klikxxi : MainAPI() {
         val recommendations = document.select("div.gmr-related-post article, div.related-post article")
             .mapNotNull { it.toSearchResult() }
 
-        // ==== Episode Parsing ====
+        // === Ambil Episodes ===
         val seasonBlocks = document.select("div.gmr-season-block")
         val allEpisodes = mutableListOf<Episode>()
 
