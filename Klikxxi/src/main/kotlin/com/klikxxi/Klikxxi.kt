@@ -15,36 +15,24 @@ override var lang = "id"
 override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
 override val mainPage = mainPageOf(
-    "category/western-series" to "Western Series",
-    "category/india-series" to "India Series",
-    "category/korea" to "Korea Series",
-    "?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=" to "Update Terbaru"
+    "$mainUrl/?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=&page=%d" to "Update Terbaru",
+    "$mainUrl/category/western-series/page/%d/" to "Western Series",
+    "$mainUrl/category/india-series/page/%d/" to "India Series",
+    "$mainUrl/category/korea/page/%d/" to "Korea Series"
 )
 
-
 override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val url = if (request.data.startsWith("?")) {
-        "$mainUrl/${request.data}&page=$page"
-    } else {
-        "$mainUrl/${request.data}/page/$page/"
-    }
-
+    val url = request.data.format(page)
     val document = app.get(url).document
 
-    // selector beda untuk update terbaru
-    val selector = if (request.name == "Update Terbaru") {
-        "main#main article"
-    } else {
-        "article, div.gmr-item-movie"
-    }
+    val items = document.select("main#main article")
+        .mapNotNull { it.toSearchResult() }
 
-    val items = document.select(selector).mapNotNull { it.toSearchResult() }
+    // cek apakah ada tombol pagination (next page)
+    val hasNext = document.selectFirst("ul.page-numbers li a.next") != null
 
-    return newHomePageResponse(HomePageList(request.name, items), hasNext = items.isNotEmpty())
+    return newHomePageResponse(HomePageList(request.name, items), hasNext)
 }
-
-
-
 
 private fun Element.toSearchResult(): SearchResponse? {
     val linkElement = selectFirst("a[href]") ?: return null
