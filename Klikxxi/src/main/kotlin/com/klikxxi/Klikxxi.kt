@@ -59,64 +59,89 @@ override suspend fun search(query: String): List<SearchResponse> {
         .mapNotNull { it.toSearchResult() }
 }
 
-
 override suspend fun load(url: String): LoadResponse {
-val document = app.get(url).document
+    val document = app.get(url).document
 
-val title = document.selectFirst("h1.entry-title, div.mvic-desc h3")?.text()
-?.substringBefore("Season")?.substringBefore("Episode")?.substringBefore("(")?.trim().orEmpty()
-val poster = document.selectFirst("figure.pull-left img, div.gmr-movieposter img, .poster img")
-?.getImageAttr()?.let { fixUrlNull(it) }
-val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")
-?.text()?.trim()
-val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a").map { it.text() }
-val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().toIntOrNull()
-val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
-val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.toRatingInt()
-val actors = document.select("div.gmr-moviedata span[itemprop=actors] a").map { it.text() }.takeIf { it.isNotEmpty() }
-val recommendations = document.select("div.gmr-related-post article, div.related-post article")
-    .mapNotNull { it.toSearchResult() }
+    val title = document.selectFirst("h1.entry-title, div.mvic-desc h3")
+        ?.text()
+        ?.substringBefore("Season")
+        ?.substringBefore("Episode")
+        ?.substringBefore("(")
+        ?.trim()
+        .orEmpty()
 
-val episodesElements = document.select("div.vid-episodes a, div.gmr-listseries a")
-val tvType = if (episodesElements.isNotEmpty()) TvType.TvSeries else TvType.Movie
+    val poster = document.selectFirst("figure.pull-left img, div.gmr-movieposter img, .poster img")
+        ?.attr("src")
+        ?.let { fixUrlNull(it) }
 
+    val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")
+        ?.text()
+        ?.trim()
 
-return if (tvType == TvType.TvSeries) {
-val episodes = episodesElements.mapNotNull { epLink ->
-val href = epLink.attr("href").takeIf { it.isNotBlank() }?.let { fixUrl(it) } ?: return@mapNotNull null
-val name = epLink.text()
-val episode = name.split(" ").lastOrNull()?.filter { it.isDigit() }?.toIntOrNull()
-val season = name.split(" ").firstOrNull()?.filter { it.isDigit() }?.toIntOrNull()
-newEpisode(href) {
-this.name = name
-this.season = season
-this.episode = episode
-}
+    val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a")
+        .map { it.text() }
+
+    val year = document.select("div.gmr-moviedata strong:contains(Year:) > a")
+        .text()
+        .toIntOrNull()
+
+    val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")
+        ?.attr("href")
+
+    val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")
+        ?.text()
+        ?.toRatingInt()
+
+    val actors = document.select("div.gmr-moviedata span[itemprop=actors] a")
+        .map { it.text() }
+        .takeIf { it.isNotEmpty() }
+
+    val recommendations = document.select("div.gmr-related-post article, div.related-post article")
+        .mapNotNull { it.toSearchResult() }
+
+    // --- ambil episode list ---
+    val episodesElements = document.select("div.vid-episodes a, div.gmr-listseries a")
+    val tvType = if (episodesElements.isNotEmpty()) TvType.TvSeries else TvType.Movie
+
+    return if (tvType == TvType.TvSeries) {
+        val episodes = episodesElements.mapIndexedNotNull { index, epLink ->
+            val href = epLink.attr("href").takeIf { it.isNotBlank() }?.let { fixUrl(it) } ?: return@mapIndexedNotNull null
+            val name = epLink.text().trim()
+
+            // regex cari Sx dan Ex
+            val season = Regex("S(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val episode = Regex("E(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
+
+            newEpisode(href) {
+                this.name = name
+                this.season = season ?: 1
+                this.episode = episode ?: (index + 1)
+            }
+        }
+
+        newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+            this.posterUrl = poster
+            this.plot = description
+            this.tags = tags
+            this.year = year
+            this.rating = rating
+            addActors(actors)
+            this.recommendations = recommendations
+        }
+    } else {
+        newMovieLoadResponse(title, url, TvType.Movie, url) {
+            this.posterUrl = poster
+            this.plot = description
+            this.tags = tags
+            this.year = year
+            this.rating = rating
+            addActors(actors)
+            addTrailer(trailer)
+            this.recommendations = recommendations
+        }
+    }
 }
 
-
-newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-this.posterUrl = poster
-this.plot = description
-this.tags = tags
-this.year = year
-this.rating = rating
-addActors(actors)
-this.recommendations = recommendations
-}
-} else {
-newMovieLoadResponse(title, url, TvType.Movie, url) {
-this.posterUrl = poster
-this.plot = description
-this.tags = tags
-this.year = year
-this.rating = rating
-addActors(actors)
-addTrailer(trailer)
-this.recommendations = recommendations
-}
-}
-}
 
 override suspend fun loadLinks(
     data: String,
