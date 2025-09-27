@@ -15,7 +15,7 @@ class Klikxxi : MainAPI() {
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     override val mainPage = mainPageOf(
-        "$mainUrl/?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=&page=%d" to "Update Terbaru",
+        "$mainUrl/page/%d/" to "Update Terbaru",
         "$mainUrl/category/western-series/page/%d/" to "Western Series",
         "$mainUrl/category/india-series/page/%d/" to "India Series",
         "$mainUrl/category/korea/page/%d/" to "Korea Series"
@@ -25,7 +25,8 @@ class Klikxxi : MainAPI() {
         val url = request.data.format(page)
         val document = app.get(url).document
 
-        val items = document.select("main#main article, div.gmr-box-content")
+        // semua kategori cukup pakai <article>
+        val items = document.select("main#main article")
             .mapNotNull { it.toSearchResult() }
 
         val hasNext = document.selectFirst("ul.page-numbers li a.next") != null
@@ -41,17 +42,19 @@ class Klikxxi : MainAPI() {
             .trim()
         if (title.isBlank()) return null
 
+        // --- ambil poster ---
         val imgElement = this.selectFirst("img")
         var poster = when {
             imgElement?.hasAttr("data-lazy-src") == true -> imgElement.attr("abs:data-lazy-src")
-            imgElement?.hasAttr("data-src") == true -> imgElement.attr("abs:data-src")
-            imgElement?.hasAttr("data-lazy-srcset") == true -> imgElement.attr("abs:data-lazy-srcset").substringBefore(" ")
-            imgElement?.hasAttr("srcset") == true -> imgElement.attr("abs:srcset").substringBefore(" ")
+            imgElement?.hasAttr("data-lazy-srcset") == true -> imgElement.attr("abs:data-lazy-srcset").split(" ").firstOrNull()
+            imgElement?.hasAttr("srcset") == true -> imgElement.attr("abs:srcset").split(" ").firstOrNull()
             else -> imgElement?.attr("abs:src")
         }
 
-        // Hapus ukuran kecil -170x255, -152x228, dll agar dapat gambar full
-        poster = poster?.replace(Regex("-\\d+x\\d+(?=\\.\\w{3,4})"), "")
+        if (!poster.isNullOrBlank()) {
+            if (poster.startsWith("//")) poster = "https:$poster"
+            poster = poster.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
+        }
 
         val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
         val typeText = this.selectFirst(".gmr-posttype-item")?.text()?.trim()
@@ -71,7 +74,7 @@ class Klikxxi : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query").document
-        return document.select("article.item-infinite, div.gmr-box-content")
+        return document.select("main#main article")
             .mapNotNull { it.toSearchResult() }
     }
 
@@ -93,27 +96,13 @@ class Klikxxi : MainAPI() {
             }
 
         val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")
-            ?.text()
-            ?.trim()
+            ?.text()?.trim()
 
-        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a")
-            .map { it.text() }
-
-        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a")
-            .text()
-            .toIntOrNull()
-
-        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")
-            ?.attr("href")
-
-        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")
-            ?.text()
-            ?.toRatingInt()
-
-        val actors = document.select("div.gmr-moviedata span[itemprop=actors] a")
-            .map { it.text() }
-            .takeIf { it.isNotEmpty() }
-
+        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a").map { it.text() }
+        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().toIntOrNull()
+        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
+        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.toRatingInt()
+        val actors = document.select("div.gmr-moviedata span[itemprop=actors] a").map { it.text() }.takeIf { it.isNotEmpty() }
         val recommendations = document.select("div.gmr-related-post article, div.related-post article")
             .mapNotNull { it.toSearchResult() }
 
