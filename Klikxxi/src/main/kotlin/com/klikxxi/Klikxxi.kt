@@ -21,20 +21,29 @@ override val mainPage = mainPageOf(
     "category/korea/page/%d/" to "Korea Series"
 )
 
-override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val document = app.get("$mainUrl/${request.data.format(page)}").document
-    val home = document.select("article, div.gmr-item-movie").mapNotNull { it.toSearchResult() }
-    return newHomePageResponse(request.name, home)
-}
+override suspend fun getMainPage(
+    page: Int,
+    request: MainPageRequest
+): HomePageResponse {
+    val doc = app.get(request.data.format(page)).document
+    val results = doc.select("article").mapNotNull { it.toSearchResult() }
 
+    val filtered = if (request.name == "Film") {
+        results.filter { it is MovieSearchResponse }
+    } else {
+        results
+    }
+
+    return newHomePageResponse(request.name, filtered)
+}
 
 private fun Element.toSearchResult(): SearchResponse? {
     val linkElement = selectFirst("a[href]") ?: return null
     val href = fixUrl(linkElement.attr("href"))
+
+    // ambil type TV Show / Movie
     val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
     val isSeries = typeText.equals("TV Show", true)
-
-    if (sectionName == "Film" && isSeries) return null
 
     // Judul ambil dari atribut <a title>
     val title = linkElement.attr("title")
@@ -46,8 +55,6 @@ private fun Element.toSearchResult(): SearchResponse? {
     val poster = selectFirst("img")?.getImageAttr()?.fixImageQuality()?.let { fixUrlNull(it) }
 
     val quality = selectFirst(".gmr-quality-item")?.text()?.trim()
-    val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
-    val isSeries = typeText.equals("TV Show", true)
 
     return if (isSeries) {
         newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
@@ -60,6 +67,7 @@ private fun Element.toSearchResult(): SearchResponse? {
         }
     }
 }
+
 
 override suspend fun search(query: String): List<SearchResponse> {
     val document = app.get("$mainUrl/?s=$query").document
