@@ -15,7 +15,7 @@ override var lang = "id"
 override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
 override val mainPage = mainPageOf(
-    " to "Film",
+    "" to "Film",
     "category/western-series" to "Western Series",
     "category/india-series" to "India Series",
     "category/korea" to "Korea Series"
