@@ -15,22 +15,18 @@ override var lang = "id"
 override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
 override val mainPage = mainPageOf(
-    "Film" to "$mainUrl/page/%d/",  // atau langsung homepage kalau nggak support pagination
-    "Western Series" to "$mainUrl/category/western-series/page/%d/",
-    "India Series" to "$mainUrl/category/india-series/page/%d/",
-    "Korea Series" to "$mainUrl/category/korea/page/%d/"
+    "page/%d/" to "Film",
+    "category/western-series/page/%d/" to "Western Series",
+    "category/india-series/page/%d/" to "India Series",
+    "category/korea/page/%d/" to "Korea Series"
 )
 
-
 override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val url = if (page == 1) mainUrl else "$mainUrl/page/$page/"
-    val document = app.get(url).document
-    val items = document.select("div.gmr-item-modulepost").mapNotNull { it.toSearchResult() }
-    return newHomePageResponse(
-        list = HomePageList(request.name, items, isHorizontalImages = false),
-        hasNext = items.isNotEmpty()
-    )
+    val document = app.get("$mainUrl/${request.data.format(page)}").document
+    val home = document.select("article, div.gmr-item-movie").mapNotNull { it.toSearchResult() }
+    return newHomePageResponse(request.name, home)
 }
+
 
 private fun Element.toSearchResult(): SearchResponse? {
     val linkElement = selectFirst("a[href]") ?: return null
