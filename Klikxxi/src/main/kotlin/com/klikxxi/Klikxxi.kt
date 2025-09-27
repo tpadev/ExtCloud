@@ -171,13 +171,15 @@ class Klikxxi : MainAPI() {
         return true
     }
 
-    /** 🔧 Fix poster supaya gak abu-abu / buram */
+    /** 🔧 Fix poster supaya gak abu-abu / blur */
     private fun Element?.fixPoster(): String? {
         if (this == null) return null
         var link = when {
             this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
-            this.hasAttr("data-lazy-srcset") -> this.attr("abs:data-lazy-srcset").split(" ").firstOrNull()
-            this.hasAttr("srcset") -> this.attr("abs:srcset").split(" ").firstOrNull()
+            this.hasAttr("data-lazy-srcset") -> this.attr("abs:data-lazy-srcset")
+                .split(",").last().trim().split(" ").firstOrNull()
+            this.hasAttr("srcset") -> this.attr("abs:srcset")
+                .split(",").last().trim().split(" ").firstOrNull()
             else -> this.attr("abs:src")
         }
         if (!link.isNullOrBlank()) {
