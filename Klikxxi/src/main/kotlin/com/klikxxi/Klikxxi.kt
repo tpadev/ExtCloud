@@ -23,17 +23,26 @@ override val mainPage = mainPageOf(
 
 
 override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val url = if (request.data.isEmpty()) {
-        "$mainUrl/page/$page/"
+    val url = if (request.data.startsWith("?")) {
+        "$mainUrl/${request.data}&page=$page"
     } else {
         "$mainUrl/${request.data}/page/$page/"
     }
 
     val document = app.get(url).document
-    val items = document.select("article, div.gmr-item-movie").mapNotNull { it.toSearchResult() }
 
-    return newHomePageResponse(HomePageList(request.name, items), hasNext = true)
+    // selector beda untuk update terbaru
+    val selector = if (request.name == "Update Terbaru") {
+        "main#main article"
+    } else {
+        "article, div.gmr-item-movie"
+    }
+
+    val items = document.select(selector).mapNotNull { it.toSearchResult() }
+
+    return newHomePageResponse(HomePageList(request.name, items), hasNext = items.isNotEmpty())
 }
+
 
 
 
