@@ -166,13 +166,14 @@ override suspend fun loadLinks(
 }
 
 private fun Element.getImageAttr(): String {
-        return when {
-            this.hasAttr("data-src") -> this.attr("abs:data-src")
-            this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
-            this.hasAttr("srcset") -> this.attr("abs:srcset").substringBefore(" ")
-            else -> this.attr("abs:src")
-        }
+    return when {
+        this.hasAttr("data-src") -> this.attr("abs:data-src")
+        this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
+        this.hasAttr("data-srcset") -> this.attr("abs:data-srcset").substringBefore(" ")
+        this.hasAttr("srcset") -> this.attr("abs:srcset").substringBefore(" ")
+        else -> this.attr("abs:src")
     }
+}
 
     private fun Element?.getIframeAttr(): String? {
         return this?.attr("data-litespeed-src").takeIf { it?.isNotEmpty() == true }
