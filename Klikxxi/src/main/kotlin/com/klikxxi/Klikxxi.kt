@@ -43,7 +43,7 @@ private fun Element.toSearchResult(): SearchResponse? {
         .ifBlank { linkElement.text().trim() }
     if (title.isBlank()) return null
 
-    val posterUrl = this.selectFirst("a img")?.attr("src")?.let { fixUrlNull(it) }
+    val poster = fixUrlNull(this.selectFirst("img")?.getImageAttr())
     val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
 
     return newMovieSearchResponse(title, href, TvType.Movie) {
