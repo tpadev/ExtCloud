@@ -5,7 +5,6 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
-import java.net.URI
 
 class Klikxxi : MainAPI() {
     override var mainUrl = "https://klikxxi.fit"
@@ -43,16 +42,20 @@ class Klikxxi : MainAPI() {
             .trim()
         if (title.isBlank()) return null
 
-        // Ambil poster (srcset atau src)
-        var poster = this.selectFirst("img.wp-post-image, img")?.attr("srcset")
-            ?.substringBefore(" ")
-            ?: this.selectFirst("img.wp-post-image, img")?.attr("src")
+        // --- ambil poster ---
+        var poster = this.selectFirst("img.wp-post-image, img")?.let { img ->
+            when {
+                img.hasAttr("data-src") -> img.attr("abs:data-src")
+                img.hasAttr("data-lazy-src") -> img.attr("abs:data-lazy-src")
+                img.hasAttr("srcset") -> img.attr("srcset").split(" ").firstOrNull()
+                else -> img.attr("src")
+            }
+        }
 
-        if (poster.isNullOrBlank()) return null
-        if (poster.startsWith("//")) poster = "https:$poster"
-
-        // Hilangkan ukuran (contoh: -170x255)
-        poster = poster.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
+        if (!poster.isNullOrBlank()) {
+            if (poster.startsWith("//")) poster = "https:$poster"
+            poster = poster.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
+        }
 
         val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
         val typeText = this.selectFirst(".gmr-posttype-item")?.text()?.trim()
@@ -95,24 +98,11 @@ class Klikxxi : MainAPI() {
             ?.text()
             ?.trim()
 
-        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a")
-            .map { it.text() }
-
-        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a")
-            .text()
-            .toIntOrNull()
-
-        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")
-            ?.attr("href")
-
-        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")
-            ?.text()
-            ?.toRatingInt()
-
-        val actors = document.select("div.gmr-moviedata span[itemprop=actors] a")
-            .map { it.text() }
-            .takeIf { it.isNotEmpty() }
-
+        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a").map { it.text() }
+        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().toIntOrNull()
+        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
+        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.toRatingInt()
+        val actors = document.select("div.gmr-moviedata span[itemprop=actors] a").map { it.text() }.takeIf { it.isNotEmpty() }
         val recommendations = document.select("div.gmr-related-post article, div.related-post article")
             .mapNotNull { it.toSearchResult() }
 
