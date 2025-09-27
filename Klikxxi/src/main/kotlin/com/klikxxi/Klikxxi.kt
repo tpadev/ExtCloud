@@ -44,18 +44,7 @@ class Klikxxi : MainAPI() {
             .trim()
         if (title.isBlank()) return null
 
-        val imgElement = this.selectFirst("img")
-        var poster = when {
-            imgElement?.hasAttr("data-lazy-src") == true -> imgElement.attr("abs:data-lazy-src")
-            imgElement?.hasAttr("data-lazy-srcset") == true -> imgElement.attr("abs:data-lazy-srcset").split(" ").firstOrNull()
-            imgElement?.hasAttr("srcset") == true -> imgElement.attr("abs:srcset").split(" ").firstOrNull()
-            else -> imgElement?.attr("abs:src")
-        }
-        if (!poster.isNullOrBlank()) {
-            if (poster.startsWith("//")) poster = "https:$poster"
-            poster = poster.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
-        }
-
+        val poster = this.selectFirst("img")?.fixPoster()
         val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
         val typeText = this.selectFirst(".gmr-posttype-item")?.text()?.trim()
         val isSeries = typeText.equals("TV Show", true)
@@ -89,8 +78,7 @@ class Klikxxi : MainAPI() {
             .orEmpty()
 
         val poster = document.selectFirst("figure.pull-left img, div.gmr-movieposter img, .poster img")
-            ?.getImageAttr()
-            ?.let { fixUrlNull(it) }
+            ?.fixPoster()
 
         val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")
             ?.text()
@@ -104,13 +92,10 @@ class Klikxxi : MainAPI() {
             .toIntOrNull()
 
         val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
-
         val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.toRatingInt()
-
         val actors = document.select("div.gmr-moviedata span[itemprop=actors] a")
             .map { it.text() }
             .takeIf { it.isNotEmpty() }
-
         val recommendations = document.select("div.gmr-related-post article, div.related-post article")
             .mapNotNull { it.toSearchResult() }
 
@@ -163,7 +148,6 @@ class Klikxxi : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         val postId = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
-
         if (postId.isNullOrBlank()) return false
 
         document.select("div.tab-content-ajax").forEach { tab ->
@@ -181,20 +165,26 @@ class Klikxxi : MainAPI() {
 
             val iframe = response.selectFirst("iframe")?.attr("src") ?: return@forEach
             val link = httpsify(iframe)
-
             loadExtractor(link, mainUrl, subtitleCallback, callback)
         }
 
         return true
     }
 
-    private fun Element.getImageAttr(): String {
-        return when {
-            this.hasAttr("data-src") -> this.attr("abs:data-src")
+    /** 🔧 Fix poster supaya gak abu-abu / buram */
+    private fun Element?.fixPoster(): String? {
+        if (this == null) return null
+        var link = when {
             this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
-            this.hasAttr("srcset") -> this.attr("abs:srcset").substringBefore(" ")
+            this.hasAttr("data-lazy-srcset") -> this.attr("abs:data-lazy-srcset").split(" ").firstOrNull()
+            this.hasAttr("srcset") -> this.attr("abs:srcset").split(" ").firstOrNull()
             else -> this.attr("abs:src")
         }
+        if (!link.isNullOrBlank()) {
+            link = link.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
+            if (link.startsWith("//")) link = "https:$link"
+        }
+        return link
     }
 
     private fun Element?.getIframeAttr(): String? {
