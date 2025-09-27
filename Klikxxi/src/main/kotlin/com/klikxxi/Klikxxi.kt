@@ -35,38 +35,24 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
 }
 
 private fun Element.toSearchResult(): SearchResponse? {
-    val linkElement = selectFirst("a[href]") ?: return null
+    val linkElement = this.selectFirst("a[href]") ?: return null
     val href = fixUrl(linkElement.attr("href"))
 
-    // Cek tipe (Movie/TV)
-    val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
-    val isSeries = typeText.equals("TV Show", true)
-
-    // Ambil judul dari atribut title
     val title = linkElement.attr("title")
         .removePrefix("Permalink to: ")
         .trim()
+        .ifBlank { linkElement.text().trim() }
     if (title.isBlank()) return null
 
-    // Ambil poster, fallback: srcset -> src
-    val poster = selectFirst("img")?.let { img ->
-        img.attr("abs:srcset").substringBefore(" ").ifBlank { img.attr("abs:src") }
-    }?.let { fixUrlNull(it) }
+    val posterUrl = this.selectFirst("img")?.attr("src")?.let { fixUrlNull(it) }
+    val quality = this.selectFirst(".gmr-quality-item")?.text()?.trim()
 
-    // Ambil kualitas (HD, CAM, dll)
-    val quality = selectFirst(".gmr-quality-item")?.text()?.trim()
-
-    return if (isSeries) {
-        newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-            this.posterUrl = poster
-        }
-    } else {
-        newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = poster
-            if (!quality.isNullOrBlank()) addQuality(quality)
-        }
+    return newMovieSearchResponse(title, href, TvType.Movie) {
+        this.posterUrl = posterUrl
+        if (!quality.isNullOrBlank()) addQuality(quality)
     }
 }
+
 
 
 
