@@ -39,17 +39,17 @@ private fun Element.toSearchResult(): SearchResponse? {
     val linkElement = selectFirst("a[href]") ?: return null
     val href = fixUrl(linkElement.attr("href"))
 
+    // Judul ambil dari atribut <a title>
     val title = linkElement.attr("title")
         .removePrefix("Permalink to: ")
-        .substringBefore("(")
         .trim()
-        .ifBlank { linkElement.text().trim() }
     if (title.isBlank()) return null
 
+    // Poster ambil dari srcset/src
     val poster = selectFirst("img")?.getImageAttr()?.fixImageQuality()?.let { fixUrlNull(it) }
+
     val quality = selectFirst(".gmr-quality-item")?.text()?.trim()
     val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
-
     val isSeries = typeText.equals("TV Show", true)
 
     return if (isSeries) {
