@@ -156,22 +156,14 @@ private fun Element.getImageAttr(): String {
     return when {
         this.hasAttr("data-src") -> this.attr("abs:data-src")
         this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
-        this.hasAttr("data-srcset") -> this.attr("abs:data-srcset").substringBefore(" ")
         this.hasAttr("srcset") -> this.attr("abs:srcset").substringBefore(" ")
-        this.hasAttr("src") -> this.attr("abs:src")
-        else -> ""
+        else -> this.attr("abs:src")
     }
 }
 
     private fun Element?.getIframeAttr(): String? {
         return this?.attr("data-litespeed-src").takeIf { it?.isNotEmpty() == true }
                 ?: this?.attr("src")
-    }
-
-    private fun String?.fixImageQuality(): String? {
-        if (this == null) return null
-        val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues?.get(0) ?: return this
-        return this.replace(regex, "")
     }
 
     private fun getBaseUrl(url: String): String {
