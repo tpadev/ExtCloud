@@ -25,53 +25,35 @@ class Klikxxi : MainAPI() {
         val url = request.data.format(page)
         val document = app.get(url).document
 
-        val items = document.select("main#main article, article.item-infinite")
+        val items = document.select("main#main article")
             .mapNotNull { it.toSearchResult() }
 
-        val hasNext = document.selectFirst("ul.page-numbers li a.next, a.next") != null
+        val hasNext = document.selectFirst("ul.page-numbers li a.next") != null
+
         return newHomePageResponse(HomePageList(request.name, items), hasNext)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val linkEl = this.selectFirst("a[href][title]") ?: return null
-        val href = fixUrl(linkEl.attr("href"))
-
-        val title = linkEl.attr("title")
+        val linkElement = this.selectFirst("div.content-thumbnail a[title][href]") ?: return null
+        val href = fixUrl(linkElement.attr("href"))
+        val title = linkElement.attr("title")
             .removePrefix("Permalink to: ")
-            .ifBlank { this.selectFirst("h3, .entry-title")?.text().orEmpty() }
-            .ifBlank { linkEl.text() }
             .trim()
+            .ifBlank { linkElement.text().trim() }
         if (title.isBlank()) return null
 
-        val posterRaw = this.selectFirst("img")?.let { img ->
-            val fromSrcSet = img.attr("srcset").substringBefore(" ")
-            val fromSrc = img.attr("src")
-            (fromSrcSet.ifBlank { fromSrc })
-        }
-        val poster = posterRaw
-            ?.let { if (it.startsWith("//")) "https:$it" else it }
-            ?.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
-            ?.let { fixUrlNull(it) }
+        val poster = this.getPosterUrl()
+        val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
 
-        val quality = this.selectFirst(".gmr-quality-item")?.text()?.trim()
-        val typeText = this.selectFirst(".gmr-posttype-item")?.text()?.trim()
-        val isSeries = typeText.equals("TV Show", ignoreCase = true)
-
-        return if (isSeries) {
-            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                this.posterUrl = poster
-            }
-        } else {
-            newMovieSearchResponse(title, href, TvType.Movie) {
-                this.posterUrl = poster
-                if (!quality.isNullOrBlank()) addQuality(quality)
-            }
+        return newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = poster
+            if (!quality.isNullOrBlank()) addQuality(quality)
         }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query").document
-        return document.select("main#main article, article.item-infinite")
+        return document.select("main#main article")
             .mapNotNull { it.toSearchResult() }
     }
 
@@ -87,18 +69,26 @@ class Klikxxi : MainAPI() {
             .orEmpty()
 
         val poster = document.selectFirst("figure.pull-left img, div.gmr-movieposter img, .poster img")
-            ?.attr("src")
-            ?.let { if (it.startsWith("//")) "https:$it" else it }
-            ?.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
-            ?.let { fixUrlNull(it) }
+            ?.let { it.getPosterUrl() }
 
         val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")
-            ?.text()?.trim()
+            ?.text()
+            ?.trim()
 
-        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a").map { it.text() }
-        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().toIntOrNull()
-        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
-        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.toRatingInt()
+        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a")
+            .map { it.text() }
+
+        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a")
+            .text()
+            .toIntOrNull()
+
+        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")
+            ?.attr("href")
+
+        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")
+            ?.text()
+            ?.toRatingInt()
+
         val actors = document.select("div.gmr-moviedata span[itemprop=actors] a")
             .map { it.text() }
             .takeIf { it.isNotEmpty() }
@@ -156,10 +146,13 @@ class Klikxxi : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         val postId = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
+
         if (postId.isNullOrBlank()) return false
 
         document.select("div.tab-content-ajax").forEach { tab ->
-            val tabId = tab.attr("id") ?: return@forEach
+            val tabId = tab.attr("id")
+            if (tabId.isNullOrBlank()) return@forEach
+
             val response = app.post(
                 "$mainUrl/wp-admin/admin-ajax.php",
                 data = mapOf(
@@ -171,9 +164,26 @@ class Klikxxi : MainAPI() {
 
             val iframe = response.selectFirst("iframe")?.attr("src") ?: return@forEach
             val link = httpsify(iframe)
+
             loadExtractor(link, mainUrl, subtitleCallback, callback)
         }
+
         return true
+    }
+
+    private fun Element.getPosterUrl(): String? {
+        var link = this.attr("srcset").substringBefore(" ")
+            .ifBlank { this.attr("src") }
+            .ifBlank { this.attr("data-src") }
+            .ifBlank { this.attr("data-lazy-src") }
+
+        if (link.isNullOrBlank()) return null
+
+        if (link.startsWith("//")) link = "https:$link"
+
+        link = link.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
+
+        return link
     }
 
     private fun Element?.getIframeAttr(): String? {
