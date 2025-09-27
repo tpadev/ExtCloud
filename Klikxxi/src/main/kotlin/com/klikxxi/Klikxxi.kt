@@ -14,8 +14,9 @@ class Klikxxi : MainAPI() {
     override var lang = "id"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
+    // ✅ hanya Update Terbaru + TV Series
     override val mainPage = mainPageOf(
-        "$mainUrl/?s=&search=advanced&post_type=movie&page=%d" to "Update Terbaru",
+        "$mainUrl/?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=&page=%d" to "Update Terbaru",
         "$mainUrl/tv/page/%d/" to "TV Series"
     )
 
@@ -23,16 +24,17 @@ class Klikxxi : MainAPI() {
         val url = request.data.format(page)
         val document = app.get(url).document
 
-        val items = document.select("article.item-infinite").mapNotNull { it.toSearchResult() }
+        val items = document.select("article.item-infinite, main#main article")
+            .mapNotNull { it.toSearchResult() }
 
-        // Karena pakai infinite scroll, kita paksa true biar bisa load page berikutnya
-        val hasNext = true
+        // ✅ cek tombol next beneran
+        val hasNext = document.selectFirst("ul.page-numbers li a.next") != null
 
         return newHomePageResponse(HomePageList(request.name, items), hasNext)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val linkElement = this.selectFirst("a[href][title]") ?: return null
+        val linkElement = this.selectFirst("a[href][title], a[href][itemprop=url]") ?: return null
         val href = fixUrl(linkElement.attr("href"))
         val title = linkElement.attr("title")
             .removePrefix("Permalink to: ")
@@ -80,18 +82,11 @@ class Klikxxi : MainAPI() {
             ?.text()
             ?.trim()
 
-        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a")
-            .map { it.text() }
-
-        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a")
-            .text()
-            .toIntOrNull()
-
+        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a").map { it.text() }
+        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().toIntOrNull()
         val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
         val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.toRatingInt()
-        val actors = document.select("div.gmr-moviedata span[itemprop=actors] a")
-            .map { it.text() }
-            .takeIf { it.isNotEmpty() }
+        val actors = document.select("div.gmr-moviedata span[itemprop=actors] a").map { it.text() }.takeIf { it.isNotEmpty() }
         val recommendations = document.select("div.gmr-related-post article, div.related-post article")
             .mapNotNull { it.toSearchResult() }
 
@@ -167,10 +162,11 @@ class Klikxxi : MainAPI() {
         return true
     }
 
-    /** 🔧 Fix poster supaya gak abu-abu / buram */
+    /** ✅ fix poster agar tidak abu2 */
     private fun Element?.fixPoster(): String? {
         if (this == null) return null
         var link = when {
+            this.hasAttr("data-src") -> this.attr("abs:data-src")
             this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
             this.hasAttr("data-lazy-srcset") -> this.attr("abs:data-lazy-srcset").split(" ").firstOrNull()
             this.hasAttr("srcset") -> this.attr("abs:srcset").split(" ").firstOrNull()
