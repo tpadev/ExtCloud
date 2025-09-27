@@ -84,13 +84,8 @@ class Klikxxi : MainAPI() {
             ?.text()
             ?.trim()
 
-        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a")
-            .map { it.text() }
-
-        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a")
-            .text()
-            .toIntOrNull()
-
+        val tags = document.select("div.gmr-moviedata strong:contains(Genre:) > a").map { it.text() }
+        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().toIntOrNull()
         val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
         val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.toRatingInt()
         val actors = document.select("div.gmr-moviedata span[itemprop=actors] a")
@@ -171,14 +166,14 @@ class Klikxxi : MainAPI() {
         return true
     }
 
-    /** 🔧 Fix poster supaya gak abu-abu / blur */
+    /** Fix poster supaya gak abu-abu atau blur */
     private fun Element?.fixPoster(): String? {
         if (this == null) return null
         var link = when {
             this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
-            this.hasAttr("data-lazy-srcset") -> this.attr("abs:data-lazy-srcset")
+            this.hasAttr("data-lazy-srcset") -> this.attr("data-lazy-srcset")
                 .split(",").last().trim().split(" ").firstOrNull()
-            this.hasAttr("srcset") -> this.attr("abs:srcset")
+            this.hasAttr("srcset") -> this.attr("srcset")
                 .split(",").last().trim().split(" ").firstOrNull()
             else -> this.attr("abs:src")
         }
