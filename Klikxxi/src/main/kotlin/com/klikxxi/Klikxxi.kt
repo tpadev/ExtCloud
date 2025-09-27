@@ -15,7 +15,7 @@ override var lang = "id"
 override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
 override val mainPage = mainPageOf(
-    "Film" to "$mainUrl/?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=&page=%d",
+    "Film" to "$mainUrl/page/%d/",  // atau langsung homepage kalau nggak support pagination
     "Western Series" to "$mainUrl/category/western-series/page/%d/",
     "India Series" to "$mainUrl/category/india-series/page/%d/",
     "Korea Series" to "$mainUrl/category/korea/page/%d/"
