@@ -15,27 +15,12 @@ override var lang = "id"
 override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
 override val mainPage = mainPageOf(
-    "$mainUrl/page/%d/" to  "Film",
-    "category/western-series/page/%d/" to "Western Series",
-    "category/india-series/page/%d/" to "India Series",
-    "category/korea/page/%d/" to "Korea Series"
+    "" to "Film",  // homepage (latest film)
+    "category/western-series" to "Western Series",
+    "category/india-series" to "India Series",
+    "category/korea" to "Korea Series"
 )
 
-override suspend fun getMainPage(
-    page: Int,
-    request: MainPageRequest
-): HomePageResponse {
-    val doc = app.get(request.data.format(page)).document
-    val results = doc.select("article").mapNotNull { it.toSearchResult() }
-
-    val filtered = if (request.name == "Film") {
-        results.filter { it is MovieSearchResponse }
-    } else {
-        results
-    }
-
-    return newHomePageResponse(request.name, filtered)
-}
 
 private fun Element.toSearchResult(): SearchResponse? {
     val linkElement = selectFirst("a[href]") ?: return null
