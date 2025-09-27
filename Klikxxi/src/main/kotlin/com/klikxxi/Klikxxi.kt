@@ -16,21 +16,14 @@ class Klikxxi : MainAPI() {
 
     override val mainPage = mainPageOf(
         "$mainUrl/?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=&page=%d" to "Update Terbaru",
-        "$mainUrl/category/western-series/page/%d/" to "Western Series",
-        "$mainUrl/category/india-series/page/%d/" to "India Series",
-        "$mainUrl/category/korea/page/%d/" to "Korea Series"
+        "$mainUrl/tv/page/%d/" to "TV Series"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = request.data.format(page)
         val document = app.get(url).document
 
-        val items = if (request.name == "Update Terbaru") {
-            document.select("main#main article").mapNotNull { it.toSearchResult() }
-        } else {
-            document.select("div.gmr-box-content").mapNotNull { it.toSearchResult() }
-        }
-
+        val items = document.select("main#main article").mapNotNull { it.toSearchResult() }
         val hasNext = document.selectFirst("ul.page-numbers li a.next") != null
         return newHomePageResponse(HomePageList(request.name, items), hasNext)
     }
@@ -166,7 +159,7 @@ class Klikxxi : MainAPI() {
         return true
     }
 
-    /** Fix poster supaya gak abu-abu atau blur */
+    /** Fix poster */
     private fun Element?.fixPoster(): String? {
         if (this == null) return null
         var link = when {
