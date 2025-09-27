@@ -15,11 +15,12 @@ override var lang = "id"
 override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
 override val mainPage = mainPageOf(
-    "" to "Film",
     "category/western-series" to "Western Series",
     "category/india-series" to "India Series",
-    "category/korea" to "Korea Series"
+    "category/korea" to "Korea Series",
+    "?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=" to "Update Terbaru"
 )
+
 
 override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val url = if (request.data.isEmpty()) {
