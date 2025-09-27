@@ -38,20 +38,23 @@ private fun Element.toSearchResult(): SearchResponse? {
     val linkElement = selectFirst("a[href]") ?: return null
     val href = fixUrl(linkElement.attr("href"))
 
-    // ambil type TV Show / Movie
-    val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
-    val isSeries = typeText.equals("TV Show", true)
-
-    // Judul ambil dari atribut <a title>
+    // ambil title
     val title = linkElement.attr("title")
         .removePrefix("Permalink to: ")
         .trim()
     if (title.isBlank()) return null
 
-    // Poster ambil dari srcset/src
-    val poster = selectFirst("img")?.getImageAttr()?.fixImageQuality()?.let { fixUrlNull(it) }
+    // ambil poster langsung dari src / srcset
+    val posterElement = selectFirst("img")
+    val poster = when {
+        posterElement?.hasAttr("src") == true -> posterElement.attr("abs:src")
+        posterElement?.hasAttr("srcset") == true -> posterElement.attr("abs:srcset").substringBefore(" ")
+        else -> null
+    }?.fixImageQuality()?.let { fixUrlNull(it) }
 
     val quality = selectFirst(".gmr-quality-item")?.text()?.trim()
+    val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
+    val isSeries = typeText.equals("TV Show", true)
 
     return if (isSeries) {
         newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
@@ -64,6 +67,7 @@ private fun Element.toSearchResult(): SearchResponse? {
         }
     }
 }
+
 
 
 override suspend fun search(query: String): List<SearchResponse> {
