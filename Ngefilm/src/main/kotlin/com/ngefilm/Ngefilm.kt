@@ -34,50 +34,50 @@ class Ngefilm : MainAPI() {
             )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val data = request.data.format(page)
-        val document = app.get("$mainUrl/$data").document
-        val home = document.select("article.item").mapNotNull { it.toSearchResult() }
-        return newHomePageResponse(request.name, home)
-    }
+    val data = request.data.format(page)
+    val document = app.get("$mainUrl/$data").document
+    val home = document.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
+    return newHomePageResponse(request.name, home)
+}
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
-        val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr()).fixImageQuality()
-        val quality =
-                this.select("div.gmr-qual, div.gmr-quality-item > a").text().trim().replace("-", "")
-        return if (quality.isEmpty()) {
-            val episode =
-                    Regex("Episode\\s?([0-9]+)")
-                            .find(title)
-                            ?.groupValues
-                            ?.getOrNull(1)
-                            ?.toIntOrNull()
-                            ?: this.select("div.gmr-numbeps > span").text().toIntOrNull()
-            newAnimeSearchResponse(title, href, TvType.TvSeries) {
-                this.posterUrl = posterUrl
-                addSub(episode)
-            }
-        } else {
-            newMovieSearchResponse(title, href, TvType.Movie) {
-                this.posterUrl = posterUrl
-                addQuality(quality)
-            }
+    val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
+    val href = fixUrl(this.selectFirst("h2.entry-title > a")!!.attr("href"))
+    val posterUrl = fixUrlNull(this.selectFirst("div.content-thumbnail a > img")?.getImageAttr()).fixImageQuality()
+    val quality = this.select("div.gmr-quality-item").text().trim()
+
+    return if (quality.isEmpty()) {
+        val episode = Regex("Episode\\s?([0-9]+)")
+            .find(title)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.toIntOrNull()
+            ?: this.select("div.gmr-numbeps > span").text().toIntOrNull()
+
+        newAnimeSearchResponse(title, href, TvType.TvSeries) {
+            this.posterUrl = posterUrl
+            addSub(episode)
+        }
+    } else {
+        newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = posterUrl
+            addQuality(quality)
         }
     }
+}
+
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document =
-                app.get("${mainUrl}?s=$query&post_type[]=post&post_type[]=tv", timeout = 50L)
-                        .document
-        val results = document.select("article.item").mapNotNull { it.toSearchResult() }
-        return results
-    }
+    val document = app.get("$mainUrl/?s=$query&post_type[]=post&post_type[]=tv", timeout = 50L).document
+    val results = document.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
+    return results
+}
+
 
     private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
+        val posterUrl = fixUrlNull(this.selectFirst("div.content-thumbnail a > img")?.getImageAttr()).fixImageQuality()
         return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
 
