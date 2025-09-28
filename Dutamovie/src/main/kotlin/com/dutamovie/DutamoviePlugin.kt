@@ -9,6 +9,5 @@ class DutaMoviePlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(DutaMovie())
         registerExtractorAPI(Dingtezuni())
-      
     }
 }

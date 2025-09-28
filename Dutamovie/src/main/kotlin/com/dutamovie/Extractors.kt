@@ -12,7 +12,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import java.net.URI
 
 
-class Bingzove : Dingtezuni() {
+class Bingezove : Dingtezuni() {
     override var name = "Earnvids"
     override var mainUrl = "https://bingezove.com"
 }
