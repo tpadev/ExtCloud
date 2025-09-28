@@ -10,5 +10,6 @@ class NgefilmPlugin : Plugin() {
         registerMainAPI(Ngefilm())
         registerExtractorAPI(Dingtezuni())
         registerExtractorAPI(Bingezove())
+registerExtractorAPI(Mivalyo())
     }
 }
