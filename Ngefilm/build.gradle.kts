@@ -1,9 +1,9 @@
 version = 3
 
 cloudstream {
-    description = "DutaMovie"
+    description = "Ngefilm"
     language = "id"
-    authors = listOf("Hexated", "TeKuma25")
+    authors = listOf("Duro92")
 
     /**
      * Status int as the following:
@@ -19,5 +19,5 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=scandal.dutamovie21.cc&sz=256"
+    iconUrl = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://new18.ngefilm.site&size=%size%"
 }

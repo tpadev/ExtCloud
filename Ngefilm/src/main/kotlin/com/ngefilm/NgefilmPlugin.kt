@@ -9,6 +9,6 @@ class NgefilmPlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Ngefilm())
         registerExtractorAPI(Dingtezuni())
-        
+        registerExtractorAPI(Bingezove())
     }
 }
