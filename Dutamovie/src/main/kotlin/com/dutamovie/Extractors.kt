@@ -12,6 +12,10 @@ import com.lagradost.cloudstream3.utils.Qualities
 import java.net.URI
 
 
+class Bingzove : Dingtezuni() {
+    override var name = "Earnvids"
+    override var mainUrl = "https://bingezove.com"
+}
 
 open class Dingtezuni : ExtractorApi() {
     override val name = "Earnvids"
