@@ -190,3 +190,4 @@ class Oppadrama : MainAPI() {
         val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues?.get(0) ?: return this
         return this.replace(regex, "")
     }
+}
