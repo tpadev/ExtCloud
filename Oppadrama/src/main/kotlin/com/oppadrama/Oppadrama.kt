@@ -160,24 +160,31 @@ val episodes = document.select("div.eplister li a").map { ep ->
 ): Boolean {
     val document = app.get(data).document
 
-    // Ambil semua server dari <select class="mirror">
-    val servers = document.select("select.mirror option[value]")
-    for (server in servers) {
-        val value = server.attr("value")
-        if (value.isNullOrBlank()) continue
-
-        // Buka halaman server → iframe ada di div.player-embed
-        val res = app.get(fixUrl(value)).document
-        val iframe = res.selectFirst("div.player-embed iframe")?.getIframeAttr() ?: continue
-
-        loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
+    // ===== CASE 1: Ambil iframe default (biasanya emturbovid) =====
+    val defaultIframe = document.selectFirst("div.player-embed iframe")?.getIframeAttr()
+    if (!defaultIframe.isNullOrBlank()) {
+        loadExtractor(httpsify(defaultIframe), data, subtitleCallback, callback)
     }
 
-    // Kalau ada iframe langsung di halaman utama juga bisa diproses
-    val iframes = document.select("div.player-embed iframe")
-    for (iframe in iframes) {
-        val src = iframe.getIframeAttr()?.let { httpsify(it) } ?: continue
-        loadExtractor(src, data, subtitleCallback, callback)
+    // ===== CASE 2: Ambil semua server lain dari <div class="mobius"> → <select class="mirror"> =====
+    val servers = document.select("div.mobius select.mirror option[value]")
+    for (server in servers) {
+        val url = server.attr("value") ?: continue
+        if (url.isBlank()) continue
+
+        try {
+            // buka halaman server
+            val res = app.get(fixUrl(url)).document
+
+            // ambil iframe player dari halaman server
+            val iframe = res.selectFirst("div.player-embed iframe")?.getIframeAttr()
+            if (!iframe.isNullOrBlank()) {
+                loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
+            }
+        } catch (e: Exception) {
+            // biar kalau 1 server error, yang lain tetap jalan
+            println("OppaDrama loadLinks error: ${e.localizedMessage}")
+        }
     }
 
     return true
