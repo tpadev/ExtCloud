@@ -115,16 +115,17 @@ class Oppadrama : MainAPI() {
         .mapNotNull { it.toRecommendResult() }
 
     // Episodes list (jika TV Series)
-    val episodes = document.select("div.listeps a").mapNotNull { eps ->
-        val href = eps.attr("href").ifBlank { return@mapNotNull null }
-        val name = eps.text().trim()
-        val episode = name.filter { it.isDigit() }.toIntOrNull()
+val episodes = document.select("div.eplister li a").map { ep ->
+    val href = fixUrl(ep.attr("href"))
+    val name = ep.selectFirst("div.epl-title")?.text() ?: "Episode"
+    val episode = name.filter { it.isDigit() }.toIntOrNull()
 
-        newEpisode(fixUrl(href)) {
-            this.name = name
-            this.episode = episode
-        }
+    newEpisode(href) {
+        this.name = name
+        this.episode = episode
     }
+}
+
 
     return if (episodes.isNotEmpty()) {
         // TV Series
@@ -159,16 +160,29 @@ class Oppadrama : MainAPI() {
 ): Boolean {
     val document = app.get(data).document
 
-    // ambil semua iframe di player
-    val iframes = document.select("div.player-embed iframe")
+    // Ambil semua server dari <select class="mirror">
+    val servers = document.select("select.mirror option[value]")
+    for (server in servers) {
+        val value = server.attr("value")
+        if (value.isNullOrBlank()) continue
 
-    iframes.forEach { iframe ->
-        val src = iframe.attr("src")?.let { httpsify(it) } ?: return@forEach
+        // Buka halaman server → iframe ada di div.player-embed
+        val res = app.get(fixUrl(value)).document
+        val iframe = res.selectFirst("div.player-embed iframe")?.getIframeAttr() ?: continue
+
+        loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
+    }
+
+    // Kalau ada iframe langsung di halaman utama juga bisa diproses
+    val iframes = document.select("div.player-embed iframe")
+    for (iframe in iframes) {
+        val src = iframe.getIframeAttr()?.let { httpsify(it) } ?: continue
         loadExtractor(src, data, subtitleCallback, callback)
     }
 
     return true
 }
+
 
 
     private fun Element.getImageAttr(): String {
