@@ -11,6 +11,11 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import java.net.URI
 
+class Movearnpre : Dingtezuni() {
+    override var name = "Earnvids"
+    override var mainUrl = "https://movearnpre.com"
+}
+
 class Mivalyo : Dingtezuni() {
     override var name = "Earnvids"
     override var mainUrl = "https://mivalyo.com"
