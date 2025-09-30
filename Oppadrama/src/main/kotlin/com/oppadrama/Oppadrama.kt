@@ -152,7 +152,7 @@ val episodes = document.select("div.eplister li a").map { ep ->
 
 }
     
-    override suspend fun loadLinks(
+override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
     subtitleCallback: (SubtitleFile) -> Unit,
@@ -160,36 +160,18 @@ val episodes = document.select("div.eplister li a").map { ep ->
 ): Boolean {
     val document = app.get(data).document
 
-    // ===== CASE 1: Ambil iframe default (biasanya emturbovid) =====
-    val defaultIframe = document.selectFirst("div.player-embed iframe")?.getIframeAttr()
-    if (!defaultIframe.isNullOrBlank()) {
-        loadExtractor(httpsify(defaultIframe), data, subtitleCallback, callback)
-    }
+    // ambil semua server dari <select class="mirror">
+    val servers = document.select("select.mirror option[value]")
 
-    // ===== CASE 2: Ambil semua server lain dari <div class="mobius"> → <select class="mirror"> =====
-    val servers = document.select("div.mobius select.mirror option[value]")
-    for (server in servers) {
-        val url = server.attr("value") ?: continue
-        if (url.isBlank()) continue
+    servers.forEach { option ->
+        val embedUrl = option.attr("value").ifBlank { null } ?: return@forEach
+        val fixedUrl = httpsify(embedUrl)
 
-        try {
-            // buka halaman server
-            val res = app.get(fixUrl(url)).document
-
-            // ambil iframe player dari halaman server
-            val iframe = res.selectFirst("div.player-embed iframe")?.getIframeAttr()
-            if (!iframe.isNullOrBlank()) {
-                loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
-            }
-        } catch (e: Exception) {
-            // biar kalau 1 server error, yang lain tetap jalan
-            println("OppaDrama loadLinks error: ${e.localizedMessage}")
-        }
+        loadExtractor(fixedUrl, data, subtitleCallback, callback)
     }
 
     return true
 }
-
 
 
     private fun Element.getImageAttr(): String {
