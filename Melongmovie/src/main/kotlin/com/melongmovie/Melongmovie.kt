@@ -32,7 +32,7 @@ class Melongmovie : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val url = "${request.data}page/$page/"   // karena struktur pakai /page/{n}/
+    val url = request.data.format(page)
     val document = app.get(url).document
     val items = document.select("div.los article.box")
         .mapNotNull { it.toSearchResult() }
