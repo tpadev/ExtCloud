@@ -126,30 +126,30 @@ val episodes = document.select("div.eplister li a").map { ep ->
     }
 }
 
-
-    return if (episodes.isNotEmpty()) {
-        // TV Series
-        newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-            this.posterUrl = poster
-            this.year = year
-            this.plot = description
-            this.tags = tags
-            this.recommendations = recommendations
-            addActors(actors)
-            addTrailer(trailer)
-        }
-    } else {
-        // Movie
-        newMovieLoadResponse(title, url, TvType.Movie, url) {
-            this.posterUrl = poster
-            this.year = year
-            this.plot = description
-            this.tags = tags
-            this.recommendations = recommendations
-            addActors(actors)
-            addTrailer(trailer)
-        }
+    return if (episodes.size > 1) {
+    // TV Series
+    newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+        this.posterUrl = poster
+        this.year = year
+        this.plot = description
+        this.tags = tags
+        this.recommendations = recommendations
+        addActors(actors)
+        addTrailer(trailer)
     }
+} else {
+    // Movie
+    newMovieLoadResponse(title, url, TvType.Movie, episodes.firstOrNull()?.data ?: url) {
+        this.posterUrl = poster
+        this.year = year
+        this.plot = description
+        this.tags = tags
+        this.recommendations = recommendations
+        addActors(actors)
+        addTrailer(trailer)
+    }
+}
+
 }
     
     override suspend fun loadLinks(
