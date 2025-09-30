@@ -138,20 +138,22 @@ override suspend fun load(url: String): LoadResponse {
     // =========================
     //  Cek: Series atau Movie
     // =========================
-    val episodes = mutableListOf<Episode>()
-    var epIndex = 1
-    var currentEpName: String? = null
+    // Episodes (khusus untuk TV series)
+val episodes = mutableListOf<Episode>()
+var epIndex = 1
+var currentEpName: String? = null
 
-    document.select("div.entry-content").children().forEach { el ->
-        if (el.tagName() == "b" && el.text().contains("EPISODE", true)) {
-            currentEpName = el.text().trim()
-            episodes.add(newEpisode("$url#ep$epIndex") {
-                this.name = currentEpName
-                this.episode = epIndex
-            })
-            epIndex++
-        }
+document.select("div.entry-content").children().forEach { el: org.jsoup.nodes.Element ->
+    if (el.tagName() == "b" && el.text().contains("EPISODE", true)) {
+        currentEpName = el.text().trim()
+        episodes.add(newEpisode("$url#ep$epIndex") {
+            this.name = currentEpName
+            this.episode = epIndex
+        })
+        epIndex++
     }
+}
+
 
     return if (episodes.isNotEmpty()) {
         // TV Series
@@ -187,8 +189,8 @@ override suspend fun load(url: String): LoadResponse {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val parts = data.split("#")
-    val url = parts[0]                // halaman utama film/series
-    val epTag = parts.getOrNull(1)    // contoh "ep1", null = movie
+    val url = parts[0]
+    val epTag = parts.getOrNull(1) // contoh "ep1", null = movie
 
     val document = app.get(url).document
     var found = false
@@ -204,7 +206,7 @@ override suspend fun load(url: String): LoadResponse {
             found = true
         }
 
-        // Mirror host (misalnya VEEV, EarnVids, FileDon)
+        // Mirror host
         document.select("div.liserver a").forEach { a ->
             val mirrorUrl = a.attr("href")
             if (mirrorUrl.isNotBlank()) {
@@ -218,7 +220,7 @@ override suspend fun load(url: String): LoadResponse {
         // ======================
         var currentEpIndex = 0
 
-        document.select("div.entry-content").children().forEach { el ->
+        document.select("div.entry-content").children().forEach { el: org.jsoup.nodes.Element ->
             if (el.tagName() == "b" && el.text().contains("EPISODE", true)) {
                 currentEpIndex++
             }
@@ -232,6 +234,7 @@ override suspend fun load(url: String): LoadResponse {
 
     return found
 }
+
 
     private fun Element.getImageAttr(): String {
         return when {
