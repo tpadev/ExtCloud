@@ -13,9 +13,10 @@ import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse  
 import com.lagradost.cloudstream3.newEpisode  
 import com.lagradost.cloudstream3.utils.*  
-import org.jsoup.nodes.Element  
+import org.jsoup.nodes.Element
+import org.jsoup.select.Elements  
 
-class Oppadrama : MainAPI() {
+class Melongmovie : MainAPI() {
     override var mainUrl = "https://tv11.melongmovies.com"
     override var name = "Melongmovie"
     override val hasMainPage = true
@@ -143,7 +144,7 @@ val episodes = mutableListOf<Episode>()
 var epIndex = 1
 var currentEpName: String? = null
 
-document.select("div.entry-content").children().forEach { el: org.jsoup.nodes.Element ->
+document.select("div.entry-content").first()?.children()?.forEach { el: Element ->
     if (el.tagName() == "b" && el.text().contains("EPISODE", true)) {
         currentEpName = el.text().trim()
         episodes.add(newEpisode("$url#ep$epIndex") {
@@ -153,6 +154,7 @@ document.select("div.entry-content").children().forEach { el: org.jsoup.nodes.El
         epIndex++
     }
 }
+
 
 
     return if (episodes.isNotEmpty()) {
@@ -220,16 +222,17 @@ document.select("div.entry-content").children().forEach { el: org.jsoup.nodes.El
         // ======================
         var currentEpIndex = 0
 
-        document.select("div.entry-content").children().forEach { el: org.jsoup.nodes.Element ->
-            if (el.tagName() == "b" && el.text().contains("EPISODE", true)) {
-                currentEpIndex++
-            }
-            if (el.tagName() == "iframe" && epTag == "ep$currentEpIndex") {
-                val iframeUrl = fixUrl(el.attr("src"))
-                loadExtractor(iframeUrl, url, subtitleCallback, callback)
-                found = true
-            }
-        }
+        document.select("div.entry-content").first()?.children()?.forEach { el: Element ->
+    if (el.tagName() == "b" && el.text().contains("EPISODE", true)) {
+        currentEpIndex++
+    }
+    if (el.tagName() == "iframe" && epTag == "ep$currentEpIndex") {
+        val iframeUrl = fixUrl(el.attr("src"))
+        loadExtractor(iframeUrl, url, subtitleCallback, callback)
+        found = true
+    }
+}
+
     }
 
     return found
