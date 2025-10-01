@@ -2,7 +2,6 @@ package com.nomat
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.SearchResponse
@@ -14,7 +13,6 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import java.net.URI
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.mvvm.logError
-import com.lagradost.cloudstream3.utils.Score
 
 class Nomat : MainAPI() {
 
@@ -48,8 +46,7 @@ class Nomat : MainAPI() {
     val style = this.selectFirst("div.poster")?.attr("style") ?: ""
     val posterUrl = Regex("url\\(['\"]?(.*?)['\"]?\\)").find(style)?.groupValues?.get(1)
 
-    // Rating
-    val rating = this.selectFirst("div.rtg")?.ownText()?.trim()
+    
 
     // Cek apakah ini Series (ada label Eps. atau kata Season/Episode)
     val epsText = this.selectFirst("div.qual")?.text()?.trim()
@@ -61,14 +58,11 @@ class Nomat : MainAPI() {
         // Jika series
         newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
             this.posterUrl = posterUrl
-            addSub(episode)
-            if (!rating.isNullOrEmpty()) this.score = Score.fromString(rating)
         }
     } else {
         // Jika movie
         newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
-            if (!rating.isNullOrEmpty()) this.score = Score.fromString(rating)
         }
     }
 }
