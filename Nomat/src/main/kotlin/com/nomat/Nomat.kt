@@ -13,6 +13,8 @@ import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 import java.net.URI
 import org.jsoup.nodes.Element
+import com.lagradost.cloudstream3.mvvm.logError
+import com.lagradost.cloudstream3.utils.Score
 
 class Nomat : MainAPI() {
 
