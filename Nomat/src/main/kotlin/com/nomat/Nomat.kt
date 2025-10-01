@@ -34,13 +34,17 @@ class Nomat : MainAPI() {
    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val data = request.data.format(page)
     val document = app.get("$mainUrl/$data").document
-    val home = document.select("div.item").mapNotNull { it.toSearchResult() }
+
+    // cek struktur kategori
+    val home = document.select("article.item, div.item, div.post-item").mapNotNull { it.toSearchResult() }
+
     return newHomePageResponse(request.name, home)
 }
 
+
     private fun Element.toSearchResult(): SearchResponse? {
     val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
-    val title = this.selectFirst("div.title")?.text()?.trim() ?: return null
+    val title = this.selectFirst("h2.entry-title a, h3.entry-title a, a")?.text()?.trim() ?: return null
 
     // Ambil poster dari CSS background
     val style = this.selectFirst("div.poster")?.attr("style") ?: ""
