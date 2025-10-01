@@ -26,7 +26,7 @@ class Nomat : MainAPI() {
 
     override val mainPage =
             mainPageOf(
-                    "slug/film-terbaru/page/%d/" to "Film Terbaru",
+                     "slug/film-terbaru/page/%d/" to "Film Terbaru",
                     "slug/film-terfavorit/page/%d/" to "Film Terfavorit",
                     "slug/film-box-office/page/%d/" to "Film Box Office",
             )
@@ -34,10 +34,7 @@ class Nomat : MainAPI() {
    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val data = request.data.format(page)
     val document = app.get("$mainUrl/$data").document
-
-    // cek struktur kategori
-    val home = document.select("article.item, div.item, div.post-item").mapNotNull { it.toSearchResult() }
-
+    val home = document.select("div.item-content, div.item").mapNotNull { it.toSearchResult() }
     return newHomePageResponse(request.name, home)
 }
 
