@@ -13,7 +13,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import java.net.URI
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.mvvm.logError
-import com.lagradost.cloudstream3.utils.AppUtils.base64Decode
+import com.lagradost.cloudstream3.base64Decode
 
 class Nomat : MainAPI() {
 
