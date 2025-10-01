@@ -107,7 +107,6 @@ class Nomat : MainAPI() {
     val year = document.select("div.video-duration a[href*=/category/year/]").text().toIntOrNull()
     val description = document.selectFirst("div.video-synopsis")?.text()?.trim()
     val trailer = document.selectFirst("div.video-trailer iframe")?.attr("src")
-    val rating = document.selectFirst("div.video-rating")?.text()?.filter { it.isDigit() || it == '.' }
 
     val actors = document.select("div.video-actor a").map { it.text() }
     val recommendations = document.select("div.section .item-content").mapNotNull { it.toRecommendResult() }
@@ -133,7 +132,6 @@ class Nomat : MainAPI() {
             this.year = year
             this.plot = description
             this.tags = tags
-            addScore(rating)
             addActors(actors)
             this.recommendations = recommendations
             addTrailer(trailer)
@@ -144,7 +142,6 @@ class Nomat : MainAPI() {
             this.year = year
             this.plot = description
             this.tags = tags
-            addScore(rating)
             addActors(actors)
             this.recommendations = recommendations
             addTrailer(trailer)
