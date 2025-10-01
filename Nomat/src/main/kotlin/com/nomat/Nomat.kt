@@ -73,11 +73,24 @@ class Nomat : MainAPI() {
     }
 }
 
-
-    override suspend fun search(query: String): List<SearchResponse> {
+override suspend fun search(query: String): List<SearchResponse> {
     val document = app.get("$mainUrl/search/$query", timeout = 50L).document
-    return document.select("div.item-content").mapNotNull { it.toSearchResult() }
+
+    return document.select("div.item").mapNotNull { el ->
+        val a = el.selectFirst("a") ?: return@mapNotNull null
+        val href = fixUrl(a.attr("href"))
+        val title = el.selectFirst("div.title")?.text()?.trim() ?: return@mapNotNull null
+        val poster = fixUrlNull(
+            el.selectFirst("div.poster")?.attr("style")
+                ?.substringAfter("url('")?.substringBefore("')")
+        )
+
+        newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = poster
+        }
+    }
 }
+    
 
     private fun Element.toRecommendResult(): SearchResponse? {
     val href = fixUrl(this.attr("href"))
