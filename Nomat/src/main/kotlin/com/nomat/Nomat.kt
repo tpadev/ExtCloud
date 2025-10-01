@@ -166,15 +166,10 @@ override suspend fun loadLinks(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     return try {
-        // pakai timeout agak panjang
-        val nhDoc = app.get(data, timeout = 120L).document
+        // tambahkan referer supaya tidak invalid credential
+        val nhDoc = app.get(data, referer = mainUrl, timeout = 120L).document
 
-        val servers = nhDoc.select("div.server-item[data-url]")
-        if (servers.isEmpty()) {
-            logError(Exception("Tidak ada server-item di halaman: $data"))
-        }
-
-        servers.forEach { el ->
+        nhDoc.select("div.server-item").forEach { el ->
             val encoded = el.attr("data-url")
             if (encoded.isNotBlank()) {
                 try {
@@ -191,6 +186,7 @@ override suspend fun loadLinks(
         false
     }
 }
+
 
 
     private fun Element.getImageAttr(): String {
