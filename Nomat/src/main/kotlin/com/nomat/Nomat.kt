@@ -13,6 +13,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import java.net.URI
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.mvvm.logError
+import com.lagradost.cloudstream3.utils.AppUtils.base64Decode
 
 class Nomat : MainAPI() {
 
@@ -93,20 +94,19 @@ class Nomat : MainAPI() {
 
 
     override suspend fun load(url: String): LoadResponse {
-    val fetch = app.get(url)
-    val document = fetch.document
+    val document = app.get(url).document
 
-    val title =
-        document.selectFirst("div.video-title h1")?.text()
-            ?.substringBefore("Season")
-            ?.substringBefore("Episode")
-            ?.trim()
-            .toString()
+    val title = document.selectFirst("div.video-title h1")?.text()
+        ?.substringBefore("Season")
+        ?.substringBefore("Episode")
+        ?.trim()
+        ?: ""
 
-    val poster =
-        fixUrlNull(document.selectFirst("div.video-poster")?.attr("style")
+    val poster = fixUrlNull(
+        document.selectFirst("div.video-poster")?.attr("style")
             ?.substringAfter("url('")
-            ?.substringBefore("')"))?.fixImageQuality()
+            ?.substringBefore("')")
+    )?.fixImageQuality()
 
     val tags = document.select("div.video-genre a").map { it.text() }
     val year = document.select("div.video-duration a[href*=/category/year/]").text().toIntOrNull()
@@ -116,12 +116,13 @@ class Nomat : MainAPI() {
     val actors = document.select("div.video-actor a").map { it.text() }
     val recommendations = document.select("div.section .item-content").mapNotNull { it.toRecommendResult() }
 
-    val tvType = if (url.contains("/serial-tv/") || document.select("div.video-episodes a").isNotEmpty()) TvType.TvSeries else TvType.Movie
+    val isSeries = url.contains("/serial-tv/") || document.select("div.video-episodes a").isNotEmpty()
 
-    return if (tvType == TvType.TvSeries) {
+    return if (isSeries) {
+        // === Halaman Series utama ===
         val episodes = document.select("div.video-episodes a").map { eps ->
-            val href = fixUrl(eps.attr("href"))
-            val name = eps.text() // "Eps. 1"
+            val href = fixUrl(eps.attr("href")) // /play/.../a
+            val name = eps.text()
             val episode = Regex("\\d+").find(name)?.value?.toIntOrNull()
             val season = Regex("Season\\s?(\\d+)").find(title)?.groupValues?.getOrNull(1)?.toIntOrNull()
 
@@ -142,7 +143,10 @@ class Nomat : MainAPI() {
             addTrailer(trailer)
         }
     } else {
-        newMovieLoadResponse(title, url, TvType.Movie, url) {
+        // === Halaman Movie ===
+        val playUrl = document.selectFirst("div.video-wrapper a[href*='nontonhemat.link']")?.attr("href")
+
+        newMovieLoadResponse(title, url, TvType.Movie, playUrl ?: url) {
             this.posterUrl = poster
             this.year = year
             this.plot = description
@@ -155,31 +159,35 @@ class Nomat : MainAPI() {
 }
 
 
-    override suspend fun loadLinks(
+override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val doc = app.get(data).document
+    return try {
+        val nhDoc = app.get(data).document
 
-    // Ambil semua server di halaman nontonhemat.link
-    doc.select("div.server-item").forEach { server ->
-        val serverUrl = server.attr("data-url")
-        if (serverUrl.isNullOrBlank()) return@forEach
+        nhDoc.select("div.server-item").forEach { el ->
+            val encoded = el.attr("data-url")
+            if (encoded.isNotBlank()) {
+                try {
+                    val decoded = base64Decode(encoded)  // pakai util Cloudstream
+                    val quality = Regex("\\[(.*?)\\]").find(el.text())?.groupValues?.getOrNull(1) ?: "HD"
 
-        try {
-            val embedDoc = app.get(serverUrl).document
-            val iframe = embedDoc.selectFirst("iframe")?.attr("src")
-            if (!iframe.isNullOrBlank()) {
-                loadExtractor(iframe, data, subtitleCallback, callback)
+                    loadExtractor(decoded, data, subtitleCallback, callback)
+                } catch (e: Exception) {
+                    logError(e)
+                }
             }
-        } catch (e: Exception) {
-            logError(e)
         }
+        true
+    } catch (e: Exception) {
+        logError(e)
+        false
     }
-    return true
 }
+
 
 
     private fun Element.getImageAttr(): String {
