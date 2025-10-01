@@ -166,15 +166,19 @@ override suspend fun loadLinks(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     return try {
-        val nhDoc = app.get(data).document
+        // pakai timeout agak panjang
+        val nhDoc = app.get(data, timeout = 120L).document
 
-        nhDoc.select("div.server-item").forEach { el ->
+        val servers = nhDoc.select("div.server-item[data-url]")
+        if (servers.isEmpty()) {
+            logError(Exception("Tidak ada server-item di halaman: $data"))
+        }
+
+        servers.forEach { el ->
             val encoded = el.attr("data-url")
             if (encoded.isNotBlank()) {
                 try {
-                    val decoded = base64Decode(encoded)  // pakai util Cloudstream
-                    val quality = Regex("\\[(.*?)\\]").find(el.text())?.groupValues?.getOrNull(1) ?: "HD"
-
+                    val decoded = base64Decode(encoded)
                     loadExtractor(decoded, data, subtitleCallback, callback)
                 } catch (e: Exception) {
                     logError(e)
@@ -187,7 +191,6 @@ override suspend fun loadLinks(
         false
     }
 }
-
 
 
     private fun Element.getImageAttr(): String {
