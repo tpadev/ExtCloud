@@ -26,15 +26,16 @@ class Nomat : MainAPI() {
 
     override val mainPage =
             mainPageOf(
-                     "slug/film-terbaru" to "Film Terbaru",
-    "slug/film-terfavorit" to "Film Terfavorit",
-    "slug/film-box-office" to "Film Box Office",
+                     override val mainPage = mainPageOf(
+    "slug/film-terbaru/1" to "Film Terbaru",
+    "slug/film-terfavorit/1" to "Film Terfavorit",
+    "slug/film-box-office/1" to "Film Box Office",
+)
+
             )
 
    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    // Pagination selalu pakai angka (/1/, /2/, dst)
-    val url = "$mainUrl/${request.data}/$page/"
-
+    val url = "$mainUrl/${request.data.substringBeforeLast("/")}/$page/"
     val document = app.get(url).document
     val home = document.select("div.item-content").mapNotNull { it.toSearchResult() }
     return newHomePageResponse(request.name, home)
