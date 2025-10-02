@@ -11,7 +11,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class IdlixProvider : MainAPI() {
-    private val apiUrl = "https://tv8.idlixku.com"
+    private val apiUrl = "https://tv9.idlixku.com"
     override val instantLinkLoading = true
     private var directUrl = mainUrl
     override var name = "Idlix"
