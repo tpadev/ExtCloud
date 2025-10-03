@@ -8,6 +8,6 @@ import com.lagradost.cloudstream3.plugins.Plugin
 class OppadramaPlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Oppadrama())
-        registerExtractorAPI(Turbovidhls())
+        registerExtractorAPI(Smoothpre())
     }
 }
