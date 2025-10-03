@@ -109,16 +109,14 @@ class Bangjago : ExtractorApi() {
         } ?: return
 
         // Kirim hasil ke callback
-        callback.invoke(
-            newExtractorLink(
-                name,
-                name,
-                link,
-                referer = mainUrl,
-                quality = Qualities.P1080.value,
-                type = if (link.endsWith(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
-            )
-        )
+       callback.invoke(
+    newExtractorLink(
+        this.name,
+        this.name,
+        link,
+        if (link.endsWith(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
+    )
+)
     }
 }
 
