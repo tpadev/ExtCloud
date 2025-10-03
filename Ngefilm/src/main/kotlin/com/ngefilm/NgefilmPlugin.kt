@@ -12,5 +12,6 @@ class NgefilmPlugin : Plugin() {
         registerExtractorAPI(Bingezove())
         registerExtractorAPI(Mivalyo())
         registerExtractorAPI(Movearnpre())
+        registerExtractorAPI(Bangjago())
     }
 }
