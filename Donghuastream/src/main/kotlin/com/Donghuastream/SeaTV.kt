@@ -26,7 +26,6 @@ open class SeaTV : Donghuastream() {
     override val mainPage = mainPageOf(
         "anime/?status=&type=&order=update&page=" to "Recently Updated",
         "anime/?status=completed&type=&order=update" to "Completed",
-        "anime/?status=upcoming&type=&sub=&order=" to "Upcoming",
     )
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
