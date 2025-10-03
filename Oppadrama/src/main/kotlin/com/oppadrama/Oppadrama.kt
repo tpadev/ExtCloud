@@ -160,14 +160,14 @@ val episodes = document.select("div.eplister li a").map { ep ->
 ): Boolean {
     val document = app.get(data).document
 
-    // ===== CASE 1: Ambil iframe default (biasanya emturbovid) =====
+    // ===== CASE 1: iframe default =====
     val defaultIframe = document.selectFirst("div.player-embed iframe")?.getIframeAttr()
     if (!defaultIframe.isNullOrBlank()) {
         loadExtractor(httpsify(defaultIframe), data, subtitleCallback, callback)
     }
 
-    // ===== CASE 2: Ambil semua server lain dari <div class="mobius"> → <select class="mirror"> =====
-    val servers = document.select("div.mobius select.mirror option[value]")
+    // ===== CASE 2: ambil semua server dari <select.mirror> =====
+    val servers = document.select("div.mobius select.mirror option[value]:not([disabled])")
     for (server in servers) {
         val url = server.attr("value") ?: continue
         if (url.isBlank()) continue
@@ -176,13 +176,12 @@ val episodes = document.select("div.eplister li a").map { ep ->
             // buka halaman server
             val res = app.get(fixUrl(url)).document
 
-            // ambil iframe player dari halaman server
+            // ambil iframe player
             val iframe = res.selectFirst("div.player-embed iframe")?.getIframeAttr()
             if (!iframe.isNullOrBlank()) {
                 loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
             }
         } catch (e: Exception) {
-            // biar kalau 1 server error, yang lain tetap jalan
             println("OppaDrama loadLinks error: ${e.localizedMessage}")
         }
     }
