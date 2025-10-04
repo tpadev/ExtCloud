@@ -146,7 +146,6 @@ class Klikxxi : MainAPI() {
                 this.plot = description
                 this.tags = tags
                 this.year = year
-                this.rating = rating
                 addActors(actors)
                 addTrailer(trailer)
                 if (rating != null) addScore(rating.toString(), 10)
