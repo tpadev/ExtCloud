@@ -136,7 +136,7 @@ class Klikxxi : MainAPI() {
                 this.plot = description
                 this.tags = tags
                 this.year = year
-                addScore(rating)
+                this.addScore(Score(rating, 10))
                 addActors(actors)
                 this.recommendations = recommendations
             }
@@ -149,7 +149,7 @@ class Klikxxi : MainAPI() {
                 this.rating = rating
                 addActors(actors)
                 addTrailer(trailer)
-                addScore(rating)
+                this.addScore(Score(rating, 10))
                 this.recommendations = recommendations
             }
         }
