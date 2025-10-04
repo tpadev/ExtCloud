@@ -131,7 +131,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     val year = document.select("div.video-duration a[href*=/category/year/]").text().toIntOrNull()
     val description = document.selectFirst("div.video-synopsis")?.text()?.trim()
     val trailer = document.selectFirst("div.video-trailer iframe")?.attr("src")
-    val rating = this.selectFirst("div.rtg")?.text()?.trim()
+    val rating = document.selectFirst("div.rtg")?.text()?.trim()
     val actors = document.select("div.video-actor a").map { it.text() }
     val recommendations = document.select("div.section .item-content").mapNotNull { it.toRecommendResult() }
 
