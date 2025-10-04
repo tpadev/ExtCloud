@@ -3,6 +3,7 @@ package com.klikxxi
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import java.net.URI
@@ -48,11 +49,12 @@ class Klikxxi : MainAPI() {
         return if (isSeries) {
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = poster
+                addQuality(quality ?: "")
             }
         } else {
             newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = poster
-                if (!quality.isNullOrBlank()) addQuality(quality)
+                addQuality(quality ?: "")
             }
         }
     }
@@ -134,7 +136,7 @@ class Klikxxi : MainAPI() {
                 this.plot = description
                 this.tags = tags
                 this.year = year
-                this.rating = rating
+                addScore(rating ?: "")
                 addActors(actors)
                 this.recommendations = recommendations
             }
@@ -147,6 +149,7 @@ class Klikxxi : MainAPI() {
                 this.rating = rating
                 addActors(actors)
                 addTrailer(trailer)
+                addScore(rating ?: "")
                 this.recommendations = recommendations
             }
         }
