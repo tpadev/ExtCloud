@@ -68,14 +68,12 @@ class Nomat : MainAPI() {
     return if (episode != null || title.contains("Season", true) || title.contains("Episode", true)) {
         newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
             this.posterUrl = posterUrl
-            addQuality(quality)
-            
+            addQuality(quality ?: "")
         }
     } else {
         newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
-            addQuality(quality)
-           
+            addQuality(quality ?: "")   
         }
     }
 }
