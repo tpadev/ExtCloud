@@ -73,6 +73,52 @@ open class Dingtezuni : ExtractorApi() {
 
 }
 
+class EmbedPyrox : ExtractorApi() {
+    override val name = "EmbedPyrox"
+    override val mainUrl = "https://embedpyrox.xyz"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        // --- Ambil token dari berbagai variasi path ---
+        val token = when {
+            url.contains("data=") -> url.substringAfter("data=").substringBefore("&")
+            url.contains("/video/") -> url.substringAfter("/video/").substringBefore("?")
+            url.contains("/v/") -> url.substringAfter("/v/").substringBefore("?")
+            else -> url.substringAfterLast("/").substringBefore("?")
+        }
+
+        val apiUrl = "$mainUrl/player/index.php?data=$token&do=getVideo"
+
+        // --- Panggil API untuk dapatkan link video ---
+        val res = app.post(
+            apiUrl,
+            referer = referer ?: mainUrl,
+            headers = mapOf(
+                "X-Requested-With" to "XMLHttpRequest",
+                "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
+                "Origin" to mainUrl
+            )
+        ).text
+
+        // --- Cari m3u8 ---
+        val m3u8 = Regex("https?://[^\"']+\\.m3u8").find(res)?.value
+        if (!m3u8.isNullOrBlank()) {
+            generateM3u8(
+                name, 
+                m3u8, 
+                mainUrl
+            ).forEach(callback)
+            return true
+        }
+
+        return false
+    }
+}
 
 
 

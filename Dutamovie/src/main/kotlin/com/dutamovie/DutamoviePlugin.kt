@@ -10,6 +10,7 @@ class DutaMoviePlugin : Plugin() {
         registerMainAPI(DutaMovie())
         registerExtractorAPI(Dingtezuni())
         registerExtractorAPI(Bingezove())
-registerExtractorAPI(Mivalyo())
+        registerExtractorAPI(Mivalyo())
+        registerExtractorAPI(EmbedPyrox())
     }
 }
