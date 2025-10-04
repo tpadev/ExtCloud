@@ -83,8 +83,7 @@ class EmbedPyrox : ExtractorApi() {
         referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        // --- Ambil token dari berbagai variasi path ---
+    ) {
         val token = when {
             url.contains("data=") -> url.substringAfter("data=").substringBefore("&")
             url.contains("/video/") -> url.substringAfter("/video/").substringBefore("?")
@@ -94,7 +93,6 @@ class EmbedPyrox : ExtractorApi() {
 
         val apiUrl = "$mainUrl/player/index.php?data=$token&do=getVideo"
 
-        // --- Panggil API untuk dapatkan link video ---
         val res = app.post(
             apiUrl,
             referer = referer ?: mainUrl,
@@ -105,20 +103,15 @@ class EmbedPyrox : ExtractorApi() {
             )
         ).text
 
-        // --- Cari m3u8 ---
         val m3u8 = Regex("https?://[^\"']+\\.m3u8").find(res)?.value
         if (!m3u8.isNullOrBlank()) {
-            generateM3u8(
-                name, 
-                m3u8, 
-                mainUrl
-            ).forEach(callback)
-            return true
+            M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
+            return
         }
 
-        return false
     }
 }
+
 
 
 
