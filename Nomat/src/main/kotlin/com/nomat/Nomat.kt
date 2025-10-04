@@ -46,32 +46,39 @@ class Nomat : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
     val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
-    val title = this.selectFirst("h2.entry-title a, h3.entry-title a, a")?.text()?.trim() ?: return null
+
+    // Ambil judul spesifik hanya dari div.title
+    val title = this.selectFirst("div.title")?.text()?.trim() ?: return null
 
     // Ambil poster dari CSS background
     val style = this.selectFirst("div.poster")?.attr("style") ?: ""
     val posterUrl = Regex("url\\(['\"]?(.*?)['\"]?\\)").find(style)?.groupValues?.get(1)
 
-    
+    // Ambil kualitas & rating
+    val quality = this.selectFirst("div.qual")?.text()?.trim()
+  
 
-    // Cek apakah ini Series (ada label Eps. atau kata Season/Episode)
+    // Cek apakah Series (ada label eps / Season / Episode)
     val epsText = this.selectFirst("div.qual")?.text()?.trim()
     val episode = Regex("Eps.?\\s?([0-9]+)", RegexOption.IGNORE_CASE)
         .find(epsText ?: "")
         ?.groupValues?.getOrNull(1)?.toIntOrNull()
 
     return if (episode != null || title.contains("Season", true) || title.contains("Episode", true)) {
-        // Jika series
         newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
             this.posterUrl = posterUrl
+            addQuality(quality)
+            
         }
     } else {
-        // Jika movie
         newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
+            addQuality(quality)
+           
         }
     }
 }
+
 
 override suspend fun search(query: String): List<SearchResponse> {
     val document = app.get("$mainUrl/search/$query", timeout = 50L).document
