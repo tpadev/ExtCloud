@@ -5,7 +5,8 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addScore  
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer  
 import com.lagradost.cloudstream3.MainAPI  
-import com.lagradost.cloudstream3.SearchResponse  
+import com.lagradost.cloudstream3.SearchResponse
+import com.lagradost.cloudstream3.utils.AppUtils.base64Decode 
 import com.lagradost.cloudstream3.TvType  
 import com.lagradost.cloudstream3.mainPageOf  
 import com.lagradost.cloudstream3.newMovieSearchResponse  
@@ -167,22 +168,25 @@ val episodes = document.select("div.eplister li a").map { ep ->
     }
 
     // ===== CASE 2: ambil semua server dari <select.mirror> =====
-    val servers = document.select("div.mobius select.mirror option[value]:not([disabled])")
-    for (server in servers) {
-        val url = server.attr("value") ?: continue
-        if (url.isBlank()) continue
+    val options = document.select("select.mirror option[value]:not([disabled])")
+    for (option in options) {
+        val base64 = option.attr("value")
+        if (base64.isBlank()) continue
+        val label = option.text().trim()
 
         try {
-            // buka halaman server
-            val res = app.get(fixUrl(url)).document
+            // decode base64 → iframe HTML
+            val decodedHtml = String(Base64.decode(base64, Base64.DEFAULT))
+            val iframeUrl = Jsoup.parse(decodedHtml)
+                .selectFirst("iframe")
+                ?.getIframeAttr()
+                ?.let(::httpsify)
 
-            // ambil iframe player
-            val iframe = res.selectFirst("div.player-embed iframe")?.getIframeAttr()
-            if (!iframe.isNullOrBlank()) {
-                loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
+            if (!iframeUrl.isNullOrBlank()) {
+                loadExtractor(iframeUrl, data, subtitleCallback, callback)
             }
         } catch (e: Exception) {
-            println("OppaDrama loadLinks error: ${e.localizedMessage}")
+            println("OppaDrama loadLinks decode error: ${e.localizedMessage}")
         }
     }
 
