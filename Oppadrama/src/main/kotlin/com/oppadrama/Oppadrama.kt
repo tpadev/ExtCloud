@@ -14,7 +14,8 @@ import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse  
 import com.lagradost.cloudstream3.newEpisode  
 import com.lagradost.cloudstream3.utils.*  
-import org.jsoup.nodes.Element  
+import org.jsoup.nodes.Element
+import org.jsoup.Jsoup
 
 class Oppadrama : MainAPI() {
     override var mainUrl = "http://45.11.57.243"
@@ -176,7 +177,7 @@ val episodes = document.select("div.eplister li a").map { ep ->
 
         try {
             // decode base64 → iframe HTML
-            val decodedHtml = String(Base64.decode(base64, Base64.DEFAULT))
+            val decodedHtml = base64Decode(base64)
             val iframeUrl = Jsoup.parse(decodedHtml)
                 .selectFirst("iframe")
                 ?.getIframeAttr()
