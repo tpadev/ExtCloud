@@ -134,19 +134,25 @@ class Animasu : MainAPI() {
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val document = app.get(data).document
-        document.select(".mobius > .mirror > option").mapNotNull {
-    fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")) to it.text()
-            }.map { (iframe, quality) ->
-    loadFixedExtractor(iframe, quality, "$mainUrl/", subtitleCallback, callback)
-            }
-        return true
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val document = app.get(data).document
+    val mirrors = document.select(".mobius > .mirror > option").mapNotNull {
+        fixUrl(
+            Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
+        ) to it.text()
     }
+
+    // Jalankan sequentially
+    mirrors.forEach { (iframe, quality) ->
+        loadFixedExtractor(iframe, quality, "$mainUrl/", subtitleCallback, callback)
+    }
+
+    return true
+}
 
     private suspend fun loadFixedExtractor(
     url: String,
