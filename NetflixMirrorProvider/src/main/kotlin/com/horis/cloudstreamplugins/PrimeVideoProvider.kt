@@ -29,7 +29,7 @@ class PrimeVideoProvider : MainAPI() {
     )
     override var lang = "en"
 
-    override var mainUrl = "https://net2025.cc"
+    override var mainUrl = "https://net20.cc"
     override var name = "PrimeVideo"
 
     override val hasMainPage = true
@@ -228,15 +228,15 @@ class PrimeVideoProvider : MainAPI() {
         playlist.forEach { item ->
             item.sources.forEach {
                 callback.invoke(
-                    ExtractorLink(
-                        source = this@PrimeVideoProvider.name,
-                        name = it.label,
-                        url = """https://net50.cc${it.file.replace("/tv/", "/")}""",
-                        referer = "https://net50.cc/",
-                        quality = getQualityFromName(it.file.substringAfter("q=", "")),
-                        headers = mapOf(),
+                    newExtractorLink(
+                        name,
+                        it.label,
+                        """https://net50.cc${it.file.replace("/tv/", "/")}""",
                         type = ExtractorLinkType.M3U8
-                    )
+                    ) {
+                        this.referer = "https://net50.cc/"
+                        this.quality = getQualityFromName(it.file.substringAfter("q=", ""))
+                    }
                 )
             }
 

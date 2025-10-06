@@ -27,7 +27,7 @@ class JioHotstarProvider : MainAPI() {
     )
     override var lang = "en"
 
-    override var mainUrl = "https://net2025.cc"
+    override var mainUrl = "https://net20.cc"
     override var name = "JioHotstar"
 
     override val hasMainPage = true
@@ -224,15 +224,15 @@ class JioHotstarProvider : MainAPI() {
         playlist.forEach { item ->
             item.sources.forEach {
                 callback.invoke(
-                    ExtractorLink(
-                        source = this@JioHotstarProvider.name,
-                        name = it.label,
-                        url = fixUrl(it.file),
-                        referer = "$mainUrl/tv/home",
-                        quality = getQualityFromName(it.file.substringAfter("q=", "")),
-                        headers = mapOf(),
+                    newExtractorLink(
+                        name,
+                        it.label,
+                        "https://net51.cc/${it.file}",
                         type = ExtractorLinkType.M3U8
-                    )
+                    ) {
+                        this.referer = "$mainUrl/tv/home"
+                        this.quality = getQualityFromName(it.file.substringAfter("q=", ""))
+                    }
                 )
             }
 
