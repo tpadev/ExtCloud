@@ -205,9 +205,9 @@ class DutaMovie : MainAPI() {
     }
 
     // 💾 Ambil link download khusus Gofile
-    document.select("ul.gmr-download-list a").forEach { linkEl ->
+     document.select("div#download ul.gmr-download-list a").forEach { linkEl ->
         val downloadUrl = linkEl.attr("href")
-        if (downloadUrl.contains("gofile.io")) {
+        if (downloadUrl.isNotBlank()) {
             loadExtractor(downloadUrl, data, subtitleCallback, callback)
         }
     }
