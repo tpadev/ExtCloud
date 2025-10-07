@@ -174,7 +174,7 @@ class DutaMovie : MainAPI() {
     val document = app.get(data).document
     val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
 
-    // ✅ Ambil iframe player (server streaming)
+    // 🎬 Ambil iframe player (streaming)
     if (id.isNullOrEmpty()) {
         document.select("ul.muvipro-player-tabs li a").amap { ele ->
             val iframe = app.get(fixUrl(ele.attr("href")))
@@ -195,8 +195,7 @@ class DutaMovie : MainAPI() {
                     "tab" to ele.attr("id"),
                     "post_id" to "$id"
                 )
-            )
-                .document
+            ).document
                 .select("iframe")
                 .attr("src")
                 .let { httpsify(it) }
@@ -205,17 +204,17 @@ class DutaMovie : MainAPI() {
         }
     }
 
-    // ✅ Ambil link download (contoh Gofile)
+    // 💾 Ambil link download khusus Gofile
     document.select("ul.gmr-download-list a").forEach { linkEl ->
         val downloadUrl = linkEl.attr("href")
-        if (downloadUrl.isNotBlank()) {
-            // lempar ke extractor bawaan Cloudstream (misalnya Gofile)
+        if (downloadUrl.contains("gofile.io")) {
             loadExtractor(downloadUrl, data, subtitleCallback, callback)
         }
     }
 
     return true
 }
+
 
 
     private fun Element.getImageAttr(): String {
