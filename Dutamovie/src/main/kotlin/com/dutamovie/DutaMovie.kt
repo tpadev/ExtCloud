@@ -166,50 +166,57 @@ class DutaMovie : MainAPI() {
     }
 
     override suspend fun loadLinks(
-            data: String,
-            isCasting: Boolean,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
-    ): Boolean {
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val document = app.get(data).document
+    val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
 
-        val document = app.get(data).document
-        val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
+    // ✅ Ambil iframe player (server streaming)
+    if (id.isNullOrEmpty()) {
+        document.select("ul.muvipro-player-tabs li a").amap { ele ->
+            val iframe = app.get(fixUrl(ele.attr("href")))
+                .document
+                .selectFirst("div.gmr-embed-responsive iframe")
+                ?.getIframeAttr()
+                ?.let { httpsify(it) }
+                ?: return@amap
 
-        if (id.isNullOrEmpty()) {
-            document.select("ul.muvipro-player-tabs li a").amap { ele ->
-                val iframe =
-                        app.get(fixUrl(ele.attr("href")))
-                                .document
-                                .selectFirst("div.gmr-embed-responsive iframe")
-                                .getIframeAttr()
-                                ?.let { httpsify(it) }
-                                ?: return@amap
-
-                loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
-            }
-        } else {
-            document.select("div.tab-content-ajax").amap { ele ->
-                val server =
-                        app.post(
-                                        "$directUrl/wp-admin/admin-ajax.php",
-                                        data =
-                                                mapOf(
-                                                        "action" to "muvipro_player_content",
-                                                        "tab" to ele.attr("id"),
-                                                        "post_id" to "$id"
-                                                )
-                                )
-                                .document
-                                .select("iframe")
-                                .attr("src")
-                                .let { httpsify(it) }
-
-                loadExtractor(server, "$directUrl/", subtitleCallback, callback)
-            }
+            loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
         }
+    } else {
+        document.select("div.tab-content-ajax").amap { ele ->
+            val server = app.post(
+                "$directUrl/wp-admin/admin-ajax.php",
+                data = mapOf(
+                    "action" to "muvipro_player_content",
+                    "tab" to ele.attr("id"),
+                    "post_id" to "$id"
+                )
+            )
+                .document
+                .select("iframe")
+                .attr("src")
+                .let { httpsify(it) }
 
-        return true
+            loadExtractor(server, "$directUrl/", subtitleCallback, callback)
+        }
     }
+
+    // ✅ Ambil link download (contoh Gofile)
+    document.select("ul.gmr-download-list a").forEach { linkEl ->
+        val downloadUrl = linkEl.attr("href")
+        if (downloadUrl.isNotBlank()) {
+            // lempar ke extractor bawaan Cloudstream (misalnya Gofile)
+            loadExtractor(downloadUrl, data, subtitleCallback, callback)
+        }
+    }
+
+    return true
+}
+
 
     private fun Element.getImageAttr(): String {
         return when {
