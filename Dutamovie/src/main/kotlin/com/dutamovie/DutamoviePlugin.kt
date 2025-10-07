@@ -11,6 +11,5 @@ class DutaMoviePlugin : Plugin() {
         registerExtractorAPI(Dingtezuni())
         registerExtractorAPI(Bingezove())
         registerExtractorAPI(Mivalyo())
-        registerExtractorAPI(EmbedPyrox())
     }
 }
