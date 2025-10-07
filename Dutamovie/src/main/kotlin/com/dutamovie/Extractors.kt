@@ -73,5 +73,69 @@ open class Dingtezuni : ExtractorApi() {
 
 }
 
+class EmbedPyrox : ExtractorApi() {
+    override val name = "EmbedPyrox"
+    override val mainUrl = "https://embedpyrox.xyz"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        // token dari iframe /video/<id>
+        val token = url.substringAfter("/video/").substringBefore("?")
+        val apiUrl = "$mainUrl/player/index.php?data=$token&do=getVideo"
+
+        // panggil API
+        val res = app.post(
+            url = apiUrl,
+            referer = referer ?: mainUrl,
+            headers = mapOf(
+                "X-Requested-With" to "XMLHttpRequest",
+                "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
+                "Origin" to mainUrl
+            )
+        )
+
+        val cookie = res.cookies["fireplayer_player"]
+        val body = res.text
+
+        // cari .m3u8
+        val m3u8 = Regex("https?://[^\"']+\\.m3u8").find(body)?.value
+        if (!m3u8.isNullOrBlank()) {
+            M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
+            return
+        }
+
+        // fallback master.txt dengan cookie
+        val masterUrl = "$mainUrl/cdn/hls/$token/master.txt"
+        if (cookie != null) {
+            val masterRes = app.get(
+                masterUrl,
+                referer = mainUrl,
+                headers = mapOf("Cookie" to "fireplayer_player=$cookie")
+            ).text
+
+            if (masterRes.contains("#EXTM3U")) {
+                generateM3u8(
+                    name, 
+                    masterUrl, 
+                    mainUrl).forEach(callback)
+                return
+            }
+        }
+
+        // fallback m3/
+        val m3url = Regex("https?://[^\"']+/m3/[^\"']+").find(body)?.value
+        if (!m3url.isNullOrBlank()) {
+            generateM3u8(
+                name, 
+                m3url, 
+                mainUrl).forEach(callback)
+        }
+    }
+}
 
 
