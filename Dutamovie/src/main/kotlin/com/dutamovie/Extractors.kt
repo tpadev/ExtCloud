@@ -9,6 +9,8 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import java.net.URI
 
 class Mivalyo : Dingtezuni() {
@@ -76,7 +78,7 @@ open class Dingtezuni : ExtractorApi() {
 class EmbedPyrox : ExtractorApi() {
     override val name = "EmbedPyrox"
     override val mainUrl = "https://embedpyrox.xyz"
-    override val requiresReferer = false
+    override val requiresReferer = true
 
     override suspend fun getUrl(
         url: String,
@@ -84,34 +86,59 @@ class EmbedPyrox : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val token = when {
-            url.contains("data=") -> url.substringAfter("data=").substringBefore("&")
-            url.contains("/video/") -> url.substringAfter("/video/").substringBefore("?")
-            url.contains("/v/") -> url.substringAfter("/v/").substringBefore("?")
-            else -> url.substringAfterLast("/").substringBefore("?")
+        val document = app.get(url, referer = "$mainUrl/").document
+        val hash = url.split("/").last().substringAfter("data=")
+
+        val m3uLink = app.post(
+            url = "$mainUrl/player/index.php?data=$hash&do=getVideo",
+            data = mapOf("hash" to hash, "r" to "$referer"),
+            referer = url,
+            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        ).parsed<ResponseSource>().videoSource
+
+        M3u8Helper.generateM3u8(
+            this.name,
+            m3uLink,
+            url,
+        ).forEach(callback)
+
+
+        document.select("script").map { script ->
+            if (script.data().contains("eval(function(p,a,c,k,e,d)")) {
+                val subData =
+                    getAndUnpack(script.data()).substringAfter("\"tracks\":[").substringBefore("],")
+                tryParseJson<List<Tracks>>("[$subData]")?.map { subtitle ->
+                    subtitleCallback.invoke(
+                        SubtitleFile(
+                            getLanguage(subtitle.label ?: ""),
+                            subtitle.file
+                        )
+                    )
+                }
+            }
         }
-
-        val apiUrl = "$mainUrl/player/index.php?data=$token&do=getVideo"
-
-        val res = app.post(
-            apiUrl,
-            referer = referer ?: mainUrl,
-            headers = mapOf(
-                "X-Requested-With" to "XMLHttpRequest",
-                "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
-                "Origin" to mainUrl
-            )
-        ).text
-
-        val m3u8 = Regex("https?://[^\"']+\\.m3u8").find(res)?.value
-        if (!m3u8.isNullOrBlank()) {
-            M3u8Helper.generateM3u8(name, m3u8, mainUrl).forEach(callback)
-            return
-        }
-
     }
-}
 
+    private fun getLanguage(str: String): String {
+        return when {
+            str.contains("indonesia", true) || str
+                .contains("bahasa", true) -> "Indonesian"
+            else -> str
+        }
+    }
+
+    data class ResponseSource(
+        @JsonProperty("hls") val hls: Boolean,
+        @JsonProperty("videoSource") val videoSource: String,
+        @JsonProperty("securedLink") val securedLink: String?,
+    )
+
+    data class Tracks(
+        @JsonProperty("kind") val kind: String?,
+        @JsonProperty("file") val file: String,
+        @JsonProperty("label") val label: String?,
+    )
+}
 
 
 
