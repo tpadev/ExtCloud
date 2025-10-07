@@ -78,7 +78,7 @@ open class Dingtezuni : ExtractorApi() {
 class EmbedPyrox : ExtractorApi() {
     override val name = "EmbedPyrox"
     override val mainUrl = "https://embedpyrox.xyz"
-    override val requiresReferer = true
+    override val requiresReferer = false
 
     override suspend fun getUrl(
         url: String,
@@ -96,7 +96,7 @@ class EmbedPyrox : ExtractorApi() {
             headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsed<ResponseSource>().videoSource
 
-        M3u8Helper.generateM3u8(
+        generateM3u8(
             this.name,
             m3uLink,
             url,
