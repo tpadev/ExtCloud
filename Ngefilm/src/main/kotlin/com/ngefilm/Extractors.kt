@@ -11,11 +11,17 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.base64Decode
+import com.lagradost.cloudstream3.extractors.StreamWishExtractor
 import java.net.URI
 
 class Movearnpre : Dingtezuni() {
     override var name = "Earnvids"
     override var mainUrl = "https://movearnpre.com"
+}
+
+class Dhtpre : Dingtezuni() {
+    override var name = "Earnvids"
+    override var mainUrl = "https://dhtpre.com"
 }
 
 class Mivalyo : Dingtezuni() {
@@ -80,45 +86,11 @@ open class Dingtezuni : ExtractorApi() {
 
 }
 
-class Bangjago : ExtractorApi() {
-    override val name = "Bangjago"
-    override val mainUrl = "https://bangjago.upns.blog"
-    override val requiresReferer = false
-
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        // Ambil ID dari hash URL
-        val id = url.substringAfterLast("#")
-
-        // Request ke API
-        val response = app.get("$mainUrl/api/v1/info?id=$id").text
-
-        // Decode Base64 (pakai util bawaan cloudstream)
-        val decoded = base64Decode(response)
-
-        // Coba parse JSON
-        val json = tryParseJson<Map<String, Any>>(decoded)
-        val link = when {
-            json?.containsKey("videoSource") == true -> json["videoSource"] as? String
-            json?.containsKey("file") == true -> json["file"] as? String
-            else -> decoded // fallback kalau bukan JSON
-        } ?: return
-
-        // Kirim hasil ke callback
-       callback.invoke(
-    newExtractorLink(
-        this.name,
-        this.name,
-        link,
-        if (link.endsWith(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
-    )
-)
-    }
+class Hglink : StreamWishExtractor() {
+    override val name = "Hglink"
+    override val mainUrl = "https://hglink.to"
 }
+
 
 
 
