@@ -188,7 +188,7 @@ override suspend fun loadLinks(
 ): Boolean {
     return try {
         // tambahkan referer supaya tidak invalid credential
-        val nhDoc = app.get(data, referer = mainUrl, timeout = 120L).document
+        val nhDoc = app.get(data, referer = mainUrl, timeout = 100L).document
 
         nhDoc.select("div.server-item").forEach { el ->
             val encoded = el.attr("data-url")
