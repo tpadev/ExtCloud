@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.extractors.StreamWishExtractor
 import java.net.URI
 
 class Mivalyo : Dingtezuni() {
@@ -136,6 +137,11 @@ class EmbedPyrox : ExtractorApi() {
                 mainUrl).forEach(callback)
         }
     }
+}
+
+class Hglink : StreamWishExtractor() {
+    override val name = "Hglink"
+    override val mainUrl = "https://hglink.to"
 }
 
 
