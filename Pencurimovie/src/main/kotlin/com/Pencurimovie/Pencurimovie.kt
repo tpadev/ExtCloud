@@ -4,6 +4,7 @@ import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 
@@ -69,6 +70,10 @@ class Pencurimovie : MainAPI() {
         val tvtag = if (url.contains("series")) TvType.TvSeries else TvType.Movie
         val trailer = document.select("meta[itemprop=embedUrl]").attr("content") ?: ""
         val genre = document.select("div.mvic-info p:contains(Genre)").select("a").map { it.text() }
+        val rating = document.selectFirst("span.imdb-r[itemprop=ratingValue]")
+            ?.text()
+            ?.toDoubleOrNull()
+
         val actors =
             document.select("div.mvic-info p:contains(Actors)").select("a").map { it.text() }
         val year =
@@ -106,6 +111,7 @@ class Pencurimovie : MainAPI() {
                 addTrailer(trailer)
                 addActors(actors)
                 this.recommendations=recommendation
+                if (rating != null) addScore(rating.toString(), 10)
             }
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, url) {
@@ -116,6 +122,7 @@ class Pencurimovie : MainAPI() {
                 addTrailer(trailer)
                 addActors(actors)
                 this.recommendations=recommendation
+                if (rating != null) addScore(rating.toString(), 10)
             }
         }
     }
