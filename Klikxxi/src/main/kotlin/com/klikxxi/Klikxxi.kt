@@ -21,16 +21,28 @@ class Klikxxi : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = request.data.format(page)
-        val document = app.get(url).document
+    val url = request.data.format(page)
+    val document = app.get(url).document
 
-        // ✅ Ambil hanya article biar tidak dobel
-        val items = document.select("main#main article")
-            .mapNotNull { it.toSearchResult() }
+    // ✅ Ambil hanya article biar tidak dobel
+    val items = document.select("main#main article")
+        .mapNotNull { it.toSearchResult() }
 
-        val hasNext = document.selectFirst("ul.page-numbers li a.next") != null
-        return newHomePageResponse(HomePageList(request.name, items), hasNext)
-    }
+    // ✅ Cari halaman sekarang
+    val currentPage = document.selectFirst("ul.page-numbers li .current")
+        ?.text()?.toIntOrNull() ?: page
+
+    // ✅ Cari halaman terakhir dari angka terbesar
+    val lastPage = document.select("ul.page-numbers li a.page-numbers")
+        .mapNotNull { it.text().toIntOrNull() }
+        .maxOrNull() ?: currentPage
+
+    // ✅ Ada halaman berikut jika current < last
+    val hasNext = currentPage < lastPage
+
+    return newHomePageResponse(HomePageList(request.name, items), hasNext)
+}
+
 
     private fun Element.toSearchResult(): SearchResponse? {
     val linkElement = this.selectFirst("a[href][title]") ?: return null
