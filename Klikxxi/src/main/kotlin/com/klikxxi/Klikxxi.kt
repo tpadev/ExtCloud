@@ -33,19 +33,20 @@ class Klikxxi : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val linkElement = this.selectFirst("a[href][title]") ?: return null
-        val href = fixUrl(linkElement.attr("href"))
-        val title = linkElement.attr("title")
-            .removePrefix("Permalink to: ")
-            .ifBlank { linkElement.text() }
-            .trim()
-        if (title.isBlank()) return null
+    val linkElement = this.selectFirst("a[href][title]") ?: return null
+    val href = fixUrl(linkElement.attr("href"))
+    val title = linkElement.attr("title")
+        .removePrefix("Permalink to: ")
+        .ifBlank { linkElement.text() }
+        .trim()
+    if (title.isBlank()) return null
 
-        val poster = this.selectFirst("img")?.fixPoster()
-        val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
-        val typeText = this.selectFirst(".gmr-posttype-item")?.text()?.trim()
-        val isSeries = typeText.equals("TV Show", true)
+    // ambil poster dengan fixPoster helper
+    val poster = this.selectFirst("img")?.fixPoster()
 
+    val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
+    val typeText = this.selectFirst(".gmr-posttype-item")?.text()?.trim()
+    val isSeries = typeText.equals("TV Show", true)
         return if (isSeries) {
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = poster
@@ -187,24 +188,32 @@ class Klikxxi : MainAPI() {
 
     /** 🔧 Fix poster supaya gak abu-abu / buram */
     private fun Element?.fixPoster(): String? {
-        if (this == null) return null
-        var link = when {
-            this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
-            this.hasAttr("data-lazy-srcset") -> this.attr("abs:data-lazy-srcset").split(" ").firstOrNull()
-            this.hasAttr("srcset") -> this.attr("abs:srcset").split(" ").firstOrNull()
-            else -> this.attr("abs:src")
-        }
-        if (!link.isNullOrBlank()) {
-            link = link.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
-            if (link.startsWith("//")) link = "https:$link"
-        }
-        return link
+    if (this == null) return null
+    var link = when {
+        this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
+        this.hasAttr("data-lazy-srcset") -> this.attr("abs:data-lazy-srcset")
+            .split(",")
+            .map { it.trim().split(" ")[0] }
+            .lastOrNull() // ambil gambar resolusi paling besar
+        this.hasAttr("srcset") -> this.attr("abs:srcset")
+            .split(",")
+            .map { it.trim().split(" ")[0] }
+            .lastOrNull()
+        else -> this.attr("abs:src")
     }
+    if (!link.isNullOrBlank()) {
+        // hapus ukuran kecil (-170x255 dll)
+        link = link.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
+        // tambahkan https kalau diawali //
+        if (link.startsWith("//")) link = "https:$link"
+    }
+    return link
+}
 
     private fun Element?.getIframeAttr(): String? {
-        return this?.attr("data-litespeed-src").takeIf { it?.isNotEmpty() == true }
-            ?: this?.attr("src")
-    }
+    return this?.attr("data-litespeed-src").takeIf { it?.isNotEmpty() == true }
+        ?: this?.attr("src")
+}
 
     private fun getBaseUrl(url: String): String {
         return URI(url).let { "${it.scheme}://${it.host}" }
