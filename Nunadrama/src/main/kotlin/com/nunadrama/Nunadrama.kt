@@ -26,9 +26,7 @@ class Nunadrama : MainAPI() {
 
     override val mainPage =
             mainPageOf(
-                    "category/drakor/page/%d/" to "Drakor",
                     "category/film/page/%d/" to "Film",
-                    "category/drachin/page/%d/" to "Drachin",
             )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
