@@ -104,6 +104,7 @@ class DutaMovie : MainAPI() {
                         .text()
                         .trim()
                         .toIntOrNull()
+                        
         val tvType = if (url.contains("/tv/")) TvType.TvSeries else TvType.Movie
         val description = document.selectFirst("div[itemprop=description] > p")?.text()?.trim()
         val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")

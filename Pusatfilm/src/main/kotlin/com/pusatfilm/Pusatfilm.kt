@@ -81,6 +81,13 @@ class Pusatfilm : MainAPI() {
         val poster = fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
         val genres = document.select("div.gmr-moviedata a[rel=category]")
             .map { it.text() }
+        val runTime = convertRuntimeToMinutes(
+            document.selectFirst("div.gmr-moviedata strong:contains(Duration:) + span")
+                ?.text()
+                ?.trim()
+                .orEmpty()
+                )
+
         val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().trim().toIntOrNull()
         val tvType = if (url.contains("/tv/")) TvType.TvSeries else TvType.Movie
         val description = document.selectFirst("div[itemprop=description] > p")?.text()?.trim()
@@ -109,6 +116,7 @@ class Pusatfilm : MainAPI() {
                 this.plot = description
                 this.tags = genres
                 this.rating = rating
+                if (runTime != null) this.duration = runTime
                 addActors(actors)
                 addTrailer(trailer)
             }
@@ -119,6 +127,7 @@ class Pusatfilm : MainAPI() {
                 this.plot = description
                 this.tags = genres
                 this.rating = rating
+                if (runTime != null) this.duration = runTime
                 addActors(actors)
                 addTrailer(trailer)
             }
