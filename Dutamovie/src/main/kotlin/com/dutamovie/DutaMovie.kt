@@ -96,8 +96,7 @@ class DutaMovie : MainAPI() {
         val poster =
                 fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
                         ?.fixImageQuality()
-        val tags =
-                document.select("div.gmr-moviedata strong:contains(Genre:) > a").map { it.text() }
+        val tags = document.select("div.gmr-moviedata a").map { it.text() }
 
         val year =
                 document.select("div.gmr-moviedata strong:contains(Year:) > a")
