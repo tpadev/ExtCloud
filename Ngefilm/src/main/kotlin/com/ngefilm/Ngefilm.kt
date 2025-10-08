@@ -100,7 +100,7 @@ class Ngefilm : MainAPI() {
                 fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
                         ?.fixImageQuality()
         val tags =
-                document.select("div.gmr-moviedata strong:contains(Genre:) > a").map { it.text() }
+                document.select("div.gmr-moviedata a").map { it.text() }
 
         val year =
                 document.select("div.gmr-moviedata strong:contains(Year:) > a")
