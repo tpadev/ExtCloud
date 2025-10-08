@@ -110,6 +110,12 @@ class Oppadrama : MainAPI() {
     val actors = document.selectFirst("span:matchesOwn(Artis:)")?.text()
         ?.replace("Artis:", "")?.split(",")?.map { it.trim() }
     
+    val rating = document.selectFirst("div.rating strong")
+    ?.text()
+    ?.replace("Rating", "")
+    ?.trim()
+    ?.toDoubleOrNull()
+
     val trailer = document.selectFirst("div.bixbox.trailer iframe")?.attr("src")
 
     // Rekomendasi
@@ -136,6 +142,7 @@ val episodes = document.select("div.eplister li a").map { ep ->
         this.plot = description
         this.tags = tags
         this.recommendations = recommendations
+        if (rating != null) addScore(rating.toString(), 10)
         addActors(actors)
         addTrailer(trailer)
     }
@@ -147,6 +154,7 @@ val episodes = document.select("div.eplister li a").map { ep ->
         this.plot = description
         this.tags = tags
         this.recommendations = recommendations
+        if (rating != null) addScore(rating.toString(), 10)
         addActors(actors)
         addTrailer(trailer)
     }
