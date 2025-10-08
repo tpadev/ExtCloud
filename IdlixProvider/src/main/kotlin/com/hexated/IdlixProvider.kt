@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.extractors.helper.AesHelper
@@ -138,8 +139,9 @@ class IdlixProvider : MainAPI() {
         ) TvType.TvSeries else TvType.Movie
         val description = document.select("p:nth-child(3)").text().trim()
         val trailer = document.selectFirst("div.embed iframe")?.attr("src")
-        val rating =
-            document.selectFirst("span.dt_rating_vgs")?.text()?.toRatingInt()
+        val rating = document.selectFirst("span.dt_rating_vgs[itemprop=ratingValue]")
+        ?.text()
+        ?.toDoubleOrNull()
         val actors = document.select("div.persons > div[itemprop=actor]").map {
             Actor(it.select("meta[itemprop=name]").attr("content"), it.select("img").attr("src"))
         }
@@ -176,7 +178,7 @@ class IdlixProvider : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                this.score = Score.from100(rating)
+                if (rating != null) addScore(rating.toString(), 10)
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
@@ -187,7 +189,7 @@ class IdlixProvider : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                this.score = Score.from100(rating)
+                if (rating != null) addScore(rating.toString(), 10)
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
