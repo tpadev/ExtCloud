@@ -90,3 +90,7 @@ class Ghbrisk : StreamWishExtractor() {
     override val mainUrl = "https://ghbrisk.com"
 }
 
+class Dhcplay: StreamWishExtractor() {
+    override var name = "DHC Play"
+    override var mainUrl = "https://dhcplay.com"
+}
