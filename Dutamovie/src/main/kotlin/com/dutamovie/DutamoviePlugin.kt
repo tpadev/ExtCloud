@@ -14,6 +14,5 @@ class DutaMoviePlugin : Plugin() {
         registerExtractorAPI(Hglink())
         registerExtractorAPI(Ryderjet())
         registerExtractorAPI(Ghbrisk())
-        registerExtractorAPI(Embedpyrox())
     }
 }
