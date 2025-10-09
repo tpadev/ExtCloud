@@ -195,15 +195,7 @@ class Klikxxi : MainAPI() {
             loadExtractor(link, mainUrl, subtitleCallback, callback)
         }
 
-        document.select("ul.gmr-download-list li a").forEach { linkEl ->
-    val downloadUrl = linkEl.attr("href")
-    if (downloadUrl.isNotBlank()) {
-        loadExtractor(downloadUrl, data, subtitleCallback, callback)
-    }
-        
-    }
         return true
-
     }
 
     /** 🔧 Fix poster supaya gak abu-abu / buram */
