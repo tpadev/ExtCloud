@@ -11,6 +11,12 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.extractors.StreamWishExtractor
 import java.net.URI
+import org.mozilla.javascript.Context
+import org.mozilla.javascript.NativeJSON
+import org.mozilla.javascript.NativeObject
+import org.mozilla.javascript.Scriptable
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 class Mivalyo : Dingtezuni() {
     override var name = "Earnvids"
