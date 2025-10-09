@@ -17,6 +17,11 @@ class Mivalyo : Dingtezuni() {
     override var mainUrl = "https://mivalyo.com"
 }
 
+class Ryderjet : Dingtezuni() {
+    override var name = "Ryderjet"
+    override var mainUrl = "https://ryderjet.com"
+}
+
 class Bingezove : Dingtezuni() {
     override var name = "Earnvids"
     override var mainUrl = "https://bingezove.com"
