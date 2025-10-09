@@ -80,7 +80,8 @@ open class Dingtezuni : ExtractorApi() {
 
 }
 
-class Vidguardto4 : Vidguardto() {
+class Embedpyrox : Vidguardto() {
+    override val name = "EmbedPyrox"
     override val mainUrl = "https://embedpyrox.xyz"
 }
 
