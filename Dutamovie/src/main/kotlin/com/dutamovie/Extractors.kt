@@ -149,4 +149,8 @@ class Hglink : StreamWishExtractor() {
     override val mainUrl = "https://hglink.to"
 }
 
+class Ghbrisk : StreamWishExtractor() {
+    override val name = "Ghbrisk"
+    override val mainUrl = "https://ghbrisk.com"
+}
 
