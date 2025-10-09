@@ -12,6 +12,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.extractors.StreamWishExtractor
+import com.lagradost.cloudstream3.extractors.Gdriveplayer
 import java.net.URI
 
 class Movearnpre : Dingtezuni() {
@@ -91,7 +92,9 @@ class Hglink : StreamWishExtractor() {
     override val mainUrl = "https://hglink.to"
 }
 
-
+class Gdriveplayerto : Gdriveplayer() {
+    override val mainUrl: String = "https://gdriveplayer.to"
+}
 
 
 

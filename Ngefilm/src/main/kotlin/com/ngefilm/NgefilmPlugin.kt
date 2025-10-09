@@ -14,6 +14,7 @@ class NgefilmPlugin : Plugin() {
         registerExtractorAPI(Movearnpre())
         registerExtractorAPI(Dhtpre())
         registerExtractorAPI(Hglink())
+        registerExtractorAPI(Gdriveplayerto())
     }
 }
 
