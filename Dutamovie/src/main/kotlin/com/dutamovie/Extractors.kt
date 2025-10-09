@@ -13,6 +13,10 @@ import com.lagradost.cloudstream3.extractors.StreamWishExtractor
 import java.net.URI
 import com.fasterxml.jackson.annotation.JsonProperty
 
+class Movearnpre : Dingtezuni() {
+    override var name = "Movearnpre"
+    override var mainUrl = "https://movearnpre.com"
+}
 
 class Mivalyo : Dingtezuni() {
     override var name = "Earnvids"
