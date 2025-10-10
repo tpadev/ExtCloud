@@ -94,7 +94,6 @@ class Melongmovie : MainAPI() {
 
     val title = doc.selectFirst("h1.entry-title")?.text()?.trim().orEmpty()
     val poster = fixUrlNull(doc.selectFirst("div.sposter img")?.getImageAttr())
-
     val description = doc.selectFirst("div.entry-content[itemprop=description]")?.text()?.trim()
 
     val year = doc.selectFirst("ul.data li:has(b:contains(Release))")?.text()
@@ -111,7 +110,7 @@ class Melongmovie : MainAPI() {
     val recommendations = doc.select("div.latest.relat article.box")
         .mapNotNull { it.toRecommendResult() }
 
-    // Cek series atau movie
+    // Series
     return if (url.contains("/series/")) {
         val episodes = doc.select("div.bixbox div:has(iframe)")
             .mapIndexed { idx, ep ->
@@ -132,6 +131,7 @@ class Melongmovie : MainAPI() {
             this.recommendations = recommendations
         }
     } else {
+        // Movie
         val iframe = doc.selectFirst("div#embed_holder iframe")?.attr("src") ?: url
 
         newMovieLoadResponse(title, url, TvType.Movie, fixUrl(iframe)) {
@@ -162,12 +162,13 @@ override suspend fun loadLinks(
     var currentEp = 0
 
     // Series
-    document.select("div.entry-content").children().forEach { el ->
+    document.select("div.entry-content").first()?.children()?.forEach { el: Element ->
         if (el.tagName() == "b" && el.text().contains("EPISODE", true)) {
             currentEp++
         }
         if (el.tagName() == "iframe" && epTag == "ep$currentEp") {
-            loadExtractor(el.attr("src"), url, subtitleCallback, callback)
+            val iframeUrl = el.attr("src")
+            loadExtractor(fixUrl(iframeUrl), url, subtitleCallback, callback)
             found = true
         }
     }
@@ -175,16 +176,13 @@ override suspend fun loadLinks(
     // Movie
     if (epTag == null) {
         document.select("div.playerx iframe").forEach { iframe ->
-            loadExtractor(iframe.attr("src"), url, subtitleCallback, callback)
+            loadExtractor(fixUrl(iframe.attr("src")), url, subtitleCallback, callback)
             found = true
         }
     }
 
     return found
 }
-
-
-
 
     private fun Element.getImageAttr(): String {
         return when {
