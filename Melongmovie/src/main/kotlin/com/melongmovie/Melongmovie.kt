@@ -94,7 +94,7 @@ class Melongmovie : MainAPI() {
 
     val title = doc.selectFirst("h1.entry-title")?.text()?.trim().orEmpty()
     val poster = fixUrlNull(doc.selectFirst("div.sposter img")?.getImageAttr())
-    val description = doc.selectFirst("div.entry-content[itemprop=description]")?.text()?.trim()
+    val description = doc.selectFirst("div.bixbox > p")?.text()?.trim()
 
     val year = doc.selectFirst("ul.data li:has(b:contains(Release))")?.text()
         ?.filter { it.isDigit() }?.take(4)?.toIntOrNull()
