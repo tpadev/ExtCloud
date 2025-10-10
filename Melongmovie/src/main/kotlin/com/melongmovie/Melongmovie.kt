@@ -53,7 +53,15 @@ class Melongmovie : MainAPI() {
     val poster = this.selectFirst("img")?.getImageAttr()?.let { fixUrlNull(it) }
     val quality = this.selectFirst("span.quality")?.text()?.trim()
 
-    return newMovieSearchResponse(title, href, TvType.Movie) {
+    val isSeries = href.contains("/series/", true) || href.contains("season", true)
+
+    return if (isSeries) {
+        newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+            this.posterUrl = poster
+            this.quality = getQualityFromString(quality)
+        }
+    } else {
+        newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = poster
             this.quality = getQualityFromString(quality)
         }
@@ -98,7 +106,33 @@ class Melongmovie : MainAPI() {
     val recommendations = doc.select("div.latest.relat article.box")
         .mapNotNull { it.toRecommendResult() }
 
-    return newMovieLoadResponse(title, url, TvType.Movie, url) {
+    return if (doc.select("div.bixbox iframe").isNotEmpty()) {
+        // ----- SERIES -----
+        val episodes = mutableListOf<Episode>()
+        doc.select("div.bixbox").forEachIndexed { idx, box ->
+            val name = box.selectFirst("div")?.text()?.trim() ?: "Episode ${idx + 1}"
+            val epNumber = idx + 1
+            val dataUrl = "$url#ep$epNumber" // dikirim ke loadLinks
+            episodes.add(
+                newEpisode(dataUrl) {
+                    this.name = name
+                    this.episode = epNumber
+                }
+            )
+        }
+
+        newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+            this.posterUrl = poster
+            this.year = year
+            this.plot = description
+            this.tags = tags
+            addActors(actors)
+            addScore(rating)
+            this.recommendations = recommendations
+        }
+    } else {
+        // ----- MOVIE -----
+        newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl = poster
             this.year = year
             this.plot = description
@@ -109,6 +143,7 @@ class Melongmovie : MainAPI() {
         }
     }
 }
+
 
 override suspend fun loadLinks(
     data: String,
