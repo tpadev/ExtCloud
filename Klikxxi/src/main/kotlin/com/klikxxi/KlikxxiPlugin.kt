@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 class KlikxxiPlugin : Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(Klikxxi())  
+        registerMainAPI(Klikxxi())
+        registerExtractorAPI(Hglink())  
     }
 }

@@ -214,6 +214,9 @@ document.select("ul.gmr-download-list li a").forEach { linkEl ->
     }
 }
 
+    return true
+}
+
     /** 🔧 Fix poster supaya gak abu-abu / buram */
     private fun Element?.fixPoster(): String? {
     if (this == null) return null
