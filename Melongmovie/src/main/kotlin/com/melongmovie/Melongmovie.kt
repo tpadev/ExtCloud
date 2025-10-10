@@ -149,30 +149,45 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val doc = app.get(data).document
+    val parts = data.split("#")
+    val url = parts[0]
+    val epTag = parts.getOrNull(1)
     var found = false
 
-    // Cek SERIES
-    val episodes = doc.select("div.bixbox iframe")
-    if (episodes.isNotEmpty()) {
-        episodes.forEachIndexed { idx, iframe ->
-            val link = iframe.attr("src")
-            if (link.isNotBlank()) {
-                loadExtractor(link, data, subtitleCallback, callback)
-                found = true
-            }
+    val doc = app.get(url).document
+
+    if (epTag != null) {
+        // ---- SERIES ----
+        val epNum = epTag.removePrefix("ep").toIntOrNull()
+        val box = doc.select("div.bixbox").getOrNull(epNum?.minus(1) ?: 0)
+        val iframe = box?.selectFirst("iframe")?.attr("src")
+        if (iframe != null) {
+            loadExtractor(iframe, url, subtitleCallback, callback)
+            found = true
         }
     } else {
-        // Kalau bukan series = MOVIE
-        val iframe = doc.selectFirst("div#embed_holder iframe")?.attr("src")
-        if (!iframe.isNullOrBlank()) {
-            loadExtractor(iframe, data, subtitleCallback, callback)
+        // ---- MOVIE ----
+        // 1. iframe utama
+        doc.select("div#embed_holder iframe").forEach { iframe ->
+            loadExtractor(iframe.attr("src"), url, subtitleCallback, callback)
             found = true
+        }
+
+        // 2. mirror links
+        doc.select("ul.mirror li a[data-href]").forEach { a ->
+            val mirrorUrl = a.attr("data-href")
+            val mirrorDoc = app.get(mirrorUrl).document
+            val iframe = mirrorDoc.selectFirst("div#embed_holder iframe")?.attr("src")
+            if (iframe != null) {
+                loadExtractor(iframe, mirrorUrl, subtitleCallback, callback)
+                found = true
+            }
         }
     }
 
     return found
 }
+
 
 
     private fun Element.getImageAttr(): String {
