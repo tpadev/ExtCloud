@@ -23,11 +23,10 @@ class Melongmovie : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val supportedTypes =
-            setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
+            setOf(TvType.Movie)
 
     override val mainPage = mainPageOf(
     "$mainUrl/latest-movies/page/%d/" to "Movie Terbaru",
-    "$mainUrl/series/page/%d/" to "Update Series",
     "$mainUrl/country/usa/page/%d/" to "Film Barat",
     "$mainUrl/country/south-korea/page/%d/" to "Film Korea",
     "$mainUrl/country/thailand/page/%d/" to "Film Thailand",
@@ -39,6 +38,7 @@ class Melongmovie : MainAPI() {
     val document = app.get(url).document
     val items = document.select("div.los article.box")
         .mapNotNull { it.toSearchResult() }
+        .filter { !it.url.contains("/series/") }
     return newHomePageResponse(HomePageList(request.name, items), hasNext = items.isNotEmpty())
 }
 
@@ -53,15 +53,7 @@ class Melongmovie : MainAPI() {
     val poster = this.selectFirst("img")?.getImageAttr()?.let { fixUrlNull(it) }
     val quality = this.selectFirst("span.quality")?.text()?.trim()
 
-    val isSeries = href.contains("/series/", true) || href.contains("season", true)
-
-    return if (isSeries) {
-        newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-            this.posterUrl = poster
-            this.quality = getQualityFromString(quality)
-        }
-    } else {
-        newMovieSearchResponse(title, href, TvType.Movie) {
+    return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = poster
             this.quality = getQualityFromString(quality)
         }
@@ -73,6 +65,7 @@ class Melongmovie : MainAPI() {
     val document = app.get("$mainUrl/?s=$query", timeout = 50L).document
     return document.select("div.los article.box")
         .mapNotNull { it.toSearchResult() }
+        .filter { !it.url.contains("/series/") }
 }
 
 
@@ -105,33 +98,7 @@ class Melongmovie : MainAPI() {
     val recommendations = doc.select("div.latest.relat article.box")
         .mapNotNull { it.toRecommendResult() }
 
-    return if (doc.select("div.bixbox iframe").isNotEmpty()) {
-        // ----- SERIES -----
-        val episodes = mutableListOf<Episode>()
-        doc.select("div.bixbox").forEachIndexed { idx, box ->
-            val name = box.selectFirst("div")?.text()?.trim() ?: "Episode ${idx + 1}"
-            val epNumber = idx + 1
-            val dataUrl = "$url#ep$epNumber" // dikirim ke loadLinks
-            episodes.add(
-                newEpisode(dataUrl) {
-                    this.name = name
-                    this.episode = epNumber
-                }
-            )
-        }
-
-        newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-            this.posterUrl = poster
-            this.year = year
-            this.plot = description
-            this.tags = tags
-            addActors(actors)
-            addScore(rating)
-            this.recommendations = recommendations
-        }
-    } else {
-        // ----- MOVIE -----
-        newMovieLoadResponse(title, url, TvType.Movie, url) {
+    return newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl = poster
             this.year = year
             this.plot = description
