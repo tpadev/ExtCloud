@@ -153,36 +153,33 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val parts = data.split("#")
-    val url = parts[0]
-    val epTag = parts.getOrNull(1)
-
-    val document = app.get(url).document
+    val document = app.get(data).document
     var found = false
-    var currentEp = 0
 
-    // Series
-    document.select("div.entry-content").first()?.children()?.forEach { el: Element ->
-        if (el.tagName() == "b" && el.text().contains("EPISODE", true)) {
-            currentEp++
-        }
-        if (el.tagName() == "iframe" && epTag == "ep$currentEp") {
-            val iframeUrl = el.attr("src")
-            loadExtractor(fixUrl(iframeUrl), url, subtitleCallback, callback)
-            found = true
+    // Series: ambil semua iframe di dalam div.bixbox
+    val episodeIframes = document.select("div.bixbox iframe")
+    if (episodeIframes.isNotEmpty()) {
+        episodeIframes.forEach { iframe ->
+            val src = iframe.attr("src")
+            if (src.isNotBlank()) {
+                loadExtractor(src, data, subtitleCallback, callback)
+                found = true
+            }
         }
     }
 
-    // Movie
-    if (epTag == null) {
-        document.select("div.playerx iframe").forEach { iframe ->
-            loadExtractor(fixUrl(iframe.attr("src")), url, subtitleCallback, callback)
+    // Movie: ambil iframe dari embed_holder
+    if (!found) {
+        val movieIframe = document.selectFirst("div#embed_holder iframe")?.attr("src")
+        if (!movieIframe.isNullOrBlank()) {
+            loadExtractor(movieIframe, data, subtitleCallback, callback)
             found = true
         }
     }
 
     return found
 }
+
 
     private fun Element.getImageAttr(): String {
         return when {
