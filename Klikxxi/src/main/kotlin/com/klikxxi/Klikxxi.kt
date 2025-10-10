@@ -10,7 +10,6 @@ import java.net.URI
 
 class Klikxxi : MainAPI() {
     override var mainUrl = "https://klikxxi.fit"
-    private var directUrl: String? = null
     override var name = "Klikxxi"
     override val hasMainPage = true
     override var lang = "id"
