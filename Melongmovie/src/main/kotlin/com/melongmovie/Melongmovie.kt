@@ -94,32 +94,31 @@ class Melongmovie : MainAPI() {
 
     val title = doc.selectFirst("h1.entry-title")?.text()?.trim().orEmpty()
     val poster = fixUrlNull(doc.selectFirst("div.sposter img")?.getImageAttr())
-    val description = doc.selectFirst("div.bixbox > p")?.text()?.trim()
-
+    val description = doc.selectFirst("div.bixbox > p")?.text()?.trim() // sinopsis
     val year = doc.selectFirst("ul.data li:has(b:contains(Release))")?.text()
         ?.filter { it.isDigit() }?.take(4)?.toIntOrNull()
 
-    val tags = doc.select("ul.data li:has(b:contains(Genre)) a")
-        .map { it.text().trim() }
-
-    val actors = doc.select("ul.data li:has(b:contains(Stars)) a")
-        .map { it.text().trim() }
-
+    val tags = doc.select("ul.data li:has(b:contains(Genre)) a").map { it.text() }
+    val actors = doc.select("ul.data li:has(b:contains(Stars)) a").map { it.text() }
     val rating = doc.selectFirst("span[itemprop=ratingValue], span.ratingValue")?.text()
 
     val recommendations = doc.select("div.latest.relat article.box")
         .mapNotNull { it.toRecommendResult() }
 
-    // Series
-    return if (url.contains("/series/")) {
-        val episodes = doc.select("div.bixbox div:has(iframe)")
-            .mapIndexed { idx, ep ->
-                val iframe = ep.selectFirst("iframe")?.attr("src") ?: return@mapIndexed null
-                newEpisode(fixUrl(iframe)) {
-                    this.name = "Episode ${idx + 1}"
-                    this.episode = idx + 1
+    return if (doc.select("div.bixbox iframe").isNotEmpty()) {
+        // ----- SERIES -----
+        val episodes = mutableListOf<Episode>()
+        doc.select("div.bixbox").forEachIndexed { idx, box ->
+            val name = box.selectFirst("div")?.text()?.trim() ?: "Episode ${idx + 1}"
+            val epNumber = idx + 1
+            val dataUrl = "$url#ep$epNumber" // dikirim ke loadLinks
+            episodes.add(
+                newEpisode(dataUrl) {
+                    this.name = name
+                    this.episode = epNumber
                 }
-            }.filterNotNull()
+            )
+        }
 
         newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster
@@ -131,10 +130,8 @@ class Melongmovie : MainAPI() {
             this.recommendations = recommendations
         }
     } else {
-        // Movie
-        val iframe = doc.selectFirst("div#embed_holder iframe")?.attr("src") ?: url
-
-        newMovieLoadResponse(title, url, TvType.Movie, fixUrl(iframe)) {
+        // ----- MOVIE -----
+        newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl = poster
             this.year = year
             this.plot = description
@@ -146,33 +143,30 @@ class Melongmovie : MainAPI() {
     }
 }
 
-
 override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = app.get(data).document
+    val doc = app.get(data).document
     var found = false
 
-    // Series: ambil semua iframe di dalam div.bixbox
-    val episodeIframes = document.select("div.bixbox iframe")
-    if (episodeIframes.isNotEmpty()) {
-        episodeIframes.forEach { iframe ->
-            val src = iframe.attr("src")
-            if (src.isNotBlank()) {
-                loadExtractor(src, data, subtitleCallback, callback)
+    // Cek SERIES
+    val episodes = doc.select("div.bixbox iframe")
+    if (episodes.isNotEmpty()) {
+        episodes.forEachIndexed { idx, iframe ->
+            val link = iframe.attr("src")
+            if (link.isNotBlank()) {
+                loadExtractor(link, data, subtitleCallback, callback)
                 found = true
             }
         }
-    }
-
-    // Movie: ambil iframe dari embed_holder
-    if (!found) {
-        val movieIframe = document.selectFirst("div#embed_holder iframe")?.attr("src")
-        if (!movieIframe.isNullOrBlank()) {
-            loadExtractor(movieIframe, data, subtitleCallback, callback)
+    } else {
+        // Kalau bukan series = MOVIE
+        val iframe = doc.selectFirst("div#embed_holder iframe")?.attr("src")
+        if (!iframe.isNullOrBlank()) {
+            loadExtractor(iframe, data, subtitleCallback, callback)
             found = true
         }
     }
