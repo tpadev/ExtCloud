@@ -169,53 +169,35 @@ class Klikxxi : MainAPI() {
     }
 
     override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val document = app.get(data).document
-    val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val document = app.get(data).document
+        val postId = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
+        if (postId.isNullOrBlank()) return false
 
-    // 🎬 Ambil iframe player (streaming)
-    if (id.isNullOrEmpty()) {
-        document.select("ul.muvipro-player-tabs li a").amap { ele ->
-            val iframe = app.get(fixUrl(ele.attr("href")))
-                .document
-                .selectFirst("div.gmr-embed-responsive iframe")
-                ?.getIframeAttr()
-                ?.let { httpsify(it) }
-                ?: return@amap
+        document.select("div.tab-content-ajax").forEach { tab ->
+            val tabId = tab.attr("id")
+            if (tabId.isNullOrBlank()) return@forEach
 
-            loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
-        }
-    } else {
-        document.select("div.tab-content-ajax").amap { ele ->
-            val server = app.post(
-                "$directUrl/wp-admin/admin-ajax.php",
+            val response = app.post(
+                "$mainUrl/wp-admin/admin-ajax.php",
                 data = mapOf(
                     "action" to "muvipro_player_content",
-                    "tab" to ele.attr("id"),
-                    "post_id" to "$id"
+                    "tab" to tabId,
+                    "post_id" to postId
                 )
             ).document
-                .select("iframe")
-                .attr("src")
-                .let { httpsify(it) }
 
-            loadExtractor(server, "$directUrl/", subtitleCallback, callback)
+            val iframe = response.selectFirst("iframe")?.attr("src") ?: return@forEach
+            val link = httpsify(iframe)
+            loadExtractor(link, mainUrl, subtitleCallback, callback)
         }
-    }
 
-document.select("ul.gmr-download-list li a").forEach { linkEl ->
-    val downloadUrl = linkEl.attr("href")
-    if (downloadUrl.isNotBlank()) {
-        loadExtractor(downloadUrl, data, subtitleCallback, callback)
+        return true
     }
-}
-
-    return true
-}
 
     /** 🔧 Fix poster supaya gak abu-abu / buram */
     private fun Element?.fixPoster(): String? {
