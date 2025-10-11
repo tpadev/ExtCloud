@@ -96,7 +96,7 @@ override suspend fun load(url: String): LoadResponse {
             .orEmpty()
 
         val poster =
-                fixUrlNull(document.selectFirst("figure.pull-left img, div.gmr-movieposter img, .poster img")?.getImageAttr())
+                fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
                         ?.fixImageQuality()
 
         val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")
@@ -115,7 +115,7 @@ override suspend fun load(url: String): LoadResponse {
         val actors = document.select("div.gmr-moviedata span[itemprop=actors] a")
             .map { it.text() }
             .takeIf { it.isNotEmpty() }
-        val recommendations = document.select("div.gmr-related-post article, div.related-post article")
+        val recommendations = document.select("div.idmuvi-rp ul li")
             .mapNotNull { it.toSearchResult() }
 
         // === Ambil Episodes ===
