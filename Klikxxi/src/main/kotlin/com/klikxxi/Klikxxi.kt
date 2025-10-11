@@ -2,82 +2,85 @@ package com.klikxxi
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
-import com.lagradost.cloudstream3.utils.*
-import org.jsoup.nodes.Element
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.MainAPI
+import com.lagradost.cloudstream3.SearchResponse
+import com.lagradost.cloudstream3.TvType
+import com.lagradost.cloudstream3.mainPageOf
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.httpsify
+import com.lagradost.cloudstream3.utils.loadExtractor
 import java.net.URI
+import org.jsoup.nodes.Element
 
 class Klikxxi : MainAPI() {
-    override var mainUrl = "https://klikxxi.fit"
+
+    override var mainUrl = "https://klikxxi.me"
+    private var directUrl: String? = null
     override var name = "Klikxxi"
     override val hasMainPage = true
     override var lang = "id"
-    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
+    override val supportedTypes =
+            setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
 
-    override val mainPage = mainPageOf(
-        "$mainUrl/?s=&search=advanced&post_type=movie&page=%d" to "Update Terbaru",
-        "$mainUrl/tv/page/%d/" to "TV Series"
-    )
+    override val mainPage =
+            mainPageOf(
+                   "?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=&paged=%d" to "Film Terbaru",
+                    "tv/page/%d/" to "Series Terbaru",
+            )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val url = request.data.format(page)
-    val document = app.get(url).document
+    val data = if (page == 1) {
+        // hapus &paged=%d supaya tidak error di page 1
+        request.data.replace("&paged=%d", "")
+    } else {
+        request.data.format(page)
+    }
 
-    // ✅ Ambil hanya article biar tidak dobel
-    val items = document.select("main#main article")
-        .mapNotNull { it.toSearchResult() }
+    val document = app.get("$mainUrl/$data").document
+    val home = document.select("article.item").mapNotNull { it.toSearchResult() }
+    return newHomePageResponse(request.name, home)
+}
 
-    // ✅ Cari halaman sekarang
-    val currentPage = document.selectFirst("ul.page-numbers li .current")
-        ?.text()?.toIntOrNull() ?: page
+    private fun Element.toSearchResult(): SearchResponse? {
+    val title = this.selectFirst("h2.entry-title a")?.text()?.trim() ?: return null
+    val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
+    val posterUrl = fixUrlNull(this.selectFirst("img")?.getImageAttr()).fixImageQuality()
+    val quality = this.select("div.gmr-quality-item").text().trim().replace("-", "")
+    val type = this.selectFirst("div.gmr-posttype-item")?.text()?.trim()
 
-    // ✅ Cari halaman terakhir dari angka terbesar
-    val lastPage = document.select("ul.page-numbers li a.page-numbers")
-        .mapNotNull { it.text().toIntOrNull() }
-        .maxOrNull() ?: currentPage
+    return if (type.equals("TV Show", ignoreCase = true)) {
+        // Kalau ada label "TV Show" → TvSeries
+        val episode = this.select("div.gmr-numbeps > span").text().toIntOrNull()
 
-    // ✅ Ada halaman berikut jika current < last
-    val hasNext = currentPage < lastPage
-
-    return newHomePageResponse(HomePageList(request.name, items), hasNext)
+        newAnimeSearchResponse(title, href, TvType.TvSeries) {
+            this.posterUrl = posterUrl
+            if (episode != null) addSub(episode)
+        }
+    } else {
+        // Default → Movie
+        newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = posterUrl
+            if (quality.isNotEmpty()) addQuality(quality)
+        }
+    }
 }
 
 
-    private fun Element.toSearchResult(): SearchResponse? {
-    val linkElement = this.selectFirst("a[href][title]") ?: return null
-    val href = fixUrl(linkElement.attr("href"))
-    val title = linkElement.attr("title")
-        .removePrefix("Permalink to: ")
-        .ifBlank { linkElement.text() }
-        .trim()
-    if (title.isBlank()) return null
-
-    // ambil poster dengan fixPoster helper
-    val poster = this.selectFirst("img")?.fixPoster()
-
-    val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
-    val typeText = this.selectFirst(".gmr-posttype-item")?.text()?.trim()
-    val isSeries = typeText.equals("TV Show", true)
-        return if (isSeries) {
-            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                this.posterUrl = poster
-                addQuality(quality ?: "")
-            }
-        } else {
-            newMovieSearchResponse(title, href, TvType.Movie) {
-                this.posterUrl = poster
-                addQuality(quality ?: "")
-            }
-        }
-    }
-
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$mainUrl/?s=$query").document
-        return document.select("article.item-infinite").mapNotNull { it.toSearchResult() }
+    val document = app.get("$mainUrl/?s=$query", timeout = 50L).document
+    return document.select("article.item").mapNotNull { it.toSearchResult() }
+}
+
+    private fun Element.toRecommendResult(): SearchResponse? {
+        val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
+        val href = this.selectFirst("a")!!.attr("href")
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
+        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
 
-    override suspend fun load(url: String): LoadResponse {
+override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
 
         val title = document.selectFirst("h1.entry-title, div.mvic-desc h3")
@@ -168,64 +171,75 @@ class Klikxxi : MainAPI() {
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val document = app.get(data).document
-        val postId = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
-        if (postId.isNullOrBlank()) return false
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val document = app.get(data).document
+    val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
 
-        document.select("div.tab-content-ajax").forEach { tab ->
-            val tabId = tab.attr("id")
-            if (tabId.isNullOrBlank()) return@forEach
+    // 🎬 Ambil iframe player (streaming)
+    if (id.isNullOrEmpty()) {
+        document.select("ul.muvipro-player-tabs li a").amap { ele ->
+            val iframe = app.get(fixUrl(ele.attr("href")))
+                .document
+                .selectFirst("div.gmr-embed-responsive iframe")
+                ?.getIframeAttr()
+                ?.let { httpsify(it) }
+                ?: return@amap
 
-            val response = app.post(
-                "$mainUrl/wp-admin/admin-ajax.php",
+            loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
+        }
+    } else {
+        document.select("div.tab-content-ajax").amap { ele ->
+            val server = app.post(
+                "$directUrl/wp-admin/admin-ajax.php",
                 data = mapOf(
                     "action" to "muvipro_player_content",
-                    "tab" to tabId,
-                    "post_id" to postId
+                    "tab" to ele.attr("id"),
+                    "post_id" to "$id"
                 )
             ).document
+                .select("iframe")
+                .attr("src")
+                .let { httpsify(it) }
 
-            val iframe = response.selectFirst("iframe")?.attr("src") ?: return@forEach
-            val link = httpsify(iframe)
-            loadExtractor(link, mainUrl, subtitleCallback, callback)
+            loadExtractor(server, "$directUrl/", subtitleCallback, callback)
         }
-
-        return true
     }
 
-    /** 🔧 Fix poster supaya gak abu-abu / buram */
-    private fun Element?.fixPoster(): String? {
-    if (this == null) return null
-    var link = when {
-        this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
-        this.hasAttr("data-lazy-srcset") -> this.attr("abs:data-lazy-srcset")
-            .split(",")
-            .map { it.trim().split(" ")[0] }
-            .lastOrNull() // ambil gambar resolusi paling besar
-        this.hasAttr("srcset") -> this.attr("abs:srcset")
-            .split(",")
-            .map { it.trim().split(" ")[0] }
-            .lastOrNull()
-        else -> this.attr("abs:src")
+document.select("ul.gmr-download-list li a").forEach { linkEl ->
+    val downloadUrl = linkEl.attr("href")
+    if (downloadUrl.isNotBlank()) {
+        loadExtractor(downloadUrl, data, subtitleCallback, callback)
     }
-    if (!link.isNullOrBlank()) {
-        // hapus ukuran kecil (-170x255 dll)
-        link = link.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
-        // tambahkan https kalau diawali //
-        if (link.startsWith("//")) link = "https:$link"
-    }
-    return link
 }
+
+    return true
+}
+
+
+
+    private fun Element.getImageAttr(): String {
+        return when {
+            this.hasAttr("data-src") -> this.attr("abs:data-src")
+            this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
+            this.hasAttr("srcset") -> this.attr("abs:srcset").substringBefore(" ")
+            else -> this.attr("abs:src")
+        }
+    }
 
     private fun Element?.getIframeAttr(): String? {
-    return this?.attr("data-litespeed-src").takeIf { it?.isNotEmpty() == true }
-        ?: this?.attr("src")
-}
+        return this?.attr("data-litespeed-src").takeIf { it?.isNotEmpty() == true }
+                ?: this?.attr("src")
+    }
+
+    private fun String?.fixImageQuality(): String? {
+        if (this == null) return null
+        val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues?.get(0) ?: return this
+        return this.replace(regex, "")
+    }
 
     private fun getBaseUrl(url: String): String {
         return URI(url).let { "${it.scheme}://${it.host}" }
