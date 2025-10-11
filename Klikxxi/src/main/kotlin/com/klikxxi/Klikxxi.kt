@@ -15,7 +15,8 @@ import java.net.URI
 import org.jsoup.nodes.Element
 
 class Klikxxi : MainAPI() {
-    override var mainUrl = "https://klikxxi.fit"
+    override var mainUrl = "https://klikxxi.me"
+    private var directUrl: String? = null
     override var name = "Klikxxi"
     override val hasMainPage = true
     override var lang = "id"
@@ -217,7 +218,29 @@ document.select("ul.gmr-download-list li a").forEach { linkEl ->
     return true
 }
 
-
+    /** 🔧 Fix poster supaya gak abu-abu / buram */
+    private fun Element?.fixPoster(): String? {
+    if (this == null) return null
+    var link = when {
+        this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
+        this.hasAttr("data-lazy-srcset") -> this.attr("abs:data-lazy-srcset")
+            .split(",")
+            .map { it.trim().split(" ")[0] }
+            .lastOrNull() // ambil gambar resolusi paling besar
+        this.hasAttr("srcset") -> this.attr("abs:srcset")
+            .split(",")
+            .map { it.trim().split(" ")[0] }
+            .lastOrNull()
+        else -> this.attr("abs:src")
+    }
+    if (!link.isNullOrBlank()) {
+        // hapus ukuran kecil (-170x255 dll)
+        link = link.replace(Regex("-\\d+x\\d+(?=\\.(webp|jpg|jpeg|png))"), "")
+        // tambahkan https kalau diawali //
+        if (link.startsWith("//")) link = "https:$link"
+    }
+    return link
+}
 
     private fun Element.getImageAttr(): String {
         return when {
