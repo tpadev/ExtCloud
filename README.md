@@ -15,6 +15,7 @@ Berikut adalah daftar ekstensi yang tersedia di repositori ExtCloud:
 | Idlix         | OK                                |
 | KLIKXXI       | OK, Sebagian Poster Tidak Tampil  |
 | LayarKaca     | OK                                |
+| Melongmovie   | OK, Sebagian Link Error           |
 | MovieBox      | OK                                |
 | NOXX          | OK                                |
 | NetflixMirror | OK                                |
@@ -36,7 +37,7 @@ Berikut adalah daftar ekstensi yang tersedia di repositori ExtCloud:
 6.  Ekstensi yang tersedia akan muncul di daftar.
 7.  Pilih ekstensi yang ingin Anda instal dan klik "Instal".
 
-## Thaks To :
+## Thanks To :
 
 1.  Tekuma25 : https://github.com/TeKuma25/IndoStream
 2.  Hexated
@@ -44,5 +45,6 @@ Berikut adalah daftar ekstensi yang tersedia di repositori ExtCloud:
 4.  Phisher98 : https://github.com/phisher98/cloudstream-extensions-phisher
 5.  Zeeorepo : https://github.com/funeelo/zeeorepo
 6.  Sofie99 : https://github.com/Sofie99/cloudstream-extensions-sofie
+
 
 

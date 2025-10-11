@@ -15,9 +15,7 @@ import java.net.URI
 import org.jsoup.nodes.Element
 
 class Klikxxi : MainAPI() {
-
-    override var mainUrl = "https://klikxxi.me"
-    private var directUrl: String? = null
+    override var mainUrl = "https://klikxxi.fit"
     override var name = "Klikxxi"
     override val hasMainPage = true
     override var lang = "id"
