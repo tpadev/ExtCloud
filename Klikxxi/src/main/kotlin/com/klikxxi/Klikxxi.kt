@@ -80,7 +80,7 @@ class Klikxxi : MainAPI() {
     private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.getImageAttr().fixImageQuality())
         return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
 
@@ -96,7 +96,7 @@ override suspend fun load(url: String): LoadResponse {
             .orEmpty()
 
         val poster =
-                fixUrlNull(document.selectFirst("img")?.getImageAttr())
+                fixUrlNull(document.selectFirst("figure.pull-left img, div.gmr-movieposter img, .poster img")?.getImageAttr())
                         ?.fixImageQuality()
 
         val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")
