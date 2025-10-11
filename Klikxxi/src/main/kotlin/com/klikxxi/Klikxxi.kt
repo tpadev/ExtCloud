@@ -31,16 +31,17 @@ class Klikxxi : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val data = if (page == 1) {
-        // hapus &paged=%d supaya tidak error di page 1
-        request.data.replace("&paged=%d", "")
+        request.data.replace("/page/%d/", "") // hilangkan format /page/%d/ untuk halaman 1
     } else {
         request.data.format(page)
     }
 
-    val document = app.get("$mainUrl/$data").document
+    val url = "$mainUrl/$data"
+    val document = app.get(url).document
     val home = document.select("article.item").mapNotNull { it.toSearchResult() }
     return newHomePageResponse(request.name, home)
 }
+
 
     private fun Element.toSearchResult(): SearchResponse? {
     val linkElement = this.selectFirst("a[href][title]") ?: return null
