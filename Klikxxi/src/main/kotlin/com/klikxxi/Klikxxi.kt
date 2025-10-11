@@ -43,28 +43,32 @@ class Klikxxi : MainAPI() {
 }
 
     private fun Element.toSearchResult(): SearchResponse? {
-    val title = this.selectFirst("h2.entry-title a")?.text()?.trim() ?: return null
-    val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
-    val posterUrl = fixUrlNull(this.selectFirst("img")?.getImageAttr()).fixImageQuality()
-    val quality = this.select("div.gmr-quality-item").text().trim().replace("-", "")
-    val type = this.selectFirst("div.gmr-posttype-item")?.text()?.trim()
+    val linkElement = this.selectFirst("a[href][title]") ?: return null
+    val href = fixUrl(linkElement.attr("href"))
+    val title = linkElement.attr("title")
+        .removePrefix("Permalink to: ")
+        .ifBlank { linkElement.text() }
+        .trim()
+    if (title.isBlank()) return null
 
-    return if (type.equals("TV Show", ignoreCase = true)) {
-        // Kalau ada label "TV Show" → TvSeries
-        val episode = this.select("div.gmr-numbeps > span").text().toIntOrNull()
+    // ambil poster dengan fixPoster helper
+    val poster = this.selectFirst("img")?.fixPoster()
 
-        newAnimeSearchResponse(title, href, TvType.TvSeries) {
-            this.posterUrl = posterUrl
-            if (episode != null) addSub(episode)
-        }
-    } else {
-        // Default → Movie
-        newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = posterUrl
-            if (quality.isNotEmpty()) addQuality(quality)
+    val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
+    val typeText = this.selectFirst(".gmr-posttype-item")?.text()?.trim()
+    val isSeries = typeText.equals("TV Show", true)
+        return if (isSeries) {
+            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+                this.posterUrl = poster
+                addQuality(quality ?: "")
+            }
+        } else {
+            newMovieSearchResponse(title, href, TvType.Movie) {
+                this.posterUrl = poster
+                addQuality(quality ?: "")
+            }
         }
     }
-}
 
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -90,7 +94,7 @@ override suspend fun load(url: String): LoadResponse {
             ?.trim()
             .orEmpty()
 
-        val poster = document.selectFirst("figure.pull-left img, div.gmr-movieposter img, .poster img")
+        val poster = document.selectFirst("img")
             ?.fixPoster()
 
         val description = document.selectFirst("div[itemprop=description] > p, div.desc p.f-desc, div.entry-content > p")
