@@ -45,7 +45,7 @@ class Klikxxi : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
     val linkElement = this.selectFirst("a[href][title]") ?: return null
-    val href = fixUrl(linkElement.attr("href"))
+    val href = fixUrl(this.selectFirst("a")!!.attr("href"))
     val title = linkElement.attr("title")
         .removePrefix("Permalink to: ")
         .ifBlank { linkElement.text() }
@@ -85,7 +85,9 @@ class Klikxxi : MainAPI() {
     }
 
 override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+        val fetch = app.get(url)
+        directUrl = getBaseUrl(fetch.url)
+        val document = fetch.document
 
         val title = document.selectFirst("h1.entry-title, div.mvic-desc h3")
             ?.text()
