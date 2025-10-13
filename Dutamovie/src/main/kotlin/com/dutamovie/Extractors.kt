@@ -10,6 +10,7 @@ import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.extractors.StreamWishExtractor
+import com.lagradost.cloudstream3.extractors.VidStack
 import java.net.URI
 import com.fasterxml.jackson.annotation.JsonProperty
 
@@ -152,4 +153,16 @@ class Ghbrisk : StreamWishExtractor() {
 class Dhcplay: StreamWishExtractor() {
     override var name = "DHC Play"
     override var mainUrl = "https://dhcplay.com"
+}
+
+class Streamcasthub : VidStack() {
+    override var name = "Streamcasthub"
+    override var mainUrl = "https://live.streamcasthub.store"
+    override var requiresReferer = true
+}
+
+class Dm21upns : VidStack() {
+    override var name = "Dm21upns"
+    override var mainUrl = "https://dm21.upns.live"
+    override var requiresReferer = true
 }
