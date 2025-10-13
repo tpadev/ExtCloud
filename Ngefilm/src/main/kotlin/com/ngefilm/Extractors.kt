@@ -14,7 +14,7 @@ import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.extractors.StreamWishExtractor
 import com.lagradost.cloudstream3.extractors.Gdriveplayer
 import com.lagradost.cloudstream3.extractors.VidStack
-import com.lagradost.cloudstream3.extractors.XStreamCdn
+import com.lagradost.cloudstream3.extractors.ContentXExtractor
 import java.net.URI
 
 class Movearnpre : Dingtezuni() {
@@ -110,7 +110,7 @@ class P2pplay : VidStack() {
     override var requiresReferer = true
 }
 
-class Shorticu : XStreamCdn() {
+class Shorticu : ContentXExtractor() {
     override val name: String = "Shorticu"
     override val mainUrl: String = "https://short.icu"
 }
