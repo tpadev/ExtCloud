@@ -13,6 +13,8 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.extractors.StreamWishExtractor
 import com.lagradost.cloudstream3.extractors.Gdriveplayer
+import com.lagradost.cloudstream3.extractors.VidStack
+import com.lagradost.cloudstream3.extractors.XStreamCdn
 import java.net.URI
 
 class Movearnpre : Dingtezuni() {
@@ -96,5 +98,19 @@ class Gdriveplayerto : Gdriveplayer() {
     override val mainUrl: String = "https://gdriveplayer.to"
 }
 
+class Playerngefilm21 : VidStack() {
+    override var name = "Playerngefilm21"
+    override var mainUrl = "https://playerngefilm21.rpmlive.online"
+    override var requiresReferer = true
+}
 
+class P2pplay : VidStack() {
+    override var name = "P2pplay"
+    override var mainUrl = "https://nf21.p2pplay.pro"
+    override var requiresReferer = true
+}
 
+class Shorticu : XStreamCdn() {
+    override val name: String = "Shorticu"
+    override val mainUrl: String = "https://short.icu"
+}
