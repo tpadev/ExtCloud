@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 class KawanfilmPlugin : Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(DutaMovie())
+        registerMainAPI(Kawanfilm())
         registerExtractorAPI(Dingtezuni())
         registerExtractorAPI(Bingezove())
         registerExtractorAPI(Mivalyo())
