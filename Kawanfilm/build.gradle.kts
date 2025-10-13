@@ -1,9 +1,9 @@
-version = 3
+version = 1
 
 cloudstream {
-    description = "DutaMovie"
+    description = "Kawanfilm"
     language = "id"
-    authors = listOf("Hexated", "TeKuma25")
+    authors = listOf("Duro92")
 
     /**
      * Status int as the following:
@@ -19,5 +19,5 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://justilien.com&size=%size%"
+    iconUrl = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://tv2.kawanfilm21.co&size=%size%"
 }
