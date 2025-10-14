@@ -9,9 +9,5 @@ class MelongmoviePlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Melongmovie())
         registerExtractorAPI(Dingtezuni())
-        registerExtractorAPI(Veev())
-        registerExtractorAPI(Veev2())
-        registerExtractorAPI(Veev3())
-        registerExtractorAPI(Veev4())
     }
 }

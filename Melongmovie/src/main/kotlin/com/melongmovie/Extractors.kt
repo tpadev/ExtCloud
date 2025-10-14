@@ -9,10 +9,6 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.extractors.StreamWishExtractor
-import com.lagradost.cloudstream3.extractors.Filesim
-import com.lagradost.cloudstream3.extractors.Evoload
-import com.lagradost.cloudstream3.extractors.StreamSB
 import java.net.URI
 
 
@@ -67,25 +63,4 @@ open class Dingtezuni : ExtractorApi() {
 		}
 	}
 
-}
-
-
-class Veev : Filesim() {
-    override val name = "Veev"
-    override val mainUrl = "https://veev.to"
-}
-
-class Veev2 : StreamWishExtractor() {
-    override val name = "Veev2"
-    override val mainUrl = "https://veev.to"
-}
-
-class Veev3 : Evoload() {
-    override val name = "Veev3"
-    override val mainUrl = "https://veev.to"
-}
-
-class Veev4 : StreamSB() {
-    override val name = "Veev4"
-    override val mainUrl = "https://veev.to"
 }
