@@ -12,6 +12,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.extractors.StreamWishExtractor
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.extractors.Evoload
+import com.lagradost.cloudstream3.extractors.Streamlare
 import java.net.URI
 
 
@@ -81,5 +82,10 @@ class Veev2 : StreamWishExtractor() {
 
 class Veev3 : Evoload() {
     override val name = "Veev3"
+    override val mainUrl = "https://veev.to"
+}
+
+class Veev4 : Streamlare() {
+    override val name = "Veev4"
     override val mainUrl = "https://veev.to"
 }

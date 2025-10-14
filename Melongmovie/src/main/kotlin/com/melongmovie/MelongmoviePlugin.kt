@@ -12,5 +12,6 @@ class MelongmoviePlugin : Plugin() {
         registerExtractorAPI(Veev())
         registerExtractorAPI(Veev2())
         registerExtractorAPI(Veev3())
+        registerExtractorAPI(Veev4())
     }
 }
