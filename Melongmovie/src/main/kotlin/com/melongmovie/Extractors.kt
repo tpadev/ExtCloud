@@ -73,3 +73,8 @@ class Veev : Filesim() {
     override val mainUrl = "https://veev.to"
 }
 
+class Veev2 : StreamWishExtractor() {
+    override val name = "Veev2"
+    override val mainUrl = "https://veev.to"
+}
+
