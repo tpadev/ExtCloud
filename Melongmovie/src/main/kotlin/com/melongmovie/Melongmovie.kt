@@ -102,7 +102,7 @@ class Melongmovie : MainAPI() {
     val tags = doc.select("ul.data li:has(b:contains(Genre)) a").map { it.text() }
     val actors = doc.select("ul.data li:has(b:contains(Stars)) a").map { it.text() }
     val rating = doc.selectFirst("span[itemprop=ratingValue], span.ratingValue")?.text()
-    val duration = document.selectFirst("span[property=duration]")
+    val duration = doc.selectFirst("span[property=duration]")
     ?.text()
     ?.replace(Regex("\\D"), "")
     ?.toIntOrNull()
