@@ -73,6 +73,10 @@ class Pencurimovie : MainAPI() {
         val rating = document.selectFirst("span.imdb-r[itemprop=ratingValue]")
             ?.text()
             ?.toDoubleOrNull()
+        val duration = document.selectFirst("span[itemprop=duration]")
+            ?.text()
+            ?.replace(Regex("\\D"), "")
+            ?.toIntOrNull()
 
         val actors =
             document.select("div.mvic-info p:contains(Actors)").select("a").map { it.text() }
@@ -111,6 +115,7 @@ class Pencurimovie : MainAPI() {
                 addTrailer(trailer)
                 addActors(actors)
                 this.recommendations=recommendation
+                this.duration = duration ?: 0
                 if (rating != null) addScore(rating.toString(), 10)
             }
         } else {
@@ -122,6 +127,7 @@ class Pencurimovie : MainAPI() {
                 addTrailer(trailer)
                 addActors(actors)
                 this.recommendations=recommendation
+                this.duration = duration ?: 0
                 if (rating != null) addScore(rating.toString(), 10)
             }
         }
