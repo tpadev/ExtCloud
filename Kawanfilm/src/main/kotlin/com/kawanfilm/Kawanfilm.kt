@@ -26,6 +26,7 @@ class Kawanfilm : MainAPI() {
 
     override val mainPage =
             mainPageOf(
+                    "/page/%d/?s&search=advanced&post_type=movie&index&orderby&genre&movieyear&country&quality=" to "Update Terbaru",
                     "category/box-office/page/%d/" to "Box Office",
                     "tv/page/%d/" to "Serial TV",
                     "/page/%d/?s=&search=advanced&post_type=&index=&orderby=&genre=drama&movieyear=&country=korea&quality=" to "Drama Korea",

@@ -117,7 +117,10 @@ class Ngefilm : MainAPI() {
                 document.select("div.gmr-moviedata").last()?.select("span[itemprop=actors]")?.map {
                     it.select("a").text()
                 }
-
+        val duration = document.selectFirst("div.gmr-moviedata span[property=duration]")
+                    ?.text()
+                    ?.replace(Regex("\\D"), "")
+                    ?.toIntOrNull()
         val recommendations =
                 document.select("div.idmuvi-rp ul li").mapNotNull { it.toRecommendResult() }
 
@@ -152,6 +155,7 @@ class Ngefilm : MainAPI() {
                 addScore(rating)
                 addActors(actors)
                 this.recommendations = recommendations
+                this.duration = duration ?: 0
                 addTrailer(trailer)
             }
         } else {
@@ -163,6 +167,7 @@ class Ngefilm : MainAPI() {
                 addScore(rating)
                 addActors(actors)
                 this.recommendations = recommendations
+                this.duration = duration ?: 0
                 addTrailer(trailer)
             }
         }
