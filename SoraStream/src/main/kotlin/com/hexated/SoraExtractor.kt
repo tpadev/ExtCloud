@@ -4,7 +4,9 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.capitalize
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
 import com.lagradost.cloudstream3.extractors.helper.AesHelper
+import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.RequestBodyTypes
 import com.lagradost.nicehttp.Requests
@@ -13,8 +15,6 @@ import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.Jsoup
-
-val session = Session(Requests().baseClient)
 
 object SoraExtractor : SoraStream() {
 
@@ -65,7 +65,8 @@ object SoraExtractor : SoraStream() {
         )
 
         var res = app.get("$api/search/$query", cookies = cookies)
-        cookies = gomoviesCookies ?: res.cookies.filter { it.key == "advanced-frontendgomovies7" }.also { gomoviesCookies = it }
+        cookies = gomoviesCookies ?: res.cookies.filter { it.key == "advanced-frontendgomovies7" }
+            .also { gomoviesCookies = it }
         val doc = res.document
         val media = doc.select("div.$mediaSelector").map {
             Triple(it.attr("data-filmName"), it.attr("data-year"), it.select("a").attr("href"))
@@ -208,10 +209,18 @@ object SoraExtractor : SoraStream() {
                     else -> it.embed_url
                 }
             } ?: return@amap
-            if(source.startsWith("https://jeniusplay.com")) {
-                Jeniusplay2().getUrl(source, "$referer/", subtitleCallback, callback)
-            } else {
-                loadExtractor(source, "$referer/", subtitleCallback, callback)
+            when {
+                source.startsWith("https://jeniusplay.com") -> {
+                    Jeniusplay2().getUrl(source, "$referer/", subtitleCallback, callback)
+                }
+
+                !source.contains("youtube") -> {
+                    loadExtractor(source, "$referer/", subtitleCallback, callback)
+                }
+
+                else -> {
+                    return@amap
+                }
             }
 
         }
@@ -238,7 +247,7 @@ object SoraExtractor : SoraStream() {
         val userId = script.substringAfter("userId = \"").substringBefore("\";")
         val v = script.substringAfter("v = \"").substringBefore("\";")
 
-        val vrf = generateVrf("$tmdbId", userId)
+        val vrf = VidsrcHelper.encryptAesCbc("$tmdbId", "secret_$userId")
 
         val serverUrl = if (season == null) {
             "$vidsrcccAPI/api/$tmdbId/servers?id=$tmdbId&type=movie&v=$v&vrf=$vrf&imdbId=$imdbId"
@@ -402,39 +411,39 @@ object SoraExtractor : SoraStream() {
                     }
                 )
             },
-//            {
-//                val url = if (season == null) {
-//                    "$xprimeAPI/${servers.last()}?name=$title&fallback_year=$year"
-//                } else {
-//                    "$xprimeAPI/${servers.last()}?name=$title&fallback_year=$year&season=$season&episode=$episode"
-//                }
-//
-//                val sources = app.get(url).parsedSafe<PrimeboxSources>()
-//
-//                sources?.streams?.map { source ->
-//                    callback.invoke(
-//                        newExtractorLink(
-//                            serverName.last(),
-//                            serverName.last(),
-//                            source.value,
-//                            ExtractorLinkType.M3U8
-//                        ) {
-//                            this.referer = referer
-//                            this.quality = getQualityFromName(source.key)
-//                        }
-//                    )
-//                }
-//
-//                sources?.subtitles?.map { subtitle ->
-//                    subtitleCallback.invoke(
-//                        SubtitleFile(
-//                            subtitle.label ?: "",
-//                            subtitle.file ?: return@map
-//                        )
-//                    )
-//                }
-//
-//            }
+            {
+                val url = if (season == null) {
+                    "$xprimeAPI/${servers.last()}?name=$title&fallback_year=$year"
+                } else {
+                    "$xprimeAPI/${servers.last()}?name=$title&fallback_year=$year&season=$season&episode=$episode"
+                }
+
+                val sources = app.get(url).parsedSafe<PrimeboxSources>()
+
+                sources?.streams?.map { source ->
+                    callback.invoke(
+                        newExtractorLink(
+                            serverName.last(),
+                            serverName.last(),
+                            source.value,
+                            ExtractorLinkType.M3U8
+                        ) {
+                            this.referer = referer
+                            this.quality = getQualityFromName(source.key)
+                        }
+                    )
+                }
+
+                sources?.subtitles?.map { subtitle ->
+                    subtitleCallback.invoke(
+                        SubtitleFile(
+                            subtitle.label ?: "",
+                            subtitle.file ?: return@map
+                        )
+                    )
+                }
+
+            }
         )
     }
 
@@ -472,7 +481,8 @@ object SoraExtractor : SoraStream() {
         app.get(subUrl).parsedSafe<WatchsomuchSubResponses>()?.subtitles?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
-                    sub.label?.substringBefore("&nbsp")?.trim() ?: "", fixUrl(sub.url ?: return@map null, watchSomuchAPI)
+                    sub.label?.substringBefore("&nbsp")?.trim() ?: "",
+                    fixUrl(sub.url ?: return@map null, watchSomuchAPI)
                 )
             )
         }
@@ -495,13 +505,13 @@ object SoraExtractor : SoraStream() {
         }
 
         val data = if (season == null) {
-            """[{"mediaId":$tmdbId,"mediaType":"$mediaType","tv_slug":"","source":"mapple"}]"""
+            """[{"mediaId":$tmdbId,"mediaType":"$mediaType","tv_slug":"","source":"mapple","sessionId":"session_1760391974726_qym92bfxu"}]"""
         } else {
-            """[{"mediaId":$tmdbId,"mediaType":"$mediaType","tv_slug":"$season-$episode","source":"mapple"}]"""
+            """[{"mediaId":$tmdbId,"mediaType":"$mediaType","tv_slug":"$season-$episode","source":"mapple","sessionId":"session_1760391974726_qym92bfxu"}]"""
         }
 
         val headers = mapOf(
-            "Next-Action" to "40b6aee60efbf1ae586fc60e3bf69babebf2ceae2c",
+            "Next-Action" to "403f7ef15810cd565978d2ac5b7815bb0ff20258a5",
         )
 
         val res = app.post(
@@ -541,5 +551,315 @@ object SoraExtractor : SoraStream() {
 
     }
 
-}
+    suspend fun invokeVidlink(
+        tmdbId: Int?,
+        season: Int?,
+        episode: Int?,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val type = if (season == null) "movie" else "tv"
+        val url = if (season == null) {
+            "$vidlinkAPI/$type/$tmdbId"
+        } else {
+            "$vidlinkAPI/$type/$tmdbId/$season/$episode"
+        }
 
+        val videoLink = app.get(
+            url, interceptor = WebViewResolver(
+                Regex("""$vidlinkAPI/api/b/$type/A{32}"""), timeout = 15_000L
+            )
+        ).parsedSafe<VidlinkSources>()?.stream?.playlist
+
+        callback.invoke(
+            newExtractorLink(
+                "Vidlink",
+                "Vidlink",
+                videoLink ?: return,
+                ExtractorLinkType.M3U8
+            ) {
+                this.referer = "$vidlinkAPI/"
+            }
+        )
+
+    }
+
+    suspend fun invokeVidfast(
+        tmdbId: Int?,
+        season: Int?,
+        episode: Int?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val module =
+            "hezushon/2c964f21932564b02aaf366bc1a844dc73e814348d8f6f05cc216b37652fc5d3/7bcfcea8caa45461ee91892a0aed6a96bc2101dc/APA91HuGAcQlY-iohZ0rAUokwzf42gbtRpoIS5Ji__h71jJQIlwvP6BlFOz3SmJ0T611CKuPvwwJ_B54hu1XWaVAw7ONAsELuN3DosskJnVbQ_eHmzSz4VN78GSTxrg6Er3sMUJ4AFhbJ-AM0XMCDXuWtthY1fck_e74tEC9L4bB3keeCM5YfI4/d5dff39f/05734c48-c213-55a4-9d8b-e846e35a5ac3/p"
+        val type = if (season == null) "movie" else "tv"
+        val url = if (season == null) {
+            "$vidfastAPI/$type/$tmdbId"
+        } else {
+            "$vidfastAPI/$type/$tmdbId/$season/$episode"
+        }
+
+        val res = app.get(
+            url, interceptor = WebViewResolver(
+                Regex("""$vidfastAPI/$module/Vsx1eT_KgZ-C"""),
+                timeout = 15_000L
+            )
+        ).text
+
+        tryParseJson<ArrayList<VidFastServers>>(res)?.filter { it.description?.contains("Original audio") == true }
+            ?.amapIndexed { index, server ->
+                val source =
+                    app.get("$vidfastAPI/$module/tQMg/${server.data}", referer = "$vidfastAPI/")
+                        .parsedSafe<VidFastSources>()
+
+                callback.invoke(
+                    newExtractorLink(
+                        "Vidfast",
+                        "Vidfast [${server.name}]",
+                        source?.url ?: return@amapIndexed,
+                        INFER_TYPE
+                    )
+                )
+
+                if (index == 1) {
+                    source.tracks?.map { subtitle ->
+                        subtitleCallback.invoke(
+                            SubtitleFile(
+                                subtitle.label ?: return@map,
+                                subtitle.file ?: return@map
+                            )
+                        )
+                    }
+                }
+
+            }
+
+
+    }
+
+    suspend fun invokeWyzie(
+        tmdbId: Int?,
+        season: Int?,
+        episode: Int?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+    ) {
+        val url = if (season == null) {
+            "$wyzieAPI/search?id=$tmdbId"
+        } else {
+            "$wyzieAPI/search?id=$tmdbId&season=$season&episode=$episode"
+        }
+
+        val res = app.get(url).text
+
+        tryParseJson<ArrayList<WyzieSubtitle>>(res)?.map { subtitle ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    subtitle.display ?: return@map,
+                    subtitle.url ?: return@map,
+                )
+            )
+        }
+
+    }
+
+    suspend fun invokeVixsrc(
+        tmdbId: Int?,
+        season: Int?,
+        episode: Int?,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val proxy = "https://proxy.heistotron.uk"
+        val type = if (season == null) "movie" else "tv"
+        val url = if (season == null) {
+            "$vixsrcAPI/$type/$tmdbId"
+        } else {
+            "$vixsrcAPI/$type/$tmdbId/$season/$episode"
+        }
+
+        val res =
+            app.get(url).document.selectFirst("script:containsData(window.masterPlaylist)")?.data()
+                ?: return
+
+        val video1 =
+            Regex("""'token':\s*'(\w+)'[\S\s]+'expires':\s*'(\w+)'[\S\s]+url:\s*'(\S+)'""").find(res)
+                ?.let {
+                    val (token, expires, path) = it.destructured
+                    "$path?token=$token&expires=$expires&h=1&lang=en"
+                } ?: return
+
+        val video2 =
+            "$proxy/p/${base64Encode("$proxy/api/proxy/m3u8?url=${encode(video1)}&source=sakura|ananananananananaBatman!".toByteArray())}"
+
+        listOf(
+            VixsrcSource("Vixsrc [Alpha]",video1,url),
+            VixsrcSource("Vixsrc [Beta]",video2, "$mappleAPI/"),
+        ).map {
+            callback.invoke(
+                newExtractorLink(
+                    it.name,
+                    it.name,
+                    it.url,
+                    ExtractorLinkType.M3U8
+                ) {
+                    this.referer = it.referer
+                    this.headers = mapOf(
+                        "Accept" to "*/*"
+                    )
+                }
+            )
+        }
+
+    }
+
+    suspend fun invokeVidsrccx(
+        tmdbId: Int?,
+        season: Int?,
+        episode: Int?,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val filePath =
+            if (season == null) "/media/$tmdbId/master.m3u8" else "/media/$tmdbId-$season-$episode/master.m3u8"
+        val video = app.post(
+            "https://8ball.piracy.cloud/api/generate-secure-url", requestBody = mapOf(
+                "filePath" to filePath
+            ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
+        ).parsedSafe<VidsrccxSource>()?.secureUrl
+
+        callback.invoke(
+            newExtractorLink(
+                "VidsrcCx",
+                "VidsrcCx",
+                video ?: return,
+                ExtractorLinkType.M3U8
+            ) {
+                this.referer = "$vidsrccxAPI/"
+                this.headers = mapOf(
+                    "Accept" to "*/*"
+                )
+            }
+        )
+
+    }
+
+    suspend fun invokeSuperembed(
+        tmdbId: Int?,
+        season: Int?,
+        episode: Int?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+        api: String = "https://streamingnow.mov"
+    ) {
+        val path = if (season == null) "" else "&s=$season&e=$episode"
+        val token = app.get("$superembedAPI/directstream.php?video_id=$tmdbId&tmdb=1$path").url.substringAfter(
+                "?play="
+            )
+
+        val (server, id) = app.post(
+            "$api/response.php", data = mapOf(
+                "token" to token
+            ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        ).document.select("ul.sources-list li:contains(vipstream-S)")
+            .let { it.attr("data-server") to it.attr("data-id") }
+
+        val playUrl = "$api/playvideo.php?video_id=$id&server_id=$server&token=$token&init=1"
+        val playRes = app.get(playUrl).document
+        val iframe = playRes.selectFirst("iframe.source-frame")?.attr("src") ?: run {
+            val captchaId = playRes.select("input[name=captcha_id]").attr("value")
+            app.post(playUrl, requestBody = "captcha_id=TEduRVR6NmZ3Sk5Jc3JpZEJCSlhTM25GREs2RCswK0VQN2ZsclI5KzNKL2cyV3dIaFEwZzNRRHVwMzdqVmoxV0t2QlBrNjNTY04wY2NSaHlWYS9Jc09nb25wZTV2YmxDSXNRZVNuQUpuRW5nbkF2dURsQUdJWVpwOWxUZzU5Tnh0NXllQjdYUG83Y0ZVaG1XRGtPOTBudnZvN0RFK0wxdGZvYXpFKzVNM2U1a2lBMG40REJmQ042SA%3D%3D&captcha_answer%5B%5D=8yhbjraxqf3o&captcha_answer%5B%5D=10zxn5vi746w&captcha_answer%5B%5D=gxfpe17tdwub".toRequestBody(RequestBodyTypes.TEXT.toMediaTypeOrNull())
+            ).document.selectFirst("iframe.source-frame")?.attr("src")
+        }
+        val json = app.get(iframe ?: return).text.substringAfter("Playerjs(").substringBefore(");")
+
+        val video = """file:"([^"]+)""".toRegex().find(json)?.groupValues?.get(1)
+
+        callback.invoke(
+            newExtractorLink(
+                "Superembed",
+                "Superembed",
+                video ?: return,
+                INFER_TYPE
+            ) {
+                this.headers = mapOf(
+                    "Accept" to "*/*"
+                )
+            }
+        )
+
+        """subtitle:"([^"]+)""".toRegex().find(json)?.groupValues?.get(1)?.split(",")?.map {
+            val (subLang, subUrl) = Regex("""\[(\w+)](http\S+)""").find(it)?.destructured
+                ?: return@map
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    subLang.trim(),
+                    subUrl.trim()
+                )
+            )
+        }
+
+
+    }
+
+    suspend fun invokeVidrock(
+        tmdbId: Int?,
+        season: Int?,
+        episode: Int?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+        subAPI: String = "https://sub.vdrk.site"
+    ) {
+
+        val type = if (season == null) "movie" else "tv"
+        val url = "$vidrockAPI/$type/$tmdbId${if(type == "movie") "" else "/$season/$episode"}"
+        val encryptData = VidrockHelper.encrypt(tmdbId, type, season, episode)
+
+        app.get("$vidrockAPI/api/$type/$encryptData", referer = url).parsedSafe<LinkedHashMap<String,HashMap<String,String>>>()
+            ?.map { source ->
+                if(source.key == "source2") {
+                    val json = app.get(source.value["url"] ?: return@map, referer = "${vidrockAPI}/").text
+                    tryParseJson<ArrayList<VidrockSource>>(json)?.reversed()?.map mirror@{
+                        callback.invoke(
+                            newExtractorLink(
+                                "Vidrock",
+                                "Vidrock [Source2]",
+                                it.url ?: return@mirror,
+                                INFER_TYPE
+                            ) {
+                                this.quality = it.resolution ?: Qualities.Unknown.value
+                                this.headers = mapOf(
+                                    "Range" to "bytes=0-",
+                                    "Referer" to "${vidrockAPI}/"
+                                )
+                            }
+                        )
+                    }
+                } else {
+                    callback.invoke(
+                        newExtractorLink(
+                            "Vidrock",
+                            "Vidrock [${source.key.capitalize()}]",
+                            source.value["url"] ?: return@map,
+                            ExtractorLinkType.M3U8
+                        ) {
+                            this.referer = "${vidrockAPI}/"
+                            this.headers = mapOf(
+                                "Origin" to vidrockAPI
+                            )
+                        }
+                    )
+                }
+            }
+
+        val subUrl = "$subAPI/$type/$tmdbId${if(type == "movie") "" else "/$season/$episode"}"
+        val res = app.get(subUrl).text
+        tryParseJson<ArrayList<VidrockSubtitle>>(res)?.map { subtitle ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    subtitle.label?.replace(Regex("\\d"), "")?.replace(Regex("\\s+Hi"), "")?.trim() ?: return@map,
+                    subtitle.file ?: return@map,
+                )
+            )
+        }
+
+    }
+
+}
