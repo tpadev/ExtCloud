@@ -145,7 +145,9 @@ class IdlixProvider : MainAPI() {
         val actors = document.select("div.persons > div[itemprop=actor]").map {
             Actor(it.select("meta[itemprop=name]").attr("content"), it.select("img").attr("src"))
         }
-
+        val duration = document.selectFirst("div.extra span[itemprop=duration]")?.text()
+                        ?.replace(Regex("\\D"), "")
+                        ?.toIntOrNull() ?: 0
         val recommendations = document.select("div.owl-item").map {
             val recName =
                 it.selectFirst("a")!!.attr("href").removeSuffix("/").split("/").last()
@@ -177,6 +179,7 @@ class IdlixProvider : MainAPI() {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = description
+                this.duration = duration
                 this.tags = tags
                 if (rating != null) addScore(rating.toString(), 10)
                 addActors(actors)
@@ -188,6 +191,7 @@ class IdlixProvider : MainAPI() {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = description
+                this.duration = duration
                 this.tags = tags
                 if (rating != null) addScore(rating.toString(), 10)
                 addActors(actors)
