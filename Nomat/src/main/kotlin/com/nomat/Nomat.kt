@@ -164,7 +164,9 @@ override suspend fun search(query: String): List<SearchResponse> {
             this.tags = tags
             addActors(actors)
             this.recommendations = recommendations
+            if (duration != null) {
             this.duration = duration
+            }
             addTrailer(trailer)
             addScore(rating ?: "")
         }
@@ -179,7 +181,9 @@ override suspend fun search(query: String): List<SearchResponse> {
             this.tags = tags
             addActors(actors)
             this.recommendations = recommendations
+            if (duration != null) {
             this.duration = duration
+            }
             addTrailer(trailer)
             addScore(rating ?: "")
         }
