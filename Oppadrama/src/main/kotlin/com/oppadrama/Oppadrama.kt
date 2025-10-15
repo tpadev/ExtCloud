@@ -99,7 +99,9 @@ class Oppadrama : MainAPI() {
 
     // Status, durasi, negara, tipe
     val status = document.selectFirst("span:matchesOwn(Status:)")?.ownText()?.trim()
-    val duration = document.selectFirst("span:matchesOwn(Durasi:)")?.ownText()?.trim()
+    val duration = document.selectFirst("div.spe span:contains(Durasi:)")?.ownText()
+    ?.replace(Regex("\\D"), "")
+    ?.toIntOrNull()
     val country = document.selectFirst("span:matchesOwn(Negara:)")?.ownText()?.trim()
     val type = document.selectFirst("span:matchesOwn(Tipe:)")?.ownText()?.trim()
 
@@ -107,9 +109,9 @@ class Oppadrama : MainAPI() {
     val tags = document.select("div.genxed a").map { it.text() }
 
     // Aktor
-    val actors = document.selectFirst("span:matchesOwn(Artis:)")?.text()
-        ?.replace("Artis:", "")?.split(",")?.map { it.trim() }
-    
+    val actors = document.select("span:has(b:matchesOwn(Artis:)) a")
+    .map { it.text().trim() }
+
     val rating = document.selectFirst("div.rating strong")
     ?.text()
     ?.replace("Rating", "")
@@ -142,6 +144,7 @@ val episodes = document.select("div.eplister li a").map { ep ->
         this.plot = description
         this.tags = tags
         this.recommendations = recommendations
+        this.duration = duration ?: 0
         if (rating != null) addScore(rating.toString(), 10)
         addActors(actors)
         addTrailer(trailer)
@@ -154,6 +157,7 @@ val episodes = document.select("div.eplister li a").map { ep ->
         this.plot = description
         this.tags = tags
         this.recommendations = recommendations
+        this.duration = duration ?: 0
         if (rating != null) addScore(rating.toString(), 10)
         addActors(actors)
         addTrailer(trailer)
