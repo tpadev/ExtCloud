@@ -135,9 +135,10 @@ override suspend fun search(query: String): List<SearchResponse> {
     val actors = document.select("div.video-actor a").map { it.text() }
     val recommendations = document.select("div.section .item-content").mapNotNull { it.toRecommendResult() }
     val duration = document.selectFirst("div.video-duration")
-    ?.ownText()                // ambil teks setelah ikon
-    ?.replace(Regex("\\D"), "") // buang non-digit
+    ?.text()                         // Ambil semua teks di dalam div
+    ?.replace(Regex("\\D"), "")      // Buang semua non-digit
     ?.toIntOrNull()
+
 
     val isSeries = url.contains("/serial-tv/") || document.select("div.video-episodes a").isNotEmpty()
 
