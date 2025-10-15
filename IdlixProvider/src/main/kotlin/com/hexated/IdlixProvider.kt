@@ -137,7 +137,9 @@ class IdlixProvider : MainAPI() {
         )?.groupValues?.get(1).toString().toIntOrNull()
         val tvType = if (document.select("ul#section > li:nth-child(1)").text().contains("Episodes")
         ) TvType.TvSeries else TvType.Movie
-        val description = document.select("p:nth-child(3)").text().trim()
+         val description = if (tvType == TvType.Movie) 
+            document.select("div.wp-content > p").text().trim() else 
+            document.select("div.content > center > p:nth-child(3)").text().trim()
         val trailer = document.selectFirst("div.embed iframe")?.attr("src")
         val rating = document.selectFirst("span.dt_rating_vgs[itemprop=ratingValue]")
         ?.text()
@@ -148,12 +150,14 @@ class IdlixProvider : MainAPI() {
         val duration = document.selectFirst("div.extra span[itemprop=duration]")?.text()
                         ?.replace(Regex("\\D"), "")
                         ?.toIntOrNull() ?: 0
-        val recommendations = document.select("div.owl-item").map {
-            val recName =
-                it.selectFirst("a")!!.attr("href").removeSuffix("/").split("/").last()
+        val recommendations = document.select("#single_relacionados article").map {
+            val recName = it.selectFirst("img")!!.attr("alt").replace(Regex("\\(\\d{4}\\)"), "")
             val recHref = it.selectFirst("a")!!.attr("href")
             val recPosterUrl = it.selectFirst("img")?.attr("src").toString()
-            newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
+            newMovieSearchResponse(recName,recHref,
+                if (recHref.contains("/movie/")) TvType.Movie 
+                    else TvType.TvSeries, false
+            ) {
                 this.posterUrl = recPosterUrl
             }
         }
