@@ -134,12 +134,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     val rating = document.selectFirst("div.rtg")?.text()?.trim()
     val actors = document.select("div.video-actor a").map { it.text() }
     val recommendations = document.select("div.section .item-content").mapNotNull { it.toRecommendResult() }
-    val duration = document.selectFirst("div.video-duration")
-    ?.text()                       // "Durasi: 98 Mins."
-    ?.replace(Regex("\\D"), "")    // "98"
-    ?.toIntOrNull()
-    ?.times(60)                    // konversi ke detik
-
+    
     val isSeries = url.contains("/serial-tv/") || document.select("div.video-episodes a").isNotEmpty()
 
     return if (isSeries) {
@@ -164,9 +159,6 @@ override suspend fun search(query: String): List<SearchResponse> {
             this.tags = tags
             addActors(actors)
             this.recommendations = recommendations
-            if (duration != null) {
-            this.duration = duration
-            }
             addTrailer(trailer)
             addScore(rating ?: "")
         }
@@ -181,9 +173,6 @@ override suspend fun search(query: String): List<SearchResponse> {
             this.tags = tags
             addActors(actors)
             this.recommendations = recommendations
-            if (duration != null) {
-            this.duration = duration
-            }
             addTrailer(trailer)
             addScore(rating ?: "")
         }
