@@ -102,7 +102,10 @@ class Melongmovie : MainAPI() {
     val tags = doc.select("ul.data li:has(b:contains(Genre)) a").map { it.text() }
     val actors = doc.select("ul.data li:has(b:contains(Stars)) a").map { it.text() }
     val rating = doc.selectFirst("span[itemprop=ratingValue], span.ratingValue")?.text()
-
+    val duration = document.selectFirst("span[property=duration]")
+    ?.text()
+    ?.replace(Regex("\\D"), "")
+    ?.toIntOrNull()
     val recommendations = doc.select("div.latest.relat article.box")
         .mapNotNull { it.toRecommendResult() }
 
@@ -129,6 +132,7 @@ class Melongmovie : MainAPI() {
             addActors(actors)
             addScore(rating)
             this.recommendations = recommendations
+            this.duration = duration ?: 0
         }
     } else {
         // ----- MOVIE -----
@@ -140,6 +144,7 @@ class Melongmovie : MainAPI() {
             addActors(actors)
             addScore(rating)
             this.recommendations = recommendations
+            this.duration = duration ?: 0
         }
     }
 }
