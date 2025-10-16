@@ -154,12 +154,18 @@ class IdlixProvider : MainAPI() {
             val recName = it.selectFirst("img")!!.attr("alt").replace(Regex("\\(\\d{4}\\)"), "")
             val recHref = it.selectFirst("a")!!.attr("href")
             val recPosterUrl = it.selectFirst("img")?.attr("src").toString()
+            if (tvType == TvType.Movie)
+                newMovieSearchResponse(recName,recHref,tvType){this.posterUrl = recPosterUrl}
+            else
+                newTvSeriesSearchResponse(recName,recHref,tvType){this.posterUrl = recPosterUrl}
+/*            
             newMovieSearchResponse(recName,recHref,
                 if (recHref.contains("/movie/")) TvType.Movie 
                     else TvType.TvSeries, false
             ) {
                 this.posterUrl = recPosterUrl
             }
+*/
         }
 
         return if (tvType == TvType.TvSeries) {
