@@ -11,6 +11,59 @@ data class TmdbDate(
     val nextWeek: String,
 )
 
+data class VixsrcSource(
+    val name: String,
+    val url: String,
+    val referer: String,
+)
+
+data class VidrockSource(
+    @JsonProperty("resolution") val resolution: Int? = null,
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class VidrockSubtitle(
+    @JsonProperty("label") val label: String? = null,
+    @JsonProperty("file") val file: String? = null,
+)
+
+data class VidsrccxSource(
+    @JsonProperty("secureUrl") val secureUrl: String? = null,
+)
+
+data class WyzieSubtitle(
+    @JsonProperty("display") val display: String? = null,
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class VidFastSources(
+    @JsonProperty("url") val url: String? = null,
+    @JsonProperty("tracks") val tracks: ArrayList<Tracks>? = null,
+) {
+    data class Tracks(
+        @JsonProperty("file") val file: String? = null,
+        @JsonProperty("label") val label: String? = null,
+    )
+}
+
+data class VidFastServers(
+    @JsonProperty("name") val name: String? = null,
+    @JsonProperty("description") val description: String? = null,
+    @JsonProperty("data") val data: String? = null,
+) {
+    data class Stream(
+        @JsonProperty("playlist") val playlist: String? = null,
+    )
+}
+
+data class VidlinkSources(
+    @JsonProperty("stream") val stream: Stream? = null,
+) {
+    data class Stream(
+        @JsonProperty("playlist") val playlist: String? = null,
+    )
+}
+
 data class MappleSubtitle(
     @JsonProperty("display") val display: String? = null,
     @JsonProperty("url") val url: String? = null,

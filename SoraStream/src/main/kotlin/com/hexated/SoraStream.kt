@@ -4,9 +4,16 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeMapple
+import com.hexated.SoraExtractor.invokeSuperembed
+import com.hexated.SoraExtractor.invokeVidfast
+import com.hexated.SoraExtractor.invokeVidlink
+import com.hexated.SoraExtractor.invokeVidrock
 import com.hexated.SoraExtractor.invokeVidsrc
 import com.hexated.SoraExtractor.invokeVidsrccc
+import com.hexated.SoraExtractor.invokeVidsrccx
+import com.hexated.SoraExtractor.invokeVixsrc
 import com.hexated.SoraExtractor.invokeWatchsomuch
+import com.hexated.SoraExtractor.invokeWyzie
 import com.hexated.SoraExtractor.invokeXprime
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
@@ -42,7 +49,7 @@ open class SoraStream : TmdbProvider() {
         const val malsyncAPI = "https://api.malsync.moe"
         const val jikanAPI = "https://api.jikan.moe/v4"
 
-        private const val apiKey = "f5d213cb582bc230b9da17b51f299ae4"
+        private const val apiKey = "b030404650f279792a8d3287232358e3"
 
         /** ALL SOURCES */
         const val gomoviesAPI = "https://gomovies-online.cam"
@@ -52,6 +59,13 @@ open class SoraStream : TmdbProvider() {
         const val xprimeAPI = "https://backend.xprime.tv"
         const val watchSomuchAPI = "https://watchsomuch.tv"
         const val mappleAPI = "https://mapple.uk"
+        const val vidlinkAPI = "https://vidlink.pro"
+        const val vidfastAPI = "https://vidfast.pro"
+        const val wyzieAPI = "https://sub.wyzie.ru"
+        const val vixsrcAPI = "https://vixsrc.to"
+        const val vidsrccxAPI = "https://vidsrc.cx"
+        const val superembedAPI = "https://multiembed.mov"
+        const val vidrockAPI = "https://vidrock.net"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -120,6 +134,7 @@ open class SoraStream : TmdbProvider() {
             TvType.Movie,
         ) {
             this.posterUrl = getImageUrl(posterPath)
+            this.score= Score.from10(voteAverage)
         }
     }
 
@@ -301,7 +316,8 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.episode,
                     subtitleCallback,
-                    callback)
+                    callback
+                )
             },
             {
                 invokeVidsrc(
@@ -309,27 +325,52 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.episode,
                     subtitleCallback,
-                    callback)
-            },
-            {
-                invokeXprime(
-                    res.id,
-                    res.title,
-                    res.airedYear ?: res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback)
+                    callback
+                )
             },
             {
                 invokeWatchsomuch(
                     res.imdbId,
                     res.season,
                     res.episode,
-                    subtitleCallback)
+                    subtitleCallback
+                )
+            },
+            {
+                invokeVixsrc(res.id, res.season, res.episode, callback)
+            },
+            {
+                invokeVidlink(res.id, res.season, res.episode, callback)
+            },
+            {
+                invokeVidfast(res.id, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeMapple(res.id, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeWyzie(res.id, res.season, res.episode, subtitleCallback)
+            },
+            {
+                invokeVidsrccx(res.id, res.season, res.episode, callback)
+            },
+            {
+                invokeSuperembed(
+                    res.id,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                invokeVidrock(
+                    res.id,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             }
         )
 
@@ -378,6 +419,7 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("original_title") val originalTitle: String? = null,
         @JsonProperty("media_type") val mediaType: String? = null,
         @JsonProperty("poster_path") val posterPath: String? = null,
+        @JsonProperty("vote_average") val voteAverage: Double? = null,
     )
 
     data class Genres(
