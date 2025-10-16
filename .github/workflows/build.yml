@@ -5,11 +5,11 @@ concurrency:
   group: "build"
   cancel-in-progress: true
 
-on:
-  push:
-    branches:
+on: workflow_dispatch
+#  push:
+#    branches:
       # choose your default branch
-      - main
+#      - main
     paths-ignore:
       - "*.md"
 
