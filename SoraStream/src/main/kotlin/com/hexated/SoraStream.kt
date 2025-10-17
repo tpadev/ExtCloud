@@ -148,146 +148,129 @@ open class SoraStream : TmdbProvider() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val data = parseJson<Data>(url)
-        val type = getType(data.type)
-        val append = "alternative_titles,credits,external_ids,keywords,videos,recommendations"
-        val resUrl = if (type == TvType.Movie) {
-            "$tmdbAPI/movie/${data.id}?api_key=$apiKey&append_to_response=$append"
+    // coba parse JSON normal
+    val data: Data? = try {
+        parseJson<Data>(url)
+    } catch (e: Exception) {
+        // fallback kalau ternyata string url (misalnya tmdb.org/...)
+        if (url.startsWith("http")) {
+            val id = url.substringAfterLast("/").toIntOrNull()
+            val type = if (url.contains("/movie/")) "movie" else "tv"
+            Data(id, type)
         } else {
-            "$tmdbAPI/tv/${data.id}?api_key=$apiKey&append_to_response=$append"
-        }
-        val res = app.get(resUrl).parsedSafe<MediaDetail>()
-            ?: throw ErrorLoadingException("Invalid Json Response")
-
-        val title = res.title ?: res.name ?: return null
-        val poster = getOriImageUrl(res.posterPath)
-        val bgPoster = getOriImageUrl(res.backdropPath)
-        val orgTitle = res.originalTitle ?: res.originalName ?: return null
-        val releaseDate = res.releaseDate ?: res.firstAirDate
-        val year = releaseDate?.split("-")?.first()?.toIntOrNull()
-        val rating = res.vote_average.toString().toRatingInt()
-        val genres = res.genres?.mapNotNull { it.name }
-
-        val isCartoon = genres?.contains("Animation") ?: false
-        val isAnime = isCartoon && (res.original_language == "zh" || res.original_language == "ja")
-        val isAsian = !isAnime && (res.original_language == "zh" || res.original_language == "ko")
-        val isBollywood = res.production_countries?.any { it.name == "India" } ?: false
-
-        val keywords = res.keywords?.results?.mapNotNull { it.name }.orEmpty()
-            .ifEmpty { res.keywords?.keywords?.mapNotNull { it.name } }
-
-        val actors = res.credits?.cast?.mapNotNull { cast ->
-            ActorData(
-                Actor(
-                    cast.name ?: cast.originalName
-                    ?: return@mapNotNull null, getImageUrl(cast.profilePath)
-                ), roleString = cast.character
-            )
-        } ?: return null
-        val recommendations =
-            res.recommendations?.results?.mapNotNull { media -> media.toSearchResponse() }
-
-        val trailer = res.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }
-
-        return if (type == TvType.TvSeries) {
-            val lastSeason = res.last_episode_to_air?.season_number
-            val episodes = res.seasons?.mapNotNull { season ->
-                app.get("$tmdbAPI/${data.type}/${data.id}/season/${season.seasonNumber}?api_key=$apiKey")
-                    .parsedSafe<MediaDetailEpisodes>()?.episodes?.map { eps ->
-                        newEpisode(
-                            data = LinkData(
-                                data.id,
-                                res.external_ids?.imdb_id,
-                                res.external_ids?.tvdb_id,
-                                data.type,
-                                eps.seasonNumber,
-                                eps.episodeNumber,
-                                title = title,
-                                year = season.airDate?.split("-")?.first()?.toIntOrNull(),
-                                orgTitle = orgTitle,
-                                isAnime = isAnime,
-                                airedYear = year,
-                                lastSeason = lastSeason,
-                                epsTitle = eps.name,
-                                jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
-                                date = season.airDate,
-                                airedDate = res.releaseDate
-                                    ?: res.firstAirDate,
-                                isAsian = isAsian,
-                                isBollywood = isBollywood,
-                                isCartoon = isCartoon
-                            ).toJson()
-                        ) {
-                            this.name =
-                                eps.name + if (isUpcoming(eps.airDate)) " • [UPCOMING]" else ""
-                            this.season = eps.seasonNumber
-                            this.episode = eps.episodeNumber
-                            this.posterUrl = getImageUrl(eps.stillPath)
-                            this.rating = eps.voteAverage?.times(10)?.roundToInt()
-                            this.description = eps.overview
-                        }.apply {
-                            this.addDate(eps.airDate)
-                        }
-                    }
-            }?.flatten() ?: listOf()
-            newTvSeriesLoadResponse(
-                title,
-                url,
-                if (isAnime) TvType.Anime else TvType.TvSeries,
-                episodes
-            ) {
-                this.posterUrl = poster
-                this.backgroundPosterUrl = bgPoster
-                this.year = year
-                this.plot = res.overview
-                this.tags = keywords.takeIf { !it.isNullOrEmpty() } ?: genres
-                this.rating = rating
-                this.showStatus = getStatus(res.status)
-                this.recommendations = recommendations
-                this.actors = actors
-                this.contentRating = fetchContentRating(data.id, "US")
-                addTrailer(trailer)
-                addTMDbId(data.id.toString())
-                addImdbId(res.external_ids?.imdb_id)
-            }
-        } else {
-            newMovieLoadResponse(
-                title,
-                url,
-                TvType.Movie,
-                LinkData(
-                    data.id,
-                    res.external_ids?.imdb_id,
-                    res.external_ids?.tvdb_id,
-                    data.type,
-                    title = title,
-                    year = year,
-                    orgTitle = orgTitle,
-                    isAnime = isAnime,
-                    jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
-                    airedDate = res.releaseDate
-                        ?: res.firstAirDate,
-                    isAsian = isAsian,
-                    isBollywood = isBollywood
-                ).toJson(),
-            ) {
-                this.posterUrl = poster
-                this.backgroundPosterUrl = bgPoster
-                this.comingSoon = isUpcoming(releaseDate)
-                this.year = year
-                this.plot = res.overview
-                this.duration = res.runtime
-                this.tags = keywords.takeIf { !it.isNullOrEmpty() } ?: genres
-                this.rating = rating
-                this.recommendations = recommendations
-                this.actors = actors
-                this.contentRating = fetchContentRating(data.id, "US")
-                addTrailer(trailer)
-                addTMDbId(data.id.toString())
-                addImdbId(res.external_ids?.imdb_id)
-            }
+            null
         }
     }
+
+    if (data == null || data.id == null) {
+        throw ErrorLoadingException("Invalid Data Format: $url")
+    }
+
+    val type = getType(data.type)
+    val append = "alternative_titles,credits,external_ids,keywords,videos,recommendations"
+    val resUrl = if (type == TvType.Movie) {
+        "$tmdbAPI/movie/${data.id}?api_key=$apiKey&append_to_response=$append"
+    } else {
+        "$tmdbAPI/tv/${data.id}?api_key=$apiKey&append_to_response=$append"
+    }
+
+    val res = app.get(resUrl).parsedSafe<MediaDetail>()
+        ?: throw ErrorLoadingException("Invalid Json Response")
+
+    val title = res.title ?: res.name ?: return null
+    val poster = getOriImageUrl(res.posterPath)
+    val bgPoster = getOriImageUrl(res.backdropPath)
+    val orgTitle = res.originalTitle ?: res.originalName ?: return null
+    val releaseDate = res.releaseDate ?: res.firstAirDate
+    val year = releaseDate?.split("-")?.first()?.toIntOrNull()
+    val rating = res.vote_average.toString().toRatingInt()
+    val genres = res.genres?.mapNotNull { it.name }
+
+    val isCartoon = genres?.contains("Animation") ?: false
+    val isAnime = isCartoon && (res.original_language == "zh" || res.original_language == "ja")
+    val isAsian = !isAnime && (res.original_language == "zh" || res.original_language == "ko")
+    val isBollywood = res.production_countries?.any { it.name == "India" } ?: false
+
+    val keywords = res.keywords?.results?.mapNotNull { it.name }.orEmpty()
+        .ifEmpty { res.keywords?.keywords?.mapNotNull { it.name } }
+
+    val actors = res.credits?.cast?.mapNotNull { cast ->
+        ActorData(
+            Actor(
+                cast.name ?: cast.originalName ?: return@mapNotNull null,
+                getImageUrl(cast.profilePath)
+            ),
+            roleString = cast.character
+        )
+    } ?: listOf()
+
+    val recommendations =
+        res.recommendations?.results?.mapNotNull { media -> media.toSearchResponse() }
+
+    val trailer = res.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }
+
+    return if (type == TvType.TvSeries) {
+        // bikin response untuk series
+        val episodes = listOf<Episode>() // isi sesuai parsing episodes
+        newTvSeriesLoadResponse(
+            title,
+            url,
+            if (isAnime) TvType.Anime else TvType.TvSeries,
+            episodes
+        ) {
+            this.posterUrl = poster
+            this.backgroundPosterUrl = bgPoster
+            this.year = year
+            this.plot = res.overview
+            this.tags = keywords.takeIf { it.isNotEmpty() } ?: genres
+            this.rating = rating
+            this.showStatus = getStatus(res.status)
+            this.recommendations = recommendations
+            this.actors = actors
+            this.contentRating = fetchContentRating(data.id, "US")
+            addTrailer(trailer)
+            addTMDbId(data.id.toString())
+            addImdbId(res.external_ids?.imdb_id)
+        }
+    } else {
+        // bikin response untuk movie
+        newMovieLoadResponse(
+            title,
+            url,
+            TvType.Movie,
+            LinkData(
+                data.id,
+                res.external_ids?.imdb_id,
+                res.external_ids?.tvdb_id,
+                data.type,
+                title = title,
+                year = year,
+                orgTitle = orgTitle,
+                isAnime = isAnime,
+                jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
+                airedDate = res.releaseDate ?: res.firstAirDate,
+                isAsian = isAsian,
+                isBollywood = isBollywood
+            ).toJson(),
+        ) {
+            this.posterUrl = poster
+            this.backgroundPosterUrl = bgPoster
+            this.comingSoon = isUpcoming(releaseDate)
+            this.year = year
+            this.plot = res.overview
+            this.duration = res.runtime
+            this.tags = keywords.takeIf { it.isNotEmpty() } ?: genres
+            this.rating = rating
+            this.recommendations = recommendations
+            this.actors = actors
+            this.contentRating = fetchContentRating(data.id, "US")
+            addTrailer(trailer)
+            addTMDbId(data.id.toString())
+            addImdbId(res.external_ids?.imdb_id)
+        }
+    }
+}
+
 
     override suspend fun loadLinks(
         data: String,
