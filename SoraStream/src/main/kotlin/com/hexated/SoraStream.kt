@@ -191,8 +191,9 @@ open class SoraStream : TmdbProvider() {
     val isAsian = !isAnime && (res.original_language == "zh" || res.original_language == "ko")
     val isBollywood = res.production_countries?.any { it.name == "India" } ?: false
 
-    val keywords = res.keywords?.results?.mapNotNull { it.name }.orEmpty()
-        .ifEmpty { res.keywords?.keywords?.mapNotNull { it.name } }
+    val keywords = res.keywords?.results.orEmpty().mapNotNull { it.name }
+    .ifEmpty { res.keywords?.keywords.orEmpty().mapNotNull { it.name } }
+
 
     val actors = res.credits?.cast?.mapNotNull { cast ->
         ActorData(
@@ -207,7 +208,10 @@ open class SoraStream : TmdbProvider() {
     val recommendations =
         res.recommendations?.results?.mapNotNull { media -> media.toSearchResponse() }
 
-    val trailer = res.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }
+    val trailer = res.videos?.results.orEmpty().map { 
+    "https://www.youtube.com/watch?v=${it.key}" 
+   }
+
 
     return if (type == TvType.TvSeries) {
         // bikin response untuk series
