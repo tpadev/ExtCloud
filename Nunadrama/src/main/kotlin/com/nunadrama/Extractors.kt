@@ -15,6 +15,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 class Terabox : ExtractorApi() {
     override val name = "Terabox"
     override val mainUrl = "https://www.terabox.com"
+    private val baseUrl = "https://www.1024terabox.com"
     private val apiUrl = "https://terabox-pro-api.vercel.app/api?link="
     override val requiresReferer = true
 
