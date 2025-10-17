@@ -49,7 +49,7 @@ open class SoraStream : TmdbProvider() {
         const val malsyncAPI = "https://api.malsync.moe"
         const val jikanAPI = "https://api.jikan.moe/v4"
 
-        private const val apiKey = "b030404650f279792a8d3287232358e3"
+        private const val apiKey = "f5d213cb582bc230b9da17b51f299ae4"
 
         /** ALL SOURCES */
         const val gomoviesAPI = "https://gomovies-online.cam"
