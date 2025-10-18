@@ -114,9 +114,10 @@ class Nunadrama : MainAPI() {
     val tvType = if (url.contains("/tv/")) TvType.TvSeries else TvType.Movie
     val description = document.selectFirst("div[itemprop=description] > p")?.text()?.trim()
     val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
-    val rating =
-        document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue>")
-            ?.text()?.trim()
+
+    // ✅ fix selector rating
+    val rating = document.selectFirst("span[itemprop='ratingValue']")?.text()?.trim()
+
     val actors =
         document.select("div.gmr-moviedata").last()
             ?.select("span[itemprop=actors]")?.map { it.select("a").text() }
@@ -132,28 +133,30 @@ class Nunadrama : MainAPI() {
     return if (tvType == TvType.TvSeries) {
         val episodes = mutableListOf<Episode>()
 
-        // --- Tipe 2: Tombol episode di gmr-listseries ---
+        // --- Cara 1: dari tombol gmr-listseries ---
         val listSeries = document.select("div.gmr-listseries a")
         if (listSeries.isNotEmpty()) {
-            listSeries.forEach { el ->
-                val href = fixUrl(el.attr("href"))
-                val name = el.text()
-                val episode = name.filter { it.isDigit() }.toIntOrNull()
+            listSeries.forEach { eps ->
+                val href = fixUrl(eps.attr("href"))
+                val name = eps.text()
+                val episode = Regex("\\d+").find(name)?.value?.toIntOrNull()
+                val season = Regex("S(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
                 episodes.add(
                     newEpisode(href) {
                         this.name = name
                         this.episode = episode
+                        this.season = season
                     }
                 )
             }
         } else {
-            // --- Tipe 1: Paragraf <p>Episode X---
+            // --- Cara 2: fallback dari paragraf <p>Episode ... ---
             val content = document.select("div.entry-content.entry-content-single > p")
             var currentEpisode: Int? = null
             content.forEach { p ->
                 val text = p.text()
                 if (text.startsWith("Episode", ignoreCase = true)) {
-                    currentEpisode = text.filter { it.isDigit() }.toIntOrNull()
+                    currentEpisode = Regex("\\d+").find(text)?.value?.toIntOrNull()
                 } else if (currentEpisode != null && p.select("a").isNotEmpty()) {
                     p.select("a").forEach { link ->
                         val href = fixUrl(link.attr("href"))
@@ -194,6 +197,7 @@ class Nunadrama : MainAPI() {
         }
     }
 }
+
 
     override suspend fun loadLinks(
     data: String,
