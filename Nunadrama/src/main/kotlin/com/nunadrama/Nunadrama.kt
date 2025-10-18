@@ -87,93 +87,113 @@ class Nunadrama : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val fetch = app.get(url)
-        directUrl = getBaseUrl(fetch.url)
-        val document = fetch.document
+    val fetch = app.get(url)
+    directUrl = getBaseUrl(fetch.url)
+    val document = fetch.document
 
-        val title =
-                document.selectFirst("h1.entry-title")
-                        ?.text()
-                        ?.substringBefore("Season")
-                        ?.substringBefore("Episode")
-                        ?.trim()
-                        .toString()
-        val poster =
-                fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
-                        ?.fixImageQuality()
-        val tags = document.select("div.gmr-moviedata a").map { it.text() }
+    val title =
+        document.selectFirst("h1.entry-title")
+            ?.text()
+            ?.substringBefore("Season")
+            ?.substringBefore("Episode")
+            ?.trim()
+            .toString()
 
-        val year =
-                document.select("div.gmr-moviedata strong:contains(Year:) > a")
-                        .text()
-                        .trim()
-                        .toIntOrNull()
-                        
-        val tvType = if (url.contains("/tv/")) TvType.TvSeries else TvType.Movie
-        val description = document.selectFirst("div[itemprop=description] > p")?.text()?.trim()
-        val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
-        val rating =
-                document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")
-                        ?.text()?.trim()
-        val actors =
-                document.select("div.gmr-moviedata").last()?.select("span[itemprop=actors]")?.map {
-                    it.select("a").text()
-                }
-        val duration = document.selectFirst("div.gmr-moviedata span[property=duration]")
-                    ?.text()
-                    ?.replace(Regex("\\D"), "")
-                    ?.toIntOrNull()
-        val recommendations =
-                document.select("div.idmuvi-rp ul li").mapNotNull { it.toRecommendResult() }
+    val poster =
+        fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
+            ?.fixImageQuality()
 
-        return if (tvType == TvType.TvSeries) {
-            val episodes =
-                    document.select("div.vid-episodes a, div.gmr-listseries a")
-                            .map { eps ->
-                                val href = fixUrl(eps.attr("href"))
-                                val name = eps.text()
-                                val episode =
-                                        name.split(" ")
-                                                .lastOrNull()
-                                                ?.filter { it.isDigit() }
-                                                ?.toIntOrNull()
-                                val season =
-                                        name.split(" ")
-                                                .firstOrNull()
-                                                ?.filter { it.isDigit() }
-                                                ?.toIntOrNull()                               
-                                newEpisode(href) {
-                                    this.name = name
-                                    this.episode = episode
-                                    this.season = if (name.contains(" ")) season else null
-                                }
-                            }
-                            .filter { it.episode != null }
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                this.posterUrl = poster
-                this.year = year
-                this.plot = description
-                this.tags = tags
-                addScore(rating)
-                addActors(actors)
-                this.recommendations = recommendations
-                this.duration = duration ?: 0
-                addTrailer(trailer)
+    val tags = document.select("div.gmr-moviedata a").map { it.text() }
+
+    val year =
+        document.select("div.gmr-moviedata strong:contains(Year:) > a")
+            .text()
+            .trim()
+            .toIntOrNull()
+
+    val tvType = if (url.contains("/tv/")) TvType.TvSeries else TvType.Movie
+    val description = document.selectFirst("div[itemprop=description] > p")?.text()?.trim()
+    val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
+    val rating =
+        document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue>")
+            ?.text()?.trim()
+    val actors =
+        document.select("div.gmr-moviedata").last()
+            ?.select("span[itemprop=actors]")?.map { it.select("a").text() }
+
+    val duration = document.selectFirst("div.gmr-moviedata span[property=duration]")
+        ?.text()
+        ?.replace(Regex("\\D"), "")
+        ?.toIntOrNull()
+
+    val recommendations =
+        document.select("div.idmuvi-rp ul li").mapNotNull { it.toRecommendResult() }
+
+    return if (tvType == TvType.TvSeries) {
+        val episodes = mutableListOf<Episode>()
+
+        // --- Tipe 2: Tombol episode di gmr-listseries ---
+        val listSeries = document.select("div.gmr-listseries a")
+        if (listSeries.isNotEmpty()) {
+            listSeries.forEach { el ->
+                val href = fixUrl(el.attr("href"))
+                val name = el.text()
+                val episode = name.filter { it.isDigit() }.toIntOrNull()
+                episodes.add(
+                    newEpisode(href) {
+                        this.name = name
+                        this.episode = episode
+                    }
+                )
             }
         } else {
-            newMovieLoadResponse(title, url, TvType.Movie, url) {
-                this.posterUrl = poster
-                this.year = year
-                this.plot = description
-                this.tags = tags
-                addScore(rating)
-                addActors(actors)
-                this.recommendations = recommendations
-                this.duration = duration ?: 0
-                addTrailer(trailer)
+            // --- Tipe 1: Paragraf <p>Episode X---
+            val content = document.select("div.entry-content.entry-content-single > p")
+            var currentEpisode: Int? = null
+            content.forEach { p ->
+                val text = p.text()
+                if (text.startsWith("Episode", ignoreCase = true)) {
+                    currentEpisode = text.filter { it.isDigit() }.toIntOrNull()
+                } else if (currentEpisode != null && p.select("a").isNotEmpty()) {
+                    p.select("a").forEach { link ->
+                        val href = fixUrl(link.attr("href"))
+                        val name = link.text()
+                        episodes.add(
+                            newEpisode(href) {
+                                this.name = name
+                                this.episode = currentEpisode
+                            }
+                        )
+                    }
+                }
             }
         }
+
+        newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+            this.posterUrl = poster
+            this.year = year
+            this.plot = description
+            this.tags = tags
+            addScore(rating)
+            addActors(actors)
+            this.recommendations = recommendations
+            this.duration = duration ?: 0
+            addTrailer(trailer)
+        }
+    } else {
+        newMovieLoadResponse(title, url, TvType.Movie, url) {
+            this.posterUrl = poster
+            this.year = year
+            this.plot = description
+            this.tags = tags
+            addScore(rating)
+            addActors(actors)
+            this.recommendations = recommendations
+            this.duration = duration ?: 0
+            addTrailer(trailer)
+        }
     }
+}
 
     override suspend fun loadLinks(
     data: String,
