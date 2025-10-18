@@ -16,7 +16,7 @@ import org.jsoup.nodes.Element
 
 class Nunadrama : MainAPI() {
 
-    override var mainUrl = "https://nunadrama.space"
+    override var mainUrl = "https://tvnunadrama.store"
     private var directUrl: String? = null
     override var name = "Nunadrama"
     override val hasMainPage = true
@@ -26,8 +26,16 @@ class Nunadrama : MainAPI() {
 
     override val mainPage =
             mainPageOf(
-                    "category/film/page/%d/" to "Film",
-                    "best-rating/page/%d/" to "Best Rating",
+                    "/page/%d/?s&search=advanced&post_type=movie&index&orderby&genre&movieyear&country&quality=" to
+                            "Movies Terbaru",
+                    "/page/%d/?s=&search=advanced&post_type=tv&index=&orderby=&genre=drama&movieyear=&country=korea&quality=" to
+                            "Drama Korea",
+                    "/page/%d/?s=&search=advanced&post_type=tv&index=&orderby=&genre=c-drama&movieyear=&country=china&quality=" to
+                            "Drama China",
+                    "/page/%d/?s=&search=advanced&post_type=&index=&orderby=&genre=variety-show&movieyear=&country=&quality=" to
+                            "Variety Show",
+                    "/page/%d/?s=&search=advanced&post_type=movie&index=&orderby=&genre=korean-movie&movieyear=&country=&quality=" to
+                            "Film Korea",        
             )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {

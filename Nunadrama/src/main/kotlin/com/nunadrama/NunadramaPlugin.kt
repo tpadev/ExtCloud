@@ -9,5 +9,7 @@ class NunadramaPlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Nunadrama())
         registerExtractorAPI(Terabox())
+        registerExtractorAPI(Nunaupns())
+        registerExtractorAPI(Nunap2p())
     }
 }

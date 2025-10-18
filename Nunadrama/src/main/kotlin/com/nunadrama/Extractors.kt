@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.cloudstream3.extractors.VidStack
 
 class Terabox : ExtractorApi() {
     override val name = "Terabox"
@@ -55,4 +56,16 @@ class Terabox : ExtractorApi() {
         @JsonProperty("📄 Title") val title: String?,
         @JsonProperty("🔗 Direct Download Link") val downloadUrl: String?
     )
+}
+
+class Nunaupns : VidStack() {
+    override var name = "Nunaupns"
+    override var mainUrl = "https://nuna.upns.pro"
+    override var requiresReferer = true
+}
+
+class Nunap2p : VidStack() {
+    override var name = "Nunap2p"
+    override var mainUrl = "https://nuna.p2pstream.vip"
+    override var requiresReferer = true
 }
