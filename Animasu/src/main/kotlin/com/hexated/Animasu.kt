@@ -4,7 +4,6 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.runBlocking
 import org.jsoup.Jsoup
@@ -134,53 +133,50 @@ class Animasu : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val document = app.get(data).document
-    val mirrors = document.select(".mobius > .mirror > option").mapNotNull {
-        fixUrl(
-            Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
-        ) to it.text()
+        override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val document = app.get(data).document
+        document.select(".mobius > .mirror > option").mapNotNull {
+            fixUrl(
+                Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
+            ) to it.text()
+        }.apmap { (iframe, quality) ->
+            loadFixedExtractor(iframe, quality, "$mainUrl/", subtitleCallback, callback)
+        }
+        return true
     }
-
-    // Jalankan sequentially
-    mirrors.forEach { (iframe, quality) ->
-        loadFixedExtractor(iframe, quality, "$mainUrl/", subtitleCallback, callback)
-    }
-
-    return true
-}
 
     private suspend fun loadFixedExtractor(
-    url: String,
-    quality: String?,
-    referer: String? = null,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-) {
-    loadExtractor(url, referer, subtitleCallback) { link ->
-        callback.invoke(
-            newExtractorLink(
-                link.name,
-                link.name,
-                link.url,
-                link.type
-            ) {
-                this.referer = link.referer
-                this.quality = if (link.type == ExtractorLinkType.M3U8 || link.name == "Uservideo")
-                    link.quality
-                else
-                    getIndexQuality(quality)
-                this.headers = link.headers
-                this.extractorData = link.extractorData
+        url: String,
+        quality: String?,
+        referer: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        loadExtractor(url, referer, subtitleCallback) { link ->
+            runBlocking {
+                callback.invoke(
+                    newExtractorLink(
+                        link.name,
+                        link.name,
+                        link.url,
+                        link.type
+                    ) {
+                        this.referer = link.referer
+                        this.quality = if (link.type == ExtractorLinkType.M3U8 || link.name == "Uservideo") link.quality else getIndexQuality(
+                                quality
+                            )
+                        this.headers = link.headers
+                        this.extractorData = link.extractorData
+                    }
+                )
             }
-        )
+        }
     }
-}
 
 
     private fun getIndexQuality(str: String?): Int {
