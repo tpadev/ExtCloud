@@ -52,38 +52,30 @@ class Ngefilm : MainAPI() {
     return results
 }
 
-private fun Element.toSearchResult(): SearchResponse? {
-    val title = selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
-    val href = fixUrl(selectFirst("a")!!.attr("href"))
-    val posterUrl = fixUrlNull(selectFirst("a > img")?.getImageAttr()).fixImageQuality()
-
-    val quality = select("div.gmr-qual, div.gmr-quality-item > a")
-        .text().trim().replace("-", "")
-
-    // --- AMBIL RATING DI ATAS POSTER ---
-    val rating = selectFirst("div.gmr-rating-item")
-        ?.ownText()
-        ?.trim()
-        ?.replace(",", ".")
-        ?.toDoubleOrNull()
-    // ------------------------------------
-
-    return if (quality.isEmpty()) {
-        val episode =
-            Regex("Episode\\s?([0-9]+)").find(title)?.groupValues?.getOrNull(1)?.toIntOrNull()
-                ?: select("div.gmr-numbeps > span").text().toIntOrNull()
-
-        newAnimeSearchResponse(title, href, TvType.TvSeries) {
-            this.posterUrl = posterUrl
-            addSub(episode)
-        }
-    } else {
-        newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = posterUrl
-            if (rating != null) this.score = Score.from10(rating)
-            addQuality(quality)
-        }
-    }
+private fun Element.toSearchResult(): SearchResponse? {  
+    val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null  
+    val href = fixUrl(this.selectFirst("a")!!.attr("href"))  
+    val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr()).fixImageQuality()  
+    val quality =  
+            this.select("div.gmr-qual, div.gmr-quality-item > a").text().trim().replace("-", "")  
+    return if (quality.isEmpty()) {  
+        val episode =  
+                Regex("Episode\\s?([0-9]+)")  
+                        .find(title)  
+                        ?.groupValues  
+                        ?.getOrNull(1)  
+                        ?.toIntOrNull()  
+                        ?: this.select("div.gmr-numbeps > span").text().toIntOrNull()  
+        newAnimeSearchResponse(title, href, TvType.TvSeries) {  
+            this.posterUrl = posterUrl  
+            addSub(episode)  
+        }  
+    } else {  
+        newMovieSearchResponse(title, href, TvType.Movie) {  
+            this.posterUrl = posterUrl  
+            addQuality(quality)  
+        }  
+    }  
 }
 
     private fun Element.toRecommendResult(): SearchResponse? {
