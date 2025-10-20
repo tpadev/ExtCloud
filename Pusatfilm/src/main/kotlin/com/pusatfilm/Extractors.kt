@@ -19,15 +19,14 @@ open class Kotakajaib : ExtractorApi() {
             subtitleCallback: (SubtitleFile) -> Unit,
             callback: (ExtractorLink) -> Unit
     ) {
-        app.get(url, referer = referer).document.select("ul#dropdown-server li a").apmap {
-            loadExtractor(
-                runBlocking {
-                    base64Decode(it.attr("data-frame")),
-                    "$mainUrl/",
-                    subtitleCallback,
-                    callback
-                }
-            )
+        val links = app.get(url, referer = referer).document.select("ul#dropdown-server li a")
+        for (a in links) {
+    l   oadExtractor(
+        base64Decode(a.attr("data-frame")),
+        "$mainUrl/",
+        subtitleCallback,
+        callback
+        )
         }
     }
 }
