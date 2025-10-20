@@ -140,13 +140,15 @@ class Animasu : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        document.select(".mobius > .mirror > option").mapNotNull {
-            fixUrl(
-                Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
-            ) to it.text()
-        }.apmap { (iframe, quality) ->
-            loadFixedExtractor(iframe, quality, "$mainUrl/", subtitleCallback, callback)
-        }
+        val mirrors = document.select(".mobius > .mirror > option").mapNotNull {
+    fixUrl(
+        Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")
+    ) to it.text()
+}
+
+for ((iframe, quality) in mirrors) {
+    loadFixedExtractor(iframe, quality, "$mainUrl/", subtitleCallback, callback)
+}
         return true
     }
 
@@ -157,7 +159,7 @@ class Animasu : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ) {
-    loadExtractor(url, referer, subtitleCallback) { link ->
+    loadFixedExtractor(url, quality, referer, subtitleCallback, callback) { link ->
         callback.invoke(
             newExtractorLink(
                 link.name,
