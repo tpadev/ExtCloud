@@ -21,12 +21,12 @@ open class Kotakajaib : ExtractorApi() {
     ) {
         val links = app.get(url, referer = referer).document.select("ul#dropdown-server li a")
         for (a in links) {
-    l   oadExtractor(
+    loadExtractor(
         base64Decode(a.attr("data-frame")),
         "$mainUrl/",
         subtitleCallback,
         callback
-        )
+    )
         }
     }
 }
