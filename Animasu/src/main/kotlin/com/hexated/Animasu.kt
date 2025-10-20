@@ -151,32 +151,31 @@ class Animasu : MainAPI() {
     }
 
     private suspend fun loadFixedExtractor(
-        url: String,
-        quality: String?,
-        referer: String? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        loadExtractor(url, referer, subtitleCallback) { link ->
-            runBlocking {
-                callback.invoke(
-                    newExtractorLink(
-                        link.name,
-                        link.name,
-                        link.url,
-                        link.type
-                    ) {
-                        this.referer = link.referer
-                        this.quality = if (link.type == ExtractorLinkType.M3U8 || link.name == "Uservideo") link.quality else getIndexQuality(
-                                quality
-                            )
-                        this.headers = link.headers
-                        this.extractorData = link.extractorData
-                    }
-                )
+    url: String,
+    quality: String?,
+    referer: String? = null,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+) {
+    loadExtractor(url, referer, subtitleCallback) { link ->
+        callback.invoke(
+            newExtractorLink(
+                link.name,
+                link.name,
+                link.url,
+                link.type
+            ) {
+                this.referer = link.referer
+                this.quality = if (
+                    link.type == ExtractorLinkType.M3U8 || link.name == "Uservideo"
+                ) link.quality else getIndexQuality(quality)
+
+                this.headers = link.headers
+                this.extractorData = link.extractorData
             }
-        }
+        )
     }
+}
 
 
     private fun getIndexQuality(str: String?): Int {
