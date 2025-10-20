@@ -21,10 +21,12 @@ open class Kotakajaib : ExtractorApi() {
     ) {
         app.get(url, referer = referer).document.select("ul#dropdown-server li a").apmap {
             loadExtractor(
+                runBlocking {
                     base64Decode(it.attr("data-frame")),
                     "$mainUrl/",
                     subtitleCallback,
                     callback
+                }
             )
         }
     }
