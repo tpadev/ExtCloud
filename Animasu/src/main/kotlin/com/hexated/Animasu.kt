@@ -159,7 +159,7 @@ for ((iframe, quality) in mirrors) {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ) {
-    loadFixedExtractor(url, quality, referer, subtitleCallback, callback) { link ->
+    loadExtractor(url, referer, subtitleCallback) { link ->
         callback.invoke(
             newExtractorLink(
                 link.name,
