@@ -160,6 +160,7 @@ for ((iframe, quality) in mirrors) {
     callback: (ExtractorLink) -> Unit
 ) {
     loadExtractor(url, referer, subtitleCallback) { link ->
+        runBlocking {
         callback.invoke(
             newExtractorLink(
                 link.name,
@@ -176,6 +177,7 @@ for ((iframe, quality) in mirrors) {
                 this.extractorData = link.extractorData
             }
         )
+        }
     }
 }
 
