@@ -52,31 +52,43 @@ class Ngefilm : MainAPI() {
     return results
 }
 
-private fun Element.toSearchResult(): SearchResponse? {  
-    val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null  
-    val href = fixUrl(this.selectFirst("a")!!.attr("href"))  
-    val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr()).fixImageQuality()  
-    val quality =  
-            this.select("div.gmr-qual, div.gmr-quality-item > a").text().trim().replace("-", "")  
-    return if (quality.isEmpty()) {  
-        val episode =  
-                Regex("Episode\\s?([0-9]+)")  
-                        .find(title)  
-                        ?.groupValues  
-                        ?.getOrNull(1)  
-                        ?.toIntOrNull()  
-                        ?: this.select("div.gmr-numbeps > span").text().toIntOrNull()  
-        newAnimeSearchResponse(title, href, TvType.TvSeries) {  
-            this.posterUrl = posterUrl  
-            addSub(episode)  
-        }  
-    } else {  
-        newMovieSearchResponse(title, href, TvType.Movie) {  
-            this.posterUrl = posterUrl  
-            addQuality(quality)  
-        }  
-    }  
+private fun Element.toSearchResult(): SearchResponse? {
+    val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
+    val href = fixUrl(this.selectFirst("a")!!.attr("href"))
+    val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr()).fixImageQuality()
+
+    val quality = this.select("div.gmr-qual, div.gmr-quality-item > a")
+        .text().trim().replace("-", "")
+
+    // 🔹 Ambil rating (contoh: "5.9")
+    val ratingText = this.selectFirst("div.gmr-rating-item")?.text()?.trim()
+    val ratingValue = ratingText?.toDoubleOrNull() ?: 0.0
+
+    return if (quality.isEmpty()) {
+        val episode = Regex("Episode\\s?([0-9]+)")
+            .find(title)
+            ?.groupValues?.getOrNull(1)
+            ?.toIntOrNull()
+            ?: this.select("div.gmr-numbeps > span").text().toIntOrNull()
+
+        newAnimeSearchResponse(title, href, TvType.TvSeries) {
+            this.posterUrl = posterUrl
+            addSub(episode)
+
+            // 🔹 Tambahkan score rating
+            if (ratingValue > 0) this.score = Score.from10(ratingValue)
+        }
+    } else {
+        newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = posterUrl
+            addQuality(quality)
+
+            // 🔹 Tambahkan score rating
+            if (ratingValue > 0) this.score = Score.from10(ratingValue)
+        }
+    }
 }
+
 
     private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
