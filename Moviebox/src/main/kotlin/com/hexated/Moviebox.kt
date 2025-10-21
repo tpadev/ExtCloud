@@ -17,7 +17,7 @@ class Moviebox : MainAPI() {
     override var name = "Moviebox"
     override val hasMainPage = true
     override val hasQuickSearch = true
-    override var lang = "id"
+    override var lang = "en"
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -120,10 +120,11 @@ class Moviebox : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                this.actors = actors
                 this.score = score
+                this.actors = actors
                 this.recommendations = recommendations
                 addTrailer(trailer, addRaw = true)
+            }
         } else {
             newMovieLoadResponse(
                 title,
@@ -135,8 +136,8 @@ class Moviebox : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                this.actors = actors
                 this.score = score
+                this.actors = actors
                 this.recommendations = recommendations
                 addTrailer(trailer, addRaw = true)
             }

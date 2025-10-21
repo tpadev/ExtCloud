@@ -123,7 +123,7 @@ class PrimeVideoProvider : MainAPI() {
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
 
-        val rating = data.match?.replace("IMDb ", "")?.toRatingInt()
+        val score = Score.from10(data.match?.replace("IMDb ", ""))
         val runTime = convertRuntimeToMinutes(data.runtime.toString())
 
         val suggest = data.suggest?.map {
@@ -167,7 +167,7 @@ class PrimeVideoProvider : MainAPI() {
             year = data.year.toIntOrNull()
             tags = genre
             actors = cast
-            this.rating = rating
+            this.score = score
             this.duration = runTime
             this.contentRating = data.ua
             this.recommendations = suggest
