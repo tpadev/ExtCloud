@@ -58,7 +58,7 @@ class Nomat : MainAPI() {
     // Ambil kualitas & rating
     val quality = this.selectFirst("div.qual")?.text()?.trim()
   
-
+    val ratingText = selectFirst("div.rtg")?.ownText()?.trim()
     // Cek apakah Series (ada label eps / Season / Episode)
     val epsText = this.selectFirst("div.qual")?.text()?.trim()
     val episode = Regex("Eps.?\\s?([0-9]+)", RegexOption.IGNORE_CASE)
@@ -69,11 +69,13 @@ class Nomat : MainAPI() {
         newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
             this.posterUrl = posterUrl
             addQuality(quality ?: "")
+            this.score = Score.from10(ratingText?.toDoubleOrNull())
         }
     } else {
         newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             addQuality(quality ?: "")   
+            this.score = Score.from10(ratingText?.toDoubleOrNull())
         }
     }
 }
