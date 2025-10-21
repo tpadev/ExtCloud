@@ -61,8 +61,7 @@ private fun Element.toSearchResult(): SearchResponse? {
         .text().trim().replace("-", "")
 
     // 🔹 Ambil rating (contoh: "5.9")
-    val ratingText = this.selectFirst("div.gmr-rating-item")?.text()?.trim()
-    val ratingValue = ratingText?.toDoubleOrNull() ?: 0.0
+    val ratingText = this.selectFirst("div.gmr-rating-item")?.ownText()?.trim()
 
     return if (quality.isEmpty()) {
         val episode = Regex("Episode\\s?([0-9]+)")
@@ -74,9 +73,6 @@ private fun Element.toSearchResult(): SearchResponse? {
         newAnimeSearchResponse(title, href, TvType.TvSeries) {
             this.posterUrl = posterUrl
             addSub(episode)
-
-            // 🔹 Tambahkan score rating
-            if (ratingValue > 0) this.score = Score.from10(ratingValue)
         }
     } else {
         newMovieSearchResponse(title, href, TvType.Movie) {
@@ -84,7 +80,7 @@ private fun Element.toSearchResult(): SearchResponse? {
             addQuality(quality)
 
             // 🔹 Tambahkan score rating
-            if (ratingValue > 0) this.score = Score.from10(ratingValue)
+            this.score = Score.from10(ratingText?.toDoubleOrNull())
         }
     }
 }
