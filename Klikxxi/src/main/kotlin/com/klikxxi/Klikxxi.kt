@@ -54,7 +54,7 @@ class Klikxxi : MainAPI() {
 
     // ambil poster dengan fixPoster helper
     val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr()).fixImageQuality()
-
+    val ratingText = this.selectFirst("div.gmr-rating-item")?.ownText()?.trim()
     val quality = this.selectFirst("span.gmr-quality-item")?.text()?.trim()
     val typeText = this.selectFirst(".gmr-posttype-item")?.text()?.trim()
     val isSeries = typeText.equals("TV Show", true)
@@ -62,11 +62,13 @@ class Klikxxi : MainAPI() {
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
                 addQuality(quality ?: "")
+                this.score = Score.from10(ratingText?.toDoubleOrNull())
             }
         } else {
             newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
                 addQuality(quality ?: "")
+                this.score = Score.from10(ratingText?.toDoubleOrNull())
             }
         }
     }

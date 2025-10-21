@@ -45,6 +45,7 @@ class Kawanfilm : MainAPI() {
         val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr()).fixImageQuality()
+        val ratingText = this.selectFirst("div.gmr-rating-item")?.ownText()?.trim()
         val quality =
                 this.select("div.gmr-qual, div.gmr-quality-item > a").text().trim().replace("-", "")
         return if (quality.isEmpty()) {
@@ -58,11 +59,13 @@ class Kawanfilm : MainAPI() {
             newAnimeSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
                 addSub(episode)
+                this.score = Score.from10(ratingText?.toDoubleOrNull())
             }
         } else {
             newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
                 addQuality(quality)
+                this.score = Score.from10(ratingText?.toDoubleOrNull())
             }
         }
     }

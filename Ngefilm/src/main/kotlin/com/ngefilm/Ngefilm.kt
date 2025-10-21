@@ -73,6 +73,7 @@ private fun Element.toSearchResult(): SearchResponse? {
         newAnimeSearchResponse(title, href, TvType.TvSeries) {
             this.posterUrl = posterUrl
             addSub(episode)
+            this.score = Score.from10(ratingText?.toDoubleOrNull())
         }
     } else {
         newMovieSearchResponse(title, href, TvType.Movie) {
