@@ -180,7 +180,7 @@ open class SoraStream : TmdbProvider() {
         val orgTitle = res.originalTitle ?: res.originalName ?: return null
         val releaseDate = res.releaseDate ?: res.firstAirDate
         val year = releaseDate?.split("-")?.first()?.toIntOrNull()
-        val rating = res.vote_average.toString().toRatingInt()
+        val score = Score.from10(res.vote_average?.toString())
         val genres = res.genres?.mapNotNull { it.name }
 
         val isCartoon = genres?.contains("Animation") ?: false
@@ -256,7 +256,7 @@ open class SoraStream : TmdbProvider() {
                 this.year = year
                 this.plot = res.overview
                 this.tags = keywords.takeIf { !it.isNullOrEmpty() } ?: genres
-                this.rating = rating
+                this.score = score
                 this.showStatus = getStatus(res.status)
                 this.recommendations = recommendations
                 this.actors = actors
@@ -293,7 +293,7 @@ open class SoraStream : TmdbProvider() {
                 this.plot = res.overview
                 this.duration = res.runtime
                 this.tags = keywords.takeIf { !it.isNullOrEmpty() } ?: genres
-                this.rating = rating
+                this.score = score
                 this.recommendations = recommendations
                 this.actors = actors
                 this.contentRating = fetchContentRating(data.id, "US")

@@ -84,7 +84,9 @@ class Pusatfilm : MainAPI() {
         val tvType = if (url.contains("/tv/")) TvType.TvSeries else TvType.Movie
         val description = document.selectFirst("div[itemprop=description] > p")?.text()?.trim()
         val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
-        val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.toRatingInt()
+        val score = Score.from10(
+    document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()
+)
         val actors = document.select("div.gmr-moviedata").last()?.select("span[itemprop=actors]")?.map { it.select("a").text() }
         val duration = document.selectFirst("div.gmr-moviedata span[property=duration]")
                     ?.text()
@@ -110,7 +112,7 @@ class Pusatfilm : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                this.rating = rating
+                this.score = score
                 this.duration = duration ?: 0
                 addActors(actors)
                 addTrailer(trailer)
@@ -121,7 +123,7 @@ class Pusatfilm : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                this.rating = rating
+                this.score = score
                 this.duration = duration ?: 0
                 addActors(actors)
                 addTrailer(trailer)
