@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.httpsify
@@ -163,7 +164,7 @@ class JioHotstarProvider : MainAPI() {
             year = data.year.toIntOrNull()
             tags = genre
             actors = cast
-            this.rating = rating
+            addScore(rating)
             this.duration = runTime
             this.contentRating = data.ua
             this.recommendations = suggest

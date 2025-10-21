@@ -12,6 +12,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.getQualityFromName
+import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import okhttp3.Headers
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -165,7 +166,7 @@ class NetflixProvider : MainAPI() {
             year = data.year.toIntOrNull()
             tags = genre
             actors = cast
-            this.rating = rating
+            addScore(rating)
             this.duration = runTime
             this.contentRating = data.ua
             this.recommendations = suggest
