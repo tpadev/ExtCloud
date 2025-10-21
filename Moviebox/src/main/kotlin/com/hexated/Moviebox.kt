@@ -3,7 +3,6 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -81,7 +80,7 @@ class Moviebox : MainAPI() {
         val tvType = if (subject?.subjectType == 2) TvType.TvSeries else TvType.Movie
         val description = subject?.description
         val trailer = subject?.trailer?.videoAddress?.url
-        val rating = subject?.imdbRatingValue.toRatingInt()
+        val score = Score.from10(subject?.imdbRatingValue)
         val actors = document?.stars?.mapNotNull { cast ->
             ActorData(
                 Actor(
@@ -122,9 +121,9 @@ class Moviebox : MainAPI() {
                 this.plot = description
                 this.tags = tags
                 this.actors = actors
+                this.score = score
                 this.recommendations = recommendations
                 addTrailer(trailer, addRaw = true)
-                addScore(rating)
         } else {
             newMovieLoadResponse(
                 title,
@@ -137,9 +136,9 @@ class Moviebox : MainAPI() {
                 this.plot = description
                 this.tags = tags
                 this.actors = actors
+                this.score = score
                 this.recommendations = recommendations
                 addTrailer(trailer, addRaw = true)
-                addScore(rating)
             }
         }
     }

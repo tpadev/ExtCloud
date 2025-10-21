@@ -12,7 +12,6 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.getQualityFromName
-import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import okhttp3.Headers
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -123,7 +122,7 @@ class NetflixProvider : MainAPI() {
         val genre = data.genre?.split(",")
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
-        val rating = data.match?.replace("IMDb ", "")?.toRatingInt()
+        val score = Score.from10(data.match?.replace("IMDb ", ""))
         val runTime = convertRuntimeToMinutes(data.runtime.toString())
         val suggest = data.suggest?.map {
             newAnimeSearchResponse("", Id(it.id).toJson()) {
@@ -166,8 +165,8 @@ class NetflixProvider : MainAPI() {
             year = data.year.toIntOrNull()
             tags = genre
             actors = cast
-            addScore(rating)
             this.duration = runTime
+            this.score = score
             this.contentRating = data.ua
             this.recommendations = suggest
         }
