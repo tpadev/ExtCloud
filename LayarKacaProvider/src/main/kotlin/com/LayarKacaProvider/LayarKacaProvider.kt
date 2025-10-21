@@ -61,7 +61,7 @@ class LayarKacaProvider : MainAPI() {
         val title = this.selectFirst("h3")?.ownText()?.trim() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("img")?.getImageAttr())
-        val ratingText = element.selectFirst("span.rating")?.ownText()?.trim()
+        val ratingText = selectFirst("span.rating")?.ownText()?.trim()
         val type = if (this.selectFirst("span.episode") == null) TvType.Movie else TvType.TvSeries
         val posterheaders= mapOf("Referer" to getBaseUrl(posterUrl))
         return if (type == TvType.TvSeries) {
