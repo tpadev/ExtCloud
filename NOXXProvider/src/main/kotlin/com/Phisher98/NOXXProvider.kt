@@ -118,7 +118,7 @@ class NOXXProvider : MainAPI() { // all providers must be an instance of MainAPI
         val title = doc.selectFirst("h1.px-5")?.text()?.toString()?.trim() ?: return null
         val poster = fixUrlNull(doc.selectFirst("img.relative")?.attr("src"))
         val tags = doc.select("div.relative a[class*=\"py-0.5\"]").map { it.text() }
-        val description = doc.selectFirst("p.leading-tight")?.text()?.trim())
+        val description = doc.selectFirst("p.leading-tight")?.text()?.trim()
         val score = Score.from10(doc.select("span.text-xl").text())
         val actors = doc.select("div.font-semibold span.text-blue-300").map { it.text() }
         val recommendations = doc.select("a.block").mapNotNull {
