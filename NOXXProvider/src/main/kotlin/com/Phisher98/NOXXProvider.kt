@@ -119,7 +119,8 @@ class NOXXProvider : MainAPI() { // all providers must be an instance of MainAPI
         val poster = fixUrlNull(doc.selectFirst("img.relative")?.attr("src"))
         val tags = doc.select("div.relative a[class*=\"py-0.5\"]").map { it.text() }
         val description = doc.selectFirst("p.leading-tight")?.text()?.trim()
-        val rating = doc.select("span.text-xl").text().toRatingInt()
+        val score = Score.from10(doc.select("span.text-xl").text())
+        val score = Score.from10(doc.select("span.text-xl").text())
         val actors = doc.select("div.font-semibold span.text-blue-300").map { it.text() }
         val recommendations = doc.select("a.block").mapNotNull {
             it.toSearchResult()
@@ -144,7 +145,7 @@ class NOXXProvider : MainAPI() { // all providers must be an instance of MainAPI
             this.posterUrl = poster
             this.plot = description
             this.tags = tags
-            this.rating = rating
+            this.score = score
             addActors(actors)
             this.recommendations = recommendations
         }
