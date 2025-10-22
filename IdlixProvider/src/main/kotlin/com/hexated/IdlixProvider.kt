@@ -12,13 +12,14 @@ import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.delay
 import org.jsoup.nodes.Element
 import java.net.URI
 import java.time.Duration
 import java.time.Instant
 
 class IdlixProvider : MainAPI() {
-    // =============== KONFIGURASI DASAR ===============
+    // ===================== KONFIGURASI DASAR =====================
     private val mirrors = listOf(
         "https://tv12.idlixku.com",
         "https://tv11.idlixku.com",
@@ -26,7 +27,8 @@ class IdlixProvider : MainAPI() {
         "https://tv9.idlixku.com"
     )
 
-    // Tambahkan relayPrefix kamu di sini (bisa pakai Cloudflare Worker)
+    // Cloudflare relay kamu (Cloudflare Worker). Jangan sertakan tambahan "https://" lagi,
+    // relayUrl(...) akan menambahkan skema yang tepat.
     private val relayPrefix: String? = "https://idlix-relay.pendisu647.workers.dev/"
 
     private var cachedDomain: String? = null
@@ -55,7 +57,26 @@ class IdlixProvider : MainAPI() {
         "$mainUrl/network/HBO/page/" to "HBO Series",
     )
 
-    // =============== MIRROR HANDLING ===============
+    // ===================== BROWSER-LIKE HEADERS =====================
+    private val browserHeaders: Map<String, String> = mapOf(
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+                "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/122.0.0.0 Safari/537.36",
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language" to "en-US,en;q=0.9,id;q=0.8",
+        "Accept-Encoding" to "gzip, deflate, br",
+        "Cache-Control" to "no-cache",
+        "Pragma" to "no-cache",
+        "Connection" to "keep-alive",
+        "Upgrade-Insecure-Requests" to "1",
+        "Sec-Fetch-Dest" to "document",
+        "Sec-Fetch-Mode" to "navigate",
+        "Sec-Fetch-Site" to "none",
+        "Sec-Fetch-User" to "?1",
+        "Referer" to "https://google.com"
+    )
+
+    // ===================== MIRROR HANDLING =====================
     private fun replaceHost(url: String, newBase: String): String {
         return try {
             val original = URI(url)
@@ -73,7 +94,8 @@ class IdlixProvider : MainAPI() {
         if (cachedDomain != null && isCachedValid()) return cachedDomain
         for (domain in mirrors) {
             try {
-                val res = app.get(domain)
+                // cek pakai browser-like headers supaya respons serupa browser
+                val res = app.get(domain, headers = browserHeaders)
                 val text = res.text.lowercase()
                 val title = res.document.select("title").text().lowercase()
                 if (res.code == 200 &&
@@ -91,41 +113,81 @@ class IdlixProvider : MainAPI() {
         return null
     }
 
-    // =============== SAFE REQUEST (GET + POST) ===============
+    // ===================== RELAY HELPERS =====================
+    // Build worker proxied URL — prevent duplicate scheme
+    private fun relayUrl(target: String): String {
+        val prefix = relayPrefix ?: return target
+        val stripped = target.removePrefix("https://").removePrefix("http://")
+        return if (prefix.endsWith("/")) prefix + stripped else "$prefix/$stripped"
+    }
+
+    // ===================== SAFE REQUEST (GET + POST) =====================
     private suspend fun safeGet(url: String): NiceResponse {
         val useRelay = !relayPrefix.isNullOrEmpty()
         try {
-            var res = app.get(url)
-            val title = res.document.select("title").text().orEmpty()
-            val text = res.text
+            // primary attempt (with browser-like headers)
+            var res = app.get(url, headers = browserHeaders)
+            val title = try { res.document.select("title").text().orEmpty() } catch (_: Exception) { "" }
+            val text = res.text.orEmpty()
 
+            // classic IUAM
             if (title.contains("Just a moment", true) || text.contains("Just a moment", true)) {
-                res = app.get(url, interceptor = CloudflareKiller())
-                if (res.code == 200) return res
+                val after = app.get(url, interceptor = CloudflareKiller(), headers = browserHeaders)
+                if (after.code == 200) return after
+                res = after
             }
 
+            // modern challenge or blocked
             if (title.contains("Verifying you are human", true) ||
                 text.contains("Verifying you are human", true) ||
-                res.code == 403) {
+                res.code == 403
+            ) {
+                // try mirror
                 val newDomain = pickWorkingDomain()
                 if (newDomain != null) {
                     val replaced = replaceHost(url, newDomain)
-                    val res2 = app.get(replaced)
-                    if (res2.code == 200 && !res2.text.contains("Verifying", true)) return res2
+                    try {
+                        val res2 = app.get(replaced, headers = browserHeaders)
+                        if (res2.code == 200 && !res2.text.contains("Verifying", true)) {
+                            cachedDomain = newDomain
+                            cachedAt = Instant.now()
+                            mainUrl = newDomain
+                            directUrl = newDomain
+                            return res2
+                        }
+                    } catch (_: Exception) {}
                 }
-                if (useRelay) return app.get(relayPrefix + url)
+
+                // fallback to relay worker
+                if (useRelay) {
+                    val proxied = relayUrl(url)
+                    return app.get(proxied, headers = browserHeaders)
+                }
             }
+
             return res
         } catch (e: Exception) {
+            // on exception try mirror then relay
             val newDomain = pickWorkingDomain()
             if (newDomain != null) {
                 val replaced = replaceHost(url, newDomain)
                 try {
-                    val res2 = app.get(replaced)
-                    if (res2.code == 200) return res2
+                    val res2 = app.get(replaced, headers = browserHeaders)
+                    if (res2.code == 200) {
+                        cachedDomain = newDomain
+                        cachedAt = Instant.now()
+                        mainUrl = newDomain
+                        directUrl = newDomain
+                        return res2
+                    }
                 } catch (_: Exception) {}
             }
-            if (useRelay) return app.get(relayPrefix + url)
+
+            if (useRelay) {
+                val proxied = relayUrl(url)
+                return app.get(proxied, headers = browserHeaders)
+            }
+
             throw e
         }
     }
@@ -137,35 +199,54 @@ class IdlixProvider : MainAPI() {
         headers: Map<String, String>? = null
     ): NiceResponse {
         val useRelay = !relayPrefix.isNullOrEmpty()
+        val hdrs = (headers ?: emptyMap()) + browserHeaders // merge so browser headers present
         try {
-            var res = app.post(url = url, data = data, referer = referer, headers = headers ?: emptyMap())
-            val title = res.document.select("title").text().orEmpty()
-            val text = res.text
+            var res = app.post(url = url, data = data, referer = referer, headers = hdrs)
+            val title = try { res.document.select("title").text().orEmpty() } catch (_: Exception) { "" }
+            val text = res.text.orEmpty()
 
             if (title.contains("Just a moment", true) || text.contains("Just a moment", true)) {
-                res = app.post(url, data = data, referer = referer, headers = headers ?: emptyMap(), interceptor = CloudflareKiller())
-                if (res.code == 200) return res
+                val after = app.post(url = url, data = data, referer = referer, headers = hdrs, interceptor = CloudflareKiller())
+                if (after.code == 200) return after
+                res = after
             }
 
             if (title.contains("Verifying you are human", true) || text.contains("Verifying", true) || res.code == 403) {
                 val newDomain = pickWorkingDomain()
                 if (newDomain != null) {
                     val replaced = replaceHost(url, newDomain)
-                    val res2 = app.post(url = replaced, data = data, referer = referer, headers = headers ?: emptyMap())
-                    if (res2.code == 200 && !res2.text.contains("Verifying", true)) return res2
+                    try {
+                        val res2 = app.post(url = replaced, data = data, referer = referer, headers = hdrs)
+                        if (res2.code == 200 && !res2.text.contains("Verifying", true)) {
+                            cachedDomain = newDomain
+                            cachedAt = Instant.now()
+                            mainUrl = newDomain
+                            directUrl = newDomain
+                            return res2
+                        }
+                    } catch (_: Exception) {}
                 }
-                if (useRelay) return app.post(url = relayPrefix + url, data = data, referer = referer, headers = headers ?: emptyMap())
+                if (useRelay) {
+                    val proxied = relayUrl(url)
+                    return app.post(url = proxied, data = data, referer = referer, headers = hdrs)
+                }
             }
+
             return res
         } catch (e: Exception) {
-            if (useRelay) return app.post(url = relayPrefix + url, data = data, referer = referer, headers = headers ?: emptyMap())
+            if (useRelay) {
+                try {
+                    val proxied = relayUrl(url)
+                    return app.post(url = proxied, data = data, referer = referer, headers = hdrs)
+                } catch (_: Exception) {}
+            }
             throw e
         }
     }
 
     private fun getBaseUrl(url: String): String = URI(url).let { "${it.scheme}://${it.host}" }
 
-    // =============== MAIN PAGE PARSER ===============
+    // ===================== MAIN PAGE PARSER =====================
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val urlParts = request.data.split("?")
         val targetUrl = if (request.name == "Featured" && page <= 1)
@@ -196,7 +277,7 @@ class IdlixProvider : MainAPI() {
         }
     }
 
-    // =============== SEARCH ===============
+    // ===================== SEARCH =====================
     override suspend fun search(query: String): List<SearchResponse> {
         val res = safeGet("$mainUrl/search/$query")
         val doc = res.document
@@ -209,7 +290,7 @@ class IdlixProvider : MainAPI() {
         }
     }
 
-    // =============== LOAD DETAIL ===============
+    // ===================== LOAD DETAIL =====================
     override suspend fun load(url: String): LoadResponse {
         val res = safeGet(url)
         val doc = res.document
@@ -235,7 +316,7 @@ class IdlixProvider : MainAPI() {
         }
     }
 
-    // =============== LOAD LINKS (PLAYER) ===============
+    // ===================== LOAD LINKS (PLAYER) =====================
     override suspend fun loadLinks(
         data: String, isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
