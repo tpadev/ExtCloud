@@ -17,24 +17,37 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class IdlixProvider : MainAPI() {
-    override var mainUrl = runBlocking {
-    private var directUrl = mainUrl
-    val possibleDomains = listOf(
-        "https://tv12.idlixku.com",
-        "https://tv11.idlixku.com",
-        "https://tv10.idlixku.com",
-        "https://tv9.idlixku.com"
-    )
-    possibleDomains.firstOrNull { domain ->
-        try {
-            val res = app.get(domain)
-            res.code == 200 && !res.text.contains("Verifying you are human")
-        } catch (e: Exception) {
-            false
-        }
-    } ?: "https://tv10.idlixku.com"
-}
+    override var mainUrl: String = runBlocking {
+        val possibleDomains = listOf(
+            "https://tv12.idlixku.com",
+            "https://tv11.idlixku.com",
+            "https://tv10.idlixku.com",
+            "https://tv9.idlixku.com"
+        )
 
+        // Cari domain aktif yang tidak kena Cloudflare modern
+        possibleDomains.firstOrNull { domain ->
+            try {
+                val res = app.get(domain)
+                res.code == 200 && !res.text.contains("Verifying you are human", ignoreCase = true)
+            } catch (e: Exception) {
+                false
+            }
+        } ?: "https://tv10.idlixku.com"
+    }
+
+    private var directUrl: String = mainUrl  // <- sekarang di luar runBlocking
+
+    override var name = "Idlix"
+    override val hasMainPage = true
+    override var lang = "id"
+    override val hasDownloadSupport = true
+    override val supportedTypes = setOf(
+        TvType.Movie,
+        TvType.TvSeries,
+        TvType.Anime,
+        TvType.AsianDrama
+    )
 
     override val mainPage = mainPageOf(
         "$mainUrl/" to "Featured",
