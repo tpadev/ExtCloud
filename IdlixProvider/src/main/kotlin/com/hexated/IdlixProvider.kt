@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.*
@@ -39,6 +40,14 @@ class IdlixProvider : MainAPI() {
         "$mainUrl/network/HBO/page/" to "HBO Series",
         "$mainUrl/network/netflix/page/" to "Netflix Series",
     )
+
+    private suspend fun cfKiller(url: String): NiceResponse {
+        var doc = app.get(url)
+        if (doc.document.select("title").text() == "Just a moment...") {
+            doc = app.get(url, interceptor = CloudflareKiller())
+        }
+        return doc
+    }
 
     private fun getBaseUrl(url: String): String {
         return URI(url).let {
