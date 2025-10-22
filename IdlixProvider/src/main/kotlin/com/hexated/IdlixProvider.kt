@@ -18,6 +18,7 @@ import java.net.URI
 
 class IdlixProvider : MainAPI() {
     override var mainUrl = runBlocking {
+    private var directUrl = mainUrl
     val possibleDomains = listOf(
         "https://tv12.idlixku.com",
         "https://tv11.idlixku.com",
