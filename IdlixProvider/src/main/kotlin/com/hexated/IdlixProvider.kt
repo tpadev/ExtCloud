@@ -201,74 +201,91 @@ class IdlixProvider : MainAPI() {
     // A safe POST that uses safeGet logic for fallback decisions.
     // Note: We still use app.post for actual POST, but if response indicates challenge, try mirrors/relay.
     private suspend fun safePost(
-        url: String,
-        data: Map<String, String>,
-        referer: String? = null,
-        headers: Map<String, String>? = null
-    ): NiceResponse {
-        val useRelay = !relayPrefix.isNullOrEmpty()
-        try {
-            val res = app.post(url = url, data = data, referer = referer, headers = headers)
-            val body = res.text
-            val title = res.document.select("title").text().orEmpty()
+    url: String,
+    data: Map<String, String>,
+    referer: String? = null,
+    headers: Map<String, String>? = null
+): NiceResponse {
+    val useRelay = !relayPrefix.isNullOrEmpty()
+    try {
+        val res = app.post(url = url, data = data, referer = referer, headers = headers ?: emptyMap())
+        val body = res.text
+        val title = res.document.select("title").text().orEmpty()
 
-            if (title.contains("Just a moment", ignoreCase = true) ||
-                body.contains("Just a moment", ignoreCase = true)
-            ) {
-                val after = app.post(url = url, data = data, referer = referer, headers = headers, interceptor = CloudflareKiller())
-                if (after.code == 200) return after
-            }
+        if (title.contains("Just a moment", ignoreCase = true) ||
+            body.contains("Just a moment", ignoreCase = true)
+        ) {
+            val after = app.post(
+                url = url,
+                data = data,
+                referer = referer,
+                headers = headers ?: emptyMap(),
+                interceptor = CloudflareKiller()
+            )
+            if (after.code == 200) return after
+        }
 
-            if (title.contains("Verifying you are human", ignoreCase = true) ||
-                body.contains("Verifying you are human", ignoreCase = true) ||
-                res.code == 403
-            ) {
-                val newDomain = pickWorkingDomain()
-                if (newDomain != null) {
-                    val replaced = replaceHost(url, newDomain)
-                    val secondTry = app.post(url = replaced, data = data, referer = referer, headers = headers)
-                    if (secondTry.code == 200 && !secondTry.text.contains("Verifying you are human", ignoreCase = true)) {
-                        cachedDomain = newDomain
-                        cachedAt = Instant.now()
-                        mainUrl = newDomain
-                        directUrl = newDomain
-                        return secondTry
-                    } else if (useRelay) {
-                        val proxied = relayPrefix + url
-                        return app.post(url = proxied, data = data, referer = referer, headers = headers)
-                    }
-                } else if (useRelay) {
-                    val proxied = relayPrefix + url
-                    return app.post(url = proxied, data = data, referer = referer, headers = headers)
-                }
-            }
-
-            return res
-        } catch (e: Exception) {
+        if (title.contains("Verifying you are human", ignoreCase = true) ||
+            body.contains("Verifying you are human", ignoreCase = true) ||
+            res.code == 403
+        ) {
             val newDomain = pickWorkingDomain()
             if (newDomain != null) {
                 val replaced = replaceHost(url, newDomain)
-                try {
-                    val res2 = app.post(url = replaced, data = data, referer = referer, headers = headers)
-                    if (res2.code == 200) {
-                        cachedDomain = newDomain
-                        cachedAt = Instant.now()
-                        mainUrl = newDomain
-                        directUrl = newDomain
-                        return res2
-                    }
-                } catch (_: Exception) {
+                val secondTry = app.post(
+                    url = replaced,
+                    data = data,
+                    referer = referer,
+                    headers = headers ?: emptyMap()
+                )
+                if (secondTry.code == 200 && !secondTry.text.contains("Verifying you are human", ignoreCase = true)) {
+                    cachedDomain = newDomain
+                    cachedAt = Instant.now()
+                    mainUrl = newDomain
+                    directUrl = newDomain
+                    return secondTry
+                } else if (useRelay) {
+                    val proxied = relayPrefix + url
+                    return app.post(url = proxied, data = data, referer = referer, headers = headers ?: emptyMap())
                 }
-            }
-
-            if (useRelay) {
+            } else if (useRelay) {
                 val proxied = relayPrefix + url
-                return app.post(url = proxied, data = data, referer = referer, headers = headers)
+                return app.post(url = proxied, data = data, referer = referer, headers = headers ?: emptyMap())
             }
-
-            throw e
         }
+
+        return res
+    } catch (e: Exception) {
+        val newDomain = pickWorkingDomain()
+        if (newDomain != null) {
+            val replaced = replaceHost(url, newDomain)
+            try {
+                val res2 = app.post(
+                    url = replaced,
+                    data = data,
+                    referer = referer,
+                    headers = headers ?: emptyMap()
+                )
+                if (res2.code == 200) {
+                    cachedDomain = newDomain
+                    cachedAt = Instant.now()
+                    mainUrl = newDomain
+                    directUrl = newDomain
+                    return res2
+                }
+            } catch (_: Exception) {
+            }
+        }
+
+        if (useRelay) {
+            val proxied = relayPrefix + url
+            return app.post(url = proxied, data = data, referer = referer, headers = headers ?: emptyMap())
+        }
+
+        throw e
     }
+}
+
 
     // keep a minimal cfKiller wrapper if you want direct usage
     private suspend fun cfKiller(url: String): NiceResponse {
