@@ -15,28 +15,33 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import kotlinx.coroutines.runBlocking
 import org.jsoup.nodes.Element
 import java.net.URI
+import java.time.Duration
+import java.time.Instant
 
 class IdlixProvider : MainAPI() {
-    override var mainUrl: String = runBlocking {
-        val possibleDomains = listOf(
-            "https://tv12.idlixku.com",
-            "https://tv11.idlixku.com",
-            "https://tv10.idlixku.com",
-            "https://tv9.idlixku.com"
-        )
+    // Mirrors to try (priority order)
+    private val mirrors = listOf(
+        "https://tv12.idlixku.com",
+        "https://tv11.idlixku.com",
+        "https://tv10.idlixku.com",
+        "https://tv9.idlixku.com"
+    )
 
-        // Cari domain aktif yang tidak kena Cloudflare modern
-        possibleDomains.firstOrNull { domain ->
-            try {
-                val res = app.get(domain)
-                res.code == 200 && !res.text.contains("Verifying you are human", ignoreCase = true)
-            } catch (e: Exception) {
-                false
-            }
-        } ?: "https://tv10.idlixku.com"
+    // Optional relay prefix (if you run a relay/proxy that returns raw HTML)
+    // Example: "https://my-relay.example.com/fetch?url="
+    private val relayPrefix: String? = null
+
+    // Cache the working domain so we don't check mirrors too often
+    private var cachedDomain: String? = null
+    private var cachedAt: Instant? = null
+    private val cacheTtl: Duration = Duration.ofMinutes(5)
+
+    // Initialize mainUrl at provider creation using working domain detection
+    override var mainUrl: String = runBlocking {
+        pickWorkingDomain() ?: mirrors.last()
     }
 
-    private var directUrl: String = mainUrl  // <- sekarang di luar runBlocking
+    private var directUrl: String = mainUrl // for building ajax endpoints etc.
 
     override var name = "Idlix"
     override val hasMainPage = true
@@ -62,6 +67,210 @@ class IdlixProvider : MainAPI() {
         "$mainUrl/network/netflix/page/" to "Netflix Series",
     )
 
+    // -----------------------
+    // Utilities for mirror handling & request safety
+    // -----------------------
+
+    private fun replaceHost(url: String, newBase: String): String {
+        return try {
+            val original = URI(url)
+            val base = URI(newBase)
+            URI(
+                base.scheme,
+                base.authority,
+                original.path,
+                original.query,
+                original.fragment
+            ).toString()
+        } catch (e: Exception) {
+            url
+        }
+    }
+
+    private fun isCachedValid(): Boolean {
+        val at = cachedAt ?: return false
+        return !Instant.now().isAfter(at.plus(cacheTtl))
+    }
+
+    // Try to find a working domain (not showing "Verifying you are human")
+    private suspend fun pickWorkingDomain(): String? {
+        if (cachedDomain != null && isCachedValid()) return cachedDomain
+
+        for (domain in mirrors) {
+            try {
+                val check = app.get(domain)
+                val text = check.text
+                val title = check.document.select("title").text().orEmpty()
+
+                if (check.code == 200 &&
+                    !text.contains("Verifying you are human", ignoreCase = true) &&
+                    !text.contains("cf-challenge", ignoreCase = true) &&
+                    !title.contains("Verifying you are human", ignoreCase = true)
+                ) {
+                    cachedDomain = domain
+                    cachedAt = Instant.now()
+                    mainUrl = domain
+                    directUrl = domain
+                    return domain
+                }
+            } catch (e: Exception) {
+                // ignore and try next mirror
+            }
+        }
+        return null
+    }
+
+    // Central safe GET handler
+    private suspend fun safeGet(url: String): NiceResponse {
+        val useRelay = !relayPrefix.isNullOrEmpty()
+
+        // First try normal request
+        try {
+            var res = app.get(url)
+            val title = res.document.select("title").text().orEmpty()
+            val body = res.text
+
+            // If IUAM classic (Just a moment...), try CloudflareKiller interceptor
+            if (title.contains("Just a moment", ignoreCase = true) ||
+                body.contains("Just a moment", ignoreCase = true)
+            ) {
+                val after = app.get(url, interceptor = CloudflareKiller())
+                if (after.code == 200) return after
+                // else fallthrough to mirror logic
+                res = after
+            }
+
+            // If modern challenge (Turnstile) or 403 -> switch mirror or relay
+            if (title.contains("Verifying you are human", ignoreCase = true) ||
+                body.contains("Verifying you are human", ignoreCase = true) ||
+                res.code == 403
+            ) {
+                val newDomain = pickWorkingDomain()
+                if (newDomain != null) {
+                    val replaced = replaceHost(url, newDomain)
+                    val secondTry = app.get(replaced)
+                    if (secondTry.code == 200 &&
+                        !secondTry.text.contains("Verifying you are human", ignoreCase = true)
+                    ) {
+                        cachedDomain = newDomain
+                        cachedAt = Instant.now()
+                        mainUrl = newDomain
+                        directUrl = newDomain
+                        return secondTry
+                    } else if (useRelay) {
+                        // fallback to relay if configured
+                        val proxied = relayPrefix + url
+                        return app.get(proxied)
+                    }
+                } else if (useRelay) {
+                    val proxied = relayPrefix + url
+                    return app.get(proxied)
+                }
+            }
+
+            // Normal success or other status
+            return res
+        } catch (e: Exception) {
+            // Network error or blocked: try mirrors, then relay
+            val newDomain = pickWorkingDomain()
+            if (newDomain != null) {
+                val replaced = replaceHost(url, newDomain)
+                try {
+                    val res2 = app.get(replaced)
+                    if (res2.code == 200) {
+                        cachedDomain = newDomain
+                        cachedAt = Instant.now()
+                        mainUrl = newDomain
+                        directUrl = newDomain
+                        return res2
+                    }
+                } catch (_: Exception) {
+                    // ignore
+                }
+            }
+
+            if (useRelay) {
+                val proxied = relayPrefix + url
+                return app.get(proxied)
+            }
+
+            throw e
+        }
+    }
+
+    // A safe POST that uses safeGet logic for fallback decisions.
+    // Note: We still use app.post for actual POST, but if response indicates challenge, try mirrors/relay.
+    private suspend fun safePost(
+        url: String,
+        data: Map<String, String>,
+        referer: String? = null,
+        headers: Map<String, String>? = null
+    ): NiceResponse {
+        val useRelay = !relayPrefix.isNullOrEmpty()
+        try {
+            val res = app.post(url = url, data = data, referer = referer, headers = headers)
+            val body = res.text
+            val title = res.document.select("title").text().orEmpty()
+
+            if (title.contains("Just a moment", ignoreCase = true) ||
+                body.contains("Just a moment", ignoreCase = true)
+            ) {
+                val after = app.post(url = url, data = data, referer = referer, headers = headers, interceptor = CloudflareKiller())
+                if (after.code == 200) return after
+            }
+
+            if (title.contains("Verifying you are human", ignoreCase = true) ||
+                body.contains("Verifying you are human", ignoreCase = true) ||
+                res.code == 403
+            ) {
+                val newDomain = pickWorkingDomain()
+                if (newDomain != null) {
+                    val replaced = replaceHost(url, newDomain)
+                    val secondTry = app.post(url = replaced, data = data, referer = referer, headers = headers)
+                    if (secondTry.code == 200 && !secondTry.text.contains("Verifying you are human", ignoreCase = true)) {
+                        cachedDomain = newDomain
+                        cachedAt = Instant.now()
+                        mainUrl = newDomain
+                        directUrl = newDomain
+                        return secondTry
+                    } else if (useRelay) {
+                        val proxied = relayPrefix + url
+                        return app.post(url = proxied, data = data, referer = referer, headers = headers)
+                    }
+                } else if (useRelay) {
+                    val proxied = relayPrefix + url
+                    return app.post(url = proxied, data = data, referer = referer, headers = headers)
+                }
+            }
+
+            return res
+        } catch (e: Exception) {
+            val newDomain = pickWorkingDomain()
+            if (newDomain != null) {
+                val replaced = replaceHost(url, newDomain)
+                try {
+                    val res2 = app.post(url = replaced, data = data, referer = referer, headers = headers)
+                    if (res2.code == 200) {
+                        cachedDomain = newDomain
+                        cachedAt = Instant.now()
+                        mainUrl = newDomain
+                        directUrl = newDomain
+                        return res2
+                    }
+                } catch (_: Exception) {
+                }
+            }
+
+            if (useRelay) {
+                val proxied = relayPrefix + url
+                return app.post(url = proxied, data = data, referer = referer, headers = headers)
+            }
+
+            throw e
+        }
+    }
+
+    // keep a minimal cfKiller wrapper if you want direct usage
     private suspend fun cfKiller(url: String): NiceResponse {
         var doc = app.get(url)
         if (doc.document.select("title").text() == "Just a moment...") {
@@ -76,18 +285,24 @@ class IdlixProvider : MainAPI() {
         }
     }
 
+    // -----------------------
+    // Provider functions (use safeGet / safePost)
+    // -----------------------
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val url = request.data.split("?")
+        val urlParts = request.data.split("?")
         val nonPaged = request.name == "Featured" && page <= 1
-        val req = if (nonPaged) {
-            app.get(request.data)
+        val targetUrl = if (nonPaged) {
+            request.data
         } else {
-            app.get("${url.first()}$page/?${url.lastOrNull()}")
+            "${urlParts.first()}$page/?${urlParts.lastOrNull()}"
         }
+
+        val req = safeGet(targetUrl)
         mainUrl = getBaseUrl(req.url)
+        directUrl = mainUrl
         val document = req.document
         val home = (if (nonPaged) {
             document.select("div.items.featured article")
@@ -119,27 +334,28 @@ class IdlixProvider : MainAPI() {
         }
     }
 
-    private fun Element.toSearchResult(): SearchResponse {
-        val title = this.selectFirst("h3 > a")!!.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
-        val href = getProperLink(this.selectFirst("h3 > a")!!.attr("href"))
+    private fun Element.toSearchResult(): SearchResponse? {
+        val a = this.selectFirst("h3 > a") ?: return null
+        val title = a.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
+        val href = getProperLink(a.attr("href"))
         val posterUrl = this.select("div.poster > img").attr("src")
         val quality = getQualityFromString(this.select("span.quality").text())
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             this.quality = quality
         }
-
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val req = app.get("$mainUrl/search/$query")
+        val req = safeGet("$mainUrl/search/$query")
         mainUrl = getBaseUrl(req.url)
+        directUrl = mainUrl
         val document = req.document
-        return document.select("div.result-item").map {
-            val title =
-                it.selectFirst("div.title > a")!!.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
-            val href = getProperLink(it.selectFirst("div.title > a")!!.attr("href"))
-            val posterUrl = it.selectFirst("img")!!.attr("src")
+        return document.select("div.result-item").mapNotNull {
+            val a = it.selectFirst("div.title > a") ?: return@mapNotNull null
+            val title = a.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
+            val href = getProperLink(a.attr("href"))
+            val posterUrl = it.selectFirst("img")?.attr("src").orEmpty()
             newMovieSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
             }
@@ -147,7 +363,7 @@ class IdlixProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val request = app.get(url)
+        val request = safeGet(url)
         directUrl = getBaseUrl(request.url)
         val document = request.document
         val title =
@@ -167,26 +383,27 @@ class IdlixProvider : MainAPI() {
         )?.groupValues?.get(1).toString().toIntOrNull()
         val tvType = if (document.select("ul#section > li:nth-child(1)").text().contains("Episodes")
         ) TvType.TvSeries else TvType.Movie
-         val description = if (tvType == TvType.Movie) 
-            document.select("div.wp-content > p").text().trim() else 
+        val description = if (tvType == TvType.Movie)
+            document.select("div.wp-content > p").text().trim() else
             document.select("div.content > center > p:nth-child(3)").text().trim()
         val trailer = document.selectFirst("div.embed iframe")?.attr("src")
         val rating = document.selectFirst("span.dt_rating_vgs[itemprop=ratingValue]")
-        ?.text()
-        ?.toDoubleOrNull()
+            ?.text()
+            ?.toDoubleOrNull()
         val actors = document.select("div.persons > div[itemprop=actor]").map {
             Actor(it.select("meta[itemprop=name]").attr("content"), it.select("img").attr("src"))
         }
         val duration = document.selectFirst("div.extra span[itemprop=duration]")?.text()
-                        ?.replace(Regex("\\D"), "")
-                        ?.toIntOrNull() ?: 0
-        val recommendations = document.select("#single_relacionados article").map {
-            val recName = it.selectFirst("img")!!.attr("alt").replace(Regex("\\(\\d{4}\\)"), "")
-            val recHref = it.selectFirst("a")!!.attr("href")
-            val recPosterUrl = it.selectFirst("img")?.attr("src").toString()
-            newMovieSearchResponse(recName,recHref,
-                if (recHref.contains("/movie/")) TvType.Movie 
-                    else TvType.TvSeries, false
+            ?.replace(Regex("\\D"), "")
+            ?.toIntOrNull() ?: 0
+        val recommendations = document.select("#single_relacionados article").mapNotNull {
+            val img = it.selectFirst("img") ?: return@mapNotNull null
+            val recName = img.attr("alt").replace(Regex("\\(\\d{4}\\)"), "")
+            val recHref = it.selectFirst("a")?.attr("href").orEmpty()
+            val recPosterUrl = img.attr("src")
+            newMovieSearchResponse(recName, recHref,
+                if (recHref.contains("/movie/")) TvType.Movie
+                else TvType.TvSeries, false
             ) {
                 this.posterUrl = recPosterUrl
             }
@@ -201,12 +418,11 @@ class IdlixProvider : MainAPI() {
                     .toIntOrNull()
                 val season = it.select("div.numerando").text().replace(" ", "").split("-").first()
                     .toIntOrNull()
-                newEpisode(href)
-                {
-                        this.name=name
-                        this.season=season
-                        this.episode=episode
-                        this.posterUrl=image
+                newEpisode(href) {
+                    this.name = name
+                    this.season = season
+                    this.episode = episode
+                    this.posterUrl = image
                 }
             }
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
@@ -242,7 +458,7 @@ class IdlixProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = app.get(data).document
+        val document = safeGet(data).document
         val scriptRegex = """window\.idlixNonce=['"]([a-f0-9]+)['"].*?window\.idlixTime=(\d+).*?""".toRegex(RegexOption.DOT_MATCHES_ALL)
         val script = document.select("script:containsData(window.idlix)").toString()
         val match = scriptRegex.find(script)
@@ -250,13 +466,13 @@ class IdlixProvider : MainAPI() {
         val idlixTime = match?.groups?.get(2)?.value ?: ""
 
         document.select("ul#playeroptionsul > li").map {
-                Triple(
-                    it.attr("data-post"),
-                    it.attr("data-nume"),
-                    it.attr("data-type")
-                )
-            }.amap { (id, nume, type) ->
-            val json = app.post(
+            Triple(
+                it.attr("data-post"),
+                it.attr("data-nume"),
+                it.attr("data-type")
+            )
+        }.amap { (id, nume, type) ->
+            val json = safePost(
                 url = "$directUrl/wp-admin/admin-ajax.php",
                 data = mapOf(
                     "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type, "_n" to idlixNonce, "_p" to id, "_t" to idlixTime
@@ -269,11 +485,11 @@ class IdlixProvider : MainAPI() {
             val decrypted =
                 AesHelper.cryptoAESHandler(json.embed_url, password.toByteArray(), false)
                     ?.fixBloat() ?: return@amap
-            Log.d("Phisher",decrypted.toJson())
+            Log.d("Phisher", decrypted.toJson())
 
             when {
                 !decrypted.contains("youtube") ->
-                    loadExtractor(decrypted,directUrl,subtitleCallback,callback)
+                    loadExtractor(decrypted, directUrl, subtitleCallback, callback)
                 else -> return@amap
             }
 
@@ -329,6 +545,4 @@ class IdlixProvider : MainAPI() {
     data class AesData(
         @JsonProperty("m") val m: String,
     )
-
-
 }
