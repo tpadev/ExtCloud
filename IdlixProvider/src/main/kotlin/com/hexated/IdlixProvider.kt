@@ -12,22 +12,28 @@ import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import kotlinx.coroutines.runBlocking
 import org.jsoup.nodes.Element
 import java.net.URI
 
 class IdlixProvider : MainAPI() {
-    override var mainUrl = "https://tv10.idlixku.com"
-    private var directUrl = mainUrl
-    override var name = "Idlix"
-    override val hasMainPage = true
-    override var lang = "id"
-    override val hasDownloadSupport = true
-    override val supportedTypes = setOf(
-        TvType.Movie,
-        TvType.TvSeries,
-        TvType.Anime,
-        TvType.AsianDrama
+    override var mainUrl = runBlocking {
+    val possibleDomains = listOf(
+        "https://tv12.idlixku.com",
+        "https://tv11.idlixku.com",
+        "https://tv10.idlixku.com",
+        "https://tv9.idlixku.com"
     )
+    possibleDomains.firstOrNull { domain ->
+        try {
+            val res = app.get(domain)
+            res.code == 200 && !res.text.contains("Verifying you are human")
+        } catch (e: Exception) {
+            false
+        }
+    } ?: "https://tv10.idlixku.com"
+}
+
 
     override val mainPage = mainPageOf(
         "$mainUrl/" to "Featured",
