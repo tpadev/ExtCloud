@@ -60,7 +60,6 @@ class Zoronime : MainAPI() {
         val title = this.selectFirst("h3.film-name a")?.text() ?: return null
         val posterUrl = this.selectFirst("img.film-poster-img")?.attr("data-src")
         val ratingText = selectFirst("div.tick-item-sub")?.ownText()?.trim()
-        val ratingText = selectFirst("div.tick-item-sub")?.ownText()?.trim()
         val episode = this.selectFirst("div.tick.rtl")?.ownText()
             ?.filter { it.isDigit() }?.toIntOrNull()
 
