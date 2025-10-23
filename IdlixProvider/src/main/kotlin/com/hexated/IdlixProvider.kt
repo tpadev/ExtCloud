@@ -139,7 +139,7 @@ class IdlixProvider : MainAPI() {
         ) TvType.TvSeries else TvType.Movie
         val description = if (tvType == TvType.Movie) document.select("div.wp-content > p").text().trim() else document.select("div.content > center > p:nth-child(3)").text().trim()
         val trailer = document.selectFirst("div.embed iframe")?.attr("src")
-        val rating = document.selectFirst("span.dt_rating_vgs[itemprop=ratingValue]") ?.text() ?.toDoubleOrNull()
+        val ratingValue = document.selectFirst("span.dt_rating_vgs")?.text()?.toDoubleOrNull()
         val actors = document.select("div.persons > div[itemprop=actor]").map {
             Actor(it.select("meta[itemprop=name]").attr("content"), it.select("img").attr("src"))
         }
@@ -176,7 +176,7 @@ class IdlixProvider : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                if (rating != null) addScore(rating.toString(), 10)
+                if (ratingValue != null) this.score = Score.from10(ratingValue)
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
@@ -187,7 +187,7 @@ class IdlixProvider : MainAPI() {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                if (rating != null) addScore(rating.toString(), 10)
+                if (ratingValue != null) this.score = Score.from10(ratingValue)
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
