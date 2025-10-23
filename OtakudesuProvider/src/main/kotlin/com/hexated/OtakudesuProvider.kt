@@ -162,77 +162,78 @@ class OtakudesuProvider : MainAPI() {
     )
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
 
-        val document = app.get(data).document
+    val document = app.get(data).document
 
-        argamap(
-            {
-                val scriptData =
-                    document.select("script:containsData(action:)").lastOrNull()?.data()
-                val token =
-                    scriptData?.substringAfter("{action:\"")?.substringBefore("\"}").toString()
+    // ====== BLOK 1 ======
+    try {
+        val scriptData = document.select("script:containsData(action:)").lastOrNull()?.data()
+        val token = scriptData?.substringAfter("{action:\"")?.substringBefore("\"}").toString()
 
-                val nonce =
-                    app.post("$mainUrl/wp-admin/admin-ajax.php", data = mapOf("action" to token))
-                        .parsed<ResponseData>().data
-                val action =
-                    scriptData?.substringAfter(",action:\"")?.substringBefore("\"}").toString()
+        val nonce = app.post(
+            "$mainUrl/wp-admin/admin-ajax.php",
+            data = mapOf("action" to token)
+        ).parsed<ResponseData>().data
 
-                val mirrorData = document.select("div.mirrorstream > ul > li").mapNotNull {
-                    base64Decode(it.select("a").attr("data-content"))
-                }.toString()
+        val action = scriptData?.substringAfter(",action:\"")?.substringBefore("\"}").toString()
 
-                tryParseJson<List<ResponseSources>>(mirrorData)?.apmap { res ->
-                    val id = res.id
-                    val i = res.i
-                    val q = res.q
+        val mirrorData = document.select("div.mirrorstream > ul > li").mapNotNull {
+            base64Decode(it.select("a").attr("data-content"))
+        }.toString()
 
-                    val sources = Jsoup.parse(
-                        base64Decode(
-                            app.post(
-                                "${mainUrl}/wp-admin/admin-ajax.php", data = mapOf(
-                                    "id" to id,
-                                    "i" to i,
-                                    "q" to q,
-                                    "nonce" to nonce,
-                                    "action" to action
-                                )
-                            ).parsed<ResponseData>().data
+        tryParseJson<List<ResponseSources>>(mirrorData)?.forEach { res ->
+            val id = res.id
+            val i = res.i
+            val q = res.q
+
+            val sources = Jsoup.parse(
+                base64Decode(
+                    app.post(
+                        "$mainUrl/wp-admin/admin-ajax.php",
+                        data = mapOf(
+                            "id" to id,
+                            "i" to i,
+                            "q" to q,
+                            "nonce" to nonce,
+                            "action" to action
                         )
-                    ).select("iframe").attr("src")
+                    ).parsed<ResponseData>().data
+                )
+            ).select("iframe").attr("src")
 
-                    loadCustomExtractor(sources, data, subtitleCallback, callback, getQuality(q))
-
-                }
-            },
-            {
-                document.select("div.download li").map { ele ->
-                    val quality = getQuality(ele.select("strong").text())
-                    ele.select("a").map {
-                        it.attr("href") to it.text()
-                    }.filter {
-                        !inBlacklist(it.first) && quality != Qualities.P360.value
-                    }.apmap {
-                        val link = app.get(it.first, referer = "$mainUrl/").url
-                        loadCustomExtractor(
-                            fixedIframe(link),
-                            data,
-                            subtitleCallback,
-                            callback,
-                            quality
-                        )
-                    }
-                }
-            }
-        )
-
-        return true
+            loadCustomExtractor(sources, data, subtitleCallback, callback, getQuality(q))
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
     }
+
+    // ====== BLOK 2 ======
+    document.select("div.download li").forEach { ele ->
+        val quality = getQuality(ele.select("strong").text())
+        ele.select("a").map {
+            it.attr("href") to it.text()
+        }.filter {
+            !inBlacklist(it.first) && quality != Qualities.P360.value
+        }.forEach {
+            val link = app.get(it.first, referer = "$mainUrl/").url
+            loadCustomExtractor(
+                fixedIframe(link),
+                data,
+                subtitleCallback,
+                callback,
+                quality
+            )
+        }
+    }
+
+    return true
+}
+
 
     private suspend fun loadCustomExtractor(
         url: String,
