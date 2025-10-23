@@ -13,7 +13,7 @@ buildscript {
     dependencies {
         classpath("com.android.tools.build:gradle:8.7.3") // Jangan diganti ke versi terbaru, karena ada masalah dengan versi terbaru
         classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.10")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0")
     }
 }
 
@@ -78,7 +78,7 @@ subprojects {
 
         // Other dependencies
         implementation(kotlin("stdlib")) // Untuk Kotlin Standard Library
-        implementation("com.github.Blatzar:NiceHttp:0.4.11") // Untuk HTTP requests
+        implementation("com.github.Blatzar:NiceHttp:0.4.13") // Untuk HTTP requests
         implementation("org.jsoup:jsoup:1.18.3") // Untuk parsing HTML
         implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0") // JANGAN DIGANTI ke versi terbaru, karena ada masalah dengan versi terbaru
         implementation("com.fasterxml.jackson.core:jackson-databind:2.16.0") // Untuk serialisasi/deserialisasi JSON
