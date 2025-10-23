@@ -1,12 +1,13 @@
 // use an integer for version numbers
-version = 232
+version = 1
+
 
 cloudstream {
-    language = "en"
+    language = "id"
     // All of these properties are optional, you can safely remove them
 
-     description = "#1 best extention based on MultiAPI"
-     authors = listOf("Hexated", "Sora")
+    // description = "Lorem Ipsum"
+    authors = listOf("Hexated")
 
     /**
      * Status int as the following:
@@ -17,11 +18,10 @@ cloudstream {
      * */
     status = 1 // will be 3 if unspecified
     tvTypes = listOf(
-        "AsianDrama",
-        "TvSeries",
+        "AnimeMovie",
         "Anime",
-        "Movie",
+        "OVA",
     )
 
-    iconUrl = "https://github.com/duro92/ExtCloud/blob/main/SoraStream/Icon.png"
+    iconUrl = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://otakudesu.cloud&size=%size%"
 }
