@@ -16,7 +16,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class OtakudesuProvider : MainAPI() {
-    override var mainUrl = "https://otakudesu.cloud"
+    override var mainUrl = "https://otakudesu.best"
     override var name = "Otakudesu"
     override val hasMainPage = true
     override var lang = "id"
@@ -81,16 +81,20 @@ class OtakudesuProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        return app.get("$mainUrl/?s=$query&post_type=anime").document.select("ul.chivsrc > li")
-            .map {
-                val title = it.selectFirst("h2 > a")!!.ownText().trim()
-                val href = it.selectFirst("h2 > a")!!.attr("href")
-                val posterUrl = it.selectFirst("img")!!.attr("src").toString()
-                newAnimeSearchResponse(title, href, TvType.Anime) {
-                    this.posterUrl = posterUrl
-                }
-            }
+    val url = "$mainUrl/?s=$query&post_type=anime"
+    val document = app.get(url).document
+
+    return document.select("ul.chivsrc > li").mapNotNull { li ->
+        val titleElement = li.selectFirst("h2 > a") ?: return@mapNotNull null
+        val title = titleElement.ownText().trim()
+        val href = fixUrl(titleElement.attr("href"))
+        val posterUrl = li.selectFirst("img")?.attr("src")
+
+        newAnimeSearchResponse(title, href, TvType.Anime) {
+            this.posterUrl = posterUrl
+        }
     }
+}
 
 
     override suspend fun load(url: String): LoadResponse {
