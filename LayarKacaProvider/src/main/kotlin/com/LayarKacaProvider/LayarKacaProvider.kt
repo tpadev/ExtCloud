@@ -188,22 +188,27 @@ class LayarKacaProvider : MainAPI() {
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
+            data: String,
+            isCasting: Boolean,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
     ): Boolean {
+
         val document = app.get(data).document
-        document.select("ul#player-list > li").map {
-                fixUrl(it.select("a").attr("href"))
-            }.amap {
-            val test=it.getIframe()
-            val referer=getBaseUrl(it)
-            Log.d("Phisher",test)
-            loadExtractor(it.getIframe(), referer, subtitleCallback, callback)
+        document.select("ul#loadProviders > li").map {
+            fixUrl(it.select("a").attr("href"))
+        }.apmap {
+            loadExtractor(it.getIframe(), "https://playeriframe.sbs", subtitleCallback, callback)
         }
+
         return true
     }
+
+    private suspend fun String.getIframe() : String {
+        return app.get(this, referer = "$seriesUrl/").document.select("div.embed iframe").attr("src")
+    }
+
+}
 
     private suspend fun String.getIframe(): String {
         return app.get(this, referer = "$seriesUrl/").document.select("div.embed-container iframe")
