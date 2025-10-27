@@ -205,7 +205,7 @@ class LayarKacaProvider : MainAPI() {
         // Panggil extractor untuk iframe tersebut
         loadExtractor(
             fixUrl(iframeUrl),
-            "https://playeriframe.sbs/",
+            "https://playeriframe.sbs",
             subtitleCallback,
             callback
         )
@@ -215,7 +215,7 @@ class LayarKacaProvider : MainAPI() {
         if (iframeSrc != null) {
             loadExtractor(
                 fixUrl(iframeSrc),
-                "https://playeriframe.sbs/",
+                "https://playeriframe.sbs",
                 subtitleCallback,
                 callback
             )
