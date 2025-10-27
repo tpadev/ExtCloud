@@ -196,20 +196,35 @@ class LayarKacaProvider : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-
     val document = app.get(data).document
-    coroutineScope {
-        document.select("ul#loadProviders > li").map {
-            fixUrl(it.select("a").attr("href"))
-        }.map { url ->
-            async {
-                loadExtractor(url.getIframe(), "https://playeriframe.sbs/", subtitleCallback, callback)
-            }
-        }.awaitAll()
+
+    // Ambil URL iframe dari atribut data-iframe_url
+    val iframeUrl = document.selectFirst("div.main-player")?.attr("data-iframe_url")
+
+    if (iframeUrl != null) {
+        // Panggil extractor untuk iframe tersebut
+        loadExtractor(
+            fixUrl(iframeUrl),
+            "https://playeriframe.sbs/",
+            subtitleCallback,
+            callback
+        )
+    } else {
+        // Kalau tidak ada iframe_url, coba cari iframe langsung di dalam main-player
+        val iframeSrc = document.selectFirst("div.main-player iframe")?.attr("src")
+        if (iframeSrc != null) {
+            loadExtractor(
+                fixUrl(iframeSrc),
+                "https://playeriframe.sbs/",
+                subtitleCallback,
+                callback
+            )
+        }
     }
 
     return true
 }
+
 
     private suspend fun String.getIframe(): String {
         return app.get(this, referer = "$seriesUrl/").document.select("div.embed-container iframe")
