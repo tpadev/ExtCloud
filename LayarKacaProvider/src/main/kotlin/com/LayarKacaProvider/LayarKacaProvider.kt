@@ -7,9 +7,6 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 
 class LayarKacaProvider : MainAPI() {
 
@@ -190,40 +187,23 @@ class LayarKacaProvider : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val document = app.get(data).document
-
-    // Ambil URL iframe dari atribut data-iframe_url
-    val iframeUrl = document.selectFirst("div.main-player")?.attr("data-iframe_url")
-
-    if (iframeUrl != null) {
-        // Panggil extractor untuk iframe tersebut
-        loadExtractor(
-            fixUrl(iframeUrl),
-            "https://playeriframe.sbs",
-            subtitleCallback,
-            callback
-        )
-    } else {
-        // Kalau tidak ada iframe_url, coba cari iframe langsung di dalam main-player
-        val iframeSrc = document.selectFirst("div.main-player iframe")?.attr("src")
-        if (iframeSrc != null) {
-            loadExtractor(
-                fixUrl(iframeSrc),
-                "https://playeriframe.sbs",
-                subtitleCallback,
-                callback
-            )
+        override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val document = app.get(data).document
+        document.select("ul#player-list > li").map {
+                fixUrl(it.select("a").attr("href"))
+            }.amap {
+            val test=it.getIframe()
+            val referer=getBaseUrl(it)
+            Log.d("Phisher",test)
+            loadExtractor(it.getIframe(), referer, subtitleCallback, callback)
         }
+        return true
     }
-
-    return true
-}
 
 
     private suspend fun String.getIframe(): String {
