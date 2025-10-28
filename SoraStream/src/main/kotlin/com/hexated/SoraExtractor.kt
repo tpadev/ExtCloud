@@ -861,4 +861,87 @@ object SoraExtractor : SoraStream() {
 
     }
 
+/*
+     suspend fun invokeMovieBox(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title?.createSlug()
+        val url = if (season == null) {
+            "$idlixAPI/movie/$fixTitle-$year"
+        } else {
+            "$idlixAPI/episode/$fixTitle-season-$season-episode-$episode"
+        }
+        invokeWpmovies("Idlix", url, subtitleCallback, callback, encrypt = true)
+    }
+
+    private suspend fun invokeWpmovies(
+        name: String? = null,
+        url: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+        fixIframe: Boolean = false,
+        encrypt: Boolean = false,
+        hasCloudflare: Boolean = false,
+        interceptor: Interceptor? = null,
+    ) {
+
+        val res = app.get(url ?: return, interceptor = if (hasCloudflare) interceptor else null)
+        val referer = getBaseUrl(res.url)
+        val document = res.document
+        document.select("ul#playeroptionsul > li").map {
+            Triple(
+                it.attr("data-post"),
+                it.attr("data-nume"),
+                it.attr("data-type")
+            )
+        }.amap { (id, nume, type) ->
+            val json = app.post(
+                url = "$referer/wp-admin/admin-ajax.php",
+                data = mapOf(
+                    "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
+                ),
+                headers = mapOf("Accept" to "*/*", "X-Requested-With" to "XMLHttpRequest"),
+                referer = url,
+                interceptor = if (hasCloudflare) interceptor else null
+            ).text
+            val source = tryParseJson<ResponseHash>(json)?.let {
+                when {
+                    encrypt -> {
+                        val meta = tryParseJson<Map<String, String>>(it.embed_url)?.get("m")
+                            ?: return@amap
+                        val key = generateWpKey(it.key ?: return@amap, meta)
+                        AesHelper.cryptoAESHandler(
+                            it.embed_url,
+                            key.toByteArray(),
+                            false
+                        )?.fixUrlBloat()
+                    }
+
+                    fixIframe -> Jsoup.parse(it.embed_url).select("IFRAME").attr("SRC")
+                    else -> it.embed_url
+                }
+            } ?: return@amap
+            when {
+                source.startsWith("https://jeniusplay.com") -> {
+                    Jeniusplay2().getUrl(source, "$referer/", subtitleCallback, callback)
+                }
+
+                !source.contains("youtube") -> {
+                    loadExtractor(source, "$referer/", subtitleCallback, callback)
+                }
+
+                else -> {
+                    return@amap
+                }
+            }
+
+        }
+    }
+*/
+
 }
