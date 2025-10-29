@@ -879,7 +879,6 @@ object SoraExtractor : SoraStream() {
                 "keyword" to fixTitle,
                 "page" to "1",
                 "perPage" to "5",
-                "subjectType" to type,
             )
 
             val headers = mapOf(
