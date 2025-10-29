@@ -901,6 +901,7 @@ object SoraExtractor : SoraStream() {
             
 
             val response = app.post(url, headers = headers, requestBody = jsonBody)
+                        .toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
             if (response.code != 200) return false
             
             val mapper = jacksonObjectMapper()
@@ -919,7 +920,7 @@ object SoraExtractor : SoraStream() {
                     }
                 }
             }
-            if (matchingIds.isEmpty()) return false
+            if (matchingId.isEmpty()) return false
 
             var foundLinks = false
             
