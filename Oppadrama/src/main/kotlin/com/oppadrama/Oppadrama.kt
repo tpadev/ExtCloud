@@ -99,9 +99,11 @@ class Oppadrama : MainAPI() {
 
     // Status, durasi, negara, tipe
     val status = document.selectFirst("span:matchesOwn(Status:)")?.ownText()?.trim()
-    val duration = document.selectFirst("div.spe span:contains(Durasi:)")?.ownText()
-    ?.replace(Regex("\\D"), "")
-    ?.toIntOrNull()
+    val duration = document.selectFirst("div.spe span:contains(Durasi:)")?.ownText()?.let {
+    val h = Regex("(\\d+)\\s*hr").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+    val m = Regex("(\\d+)\\s*min").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+    h * 60 + m
+    }
     val country = document.selectFirst("span:matchesOwn(Negara:)")?.ownText()?.trim()
     val type = document.selectFirst("span:matchesOwn(Tipe:)")?.ownText()?.trim()
 
