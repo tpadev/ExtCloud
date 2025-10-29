@@ -13,6 +13,7 @@ import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.Jsoup
 
@@ -861,87 +862,97 @@ object SoraExtractor : SoraStream() {
 
     }
 
-/*
-     suspend fun invokeMovieBox(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
+
+    suspend fun invokeMovieBox(
+        title: String?,
+        season: Int? = 0,
+        episode: Int? = 0,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
-    ) {
-        val fixTitle = title?.createSlug()
-        val url = if (season == null) {
-            "$idlixAPI/movie/$fixTitle-$year"
-        } else {
-            "$idlixAPI/episode/$fixTitle-season-$season-episode-$episode"
-        }
-        invokeWpmovies("Idlix", url, subtitleCallback, callback, encrypt = true)
-    }
+    ): Boolean {        
+        try {
+            val fixTitle = title?.createSlug()
+            if (fixTitle.isNullOrBlank()) return false
 
-    private suspend fun invokeWpmovies(
-        name: String? = null,
-        url: String? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-        fixIframe: Boolean = false,
-        encrypt: Boolean = false,
-        hasCloudflare: Boolean = false,
-        interceptor: Interceptor? = null,
-    ) {
-
-        val res = app.get(url ?: return, interceptor = if (hasCloudflare) interceptor else null)
-        val referer = getBaseUrl(res.url)
-        val document = res.document
-        document.select("ul#playeroptionsul > li").map {
-            Triple(
-                it.attr("data-post"),
-                it.attr("data-nume"),
-                it.attr("data-type")
+            val url = "$movieboxAPI/wefeed-web-bff/subject/search"
+            val jsonBody = mapOf(
+                "keyword" to fixTitle,
+                "page" to "1",
+                "perPage" to "5",
+                "subjectType" to type,
             )
-        }.amap { (id, nume, type) ->
-            val json = app.post(
-                url = "$referer/wp-admin/admin-ajax.php",
-                data = mapOf(
-                    "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
-                ),
-                headers = mapOf("Accept" to "*/*", "X-Requested-With" to "XMLHttpRequest"),
-                referer = url,
-                interceptor = if (hasCloudflare) interceptor else null
-            ).text
-            val source = tryParseJson<ResponseHash>(json)?.let {
-                when {
-                    encrypt -> {
-                        val meta = tryParseJson<Map<String, String>>(it.embed_url)?.get("m")
-                            ?: return@amap
-                        val key = generateWpKey(it.key ?: return@amap, meta)
-                        AesHelper.cryptoAESHandler(
-                            it.embed_url,
-                            key.toByteArray(),
-                            false
-                        )?.fixUrlBloat()
+
+            val headers = mapOf(
+                "accept" to "application/json",
+                "content-type" to "application/json",
+            )
+            
+
+            val response = app.post(url, headers = headers, requestBody = jsonBody)
+            if (response.code != 200) return false
+            
+            val mapper = jacksonObjectMapper()
+            val root = mapper.readTree(response.body.string())
+            val items = root["data"]?.get("items") ?: return false
+
+            var matchingId: String? = null
+            
+            for (item in items) {
+                val name = item["title"]?.asText() ?: continue
+                val id = item["subjectId"]?.asText() ?: continue
+                val type = item["subjectType"]?.asInt() ?: 0
+                if (name.equals(fixTitle, ignoreCase = true) && (type == 1 || type == 2)) {
+                        matchingId = id
+                        break
                     }
-
-                    fixIframe -> Jsoup.parse(it.embed_url).select("IFRAME").attr("SRC")
-                    else -> it.embed_url
-                }
-            } ?: return@amap
-            when {
-                source.startsWith("https://jeniusplay.com") -> {
-                    Jeniusplay2().getUrl(source, "$referer/", subtitleCallback, callback)
-                }
-
-                !source.contains("youtube") -> {
-                    loadExtractor(source, "$referer/", subtitleCallback, callback)
-                }
-
-                else -> {
-                    return@amap
                 }
             }
+            if (matchingIds.isEmpty()) return false
 
+            var foundLinks = false
+            
+            //terusin buat pisahin movie and series
+
+
+
+            
         }
-    }
-*/
+/*
+     val media = parseJson<LoadData>(data)
+        val referer = "$apiUrl/spa/videoPlayPage/movies/${media.detailPath}?id=${media.id}&type=/movie/detail&lang=en"
 
+        val streams = app.get(
+            "$apiUrl/wefeed-h5-bff/web/subject/play?subjectId=${media.id}&se=${media.season ?: 0}&ep=${media.episode ?: 0}",
+            referer = referer
+        ).parsedSafe<Media>()?.data?.streams
+
+        streams?.reversed()?.distinctBy { it.url }?.map { source ->
+            callback.invoke(
+                newExtractorLink(
+                    this.name,
+                    this.name,
+                    source.url ?: return@map,
+                    INFER_TYPE
+                ) {
+                    this.referer = "$apiUrl/"
+                    this.quality = getQualityFromName(source.resolutions)
+                }
+            )
+        }
+
+        val id = streams?.first()?.id
+        val format = streams?.first()?.format
+
+        app.get(
+            "$apiUrl/wefeed-h5-bff/web/subject/caption?format=$format&id=$id&subjectId=${media.id}",
+            referer = referer
+        ).parsedSafe<Media>()?.data?.captions?.map { subtitle ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    subtitle.lanName ?: "",
+                    subtitle.url ?: return@map
+                )
+            )
+        }
+*/
 }
