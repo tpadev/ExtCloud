@@ -43,15 +43,6 @@ class Ngefilm : MainAPI() {
     return newHomePageResponse(request.name, home)
 }
 
-    
-
-
-    override suspend fun search(query: String): List<SearchResponse> {
-    val document = app.get("$mainUrl/?s=$query&post_type[]=post&post_type[]=tv", timeout = 50L).document
-    val results = document.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
-    return results
-}
-
 private fun Element.toSearchResult(): SearchResponse? {
     val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
     val href = fixUrl(this.selectFirst("a")!!.attr("href"))
@@ -84,8 +75,14 @@ private fun Element.toSearchResult(): SearchResponse? {
             this.score = Score.from10(ratingText?.toDoubleOrNull())
         }
     }
-}
+}    
 
+
+    override suspend fun search(query: String): List<SearchResponse> {
+    val document = app.get("$mainUrl/?s=$query&post_type[]=post&post_type[]=tv", timeout = 50L).document
+    val results = document.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
+    return results
+}
 
     private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
