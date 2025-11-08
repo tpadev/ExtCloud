@@ -99,8 +99,7 @@ class Filmapik : MainAPI() {
     val tags = document.select("span.sgeneros a").map { it.text() }
 
     // Pemeran dan info lain
-    val stars = document.select("span.tagline:contains(Stars:) a").map { it.text() }
-    val network = document.select("span.tagline:contains(Networks:) a").text()
+    val actors = document.select("span.tagline:contains(Stars:) a").map { it.text() }
     val seriesStatus = document.select("div.info-more:contains(Series Status:)").text()
     val year = Regex("(19|20)\\d{2}").find(title)?.value?.toIntOrNull()
 
@@ -129,9 +128,8 @@ class Filmapik : MainAPI() {
             this.posterUrl = poster
             this.year = year
             this.tags = tags
-            addActors(stars)
+            addActors(actors)
             this.plot = description
-            addScore(rating)
             this.recommendations = recommendations
         }
     } else {
@@ -140,9 +138,8 @@ class Filmapik : MainAPI() {
             this.posterUrl = poster
             this.year = year
             this.tags = tags
-            addActors(stars)
+            addActors(actors)
             this.plot = description
-            addScore(rating)
             this.recommendations = recommendations
         }
     }
