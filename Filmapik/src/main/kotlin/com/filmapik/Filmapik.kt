@@ -133,8 +133,6 @@ class Filmapik : MainAPI() {
             this.plot = description
             addScore(rating)
             this.recommendations = recommendations
-            this.showStatus = seriesStatus.ifBlank { null }
-            this.network = network.ifBlank { null }
         }
     } else {
         // Movie
