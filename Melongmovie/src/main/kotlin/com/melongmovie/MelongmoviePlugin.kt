@@ -9,5 +9,6 @@ class MelongmoviePlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Melongmovie())
         registerExtractorAPI(Dingtezuni())
+        registerExtractorAPI(Melongfilmstrp2p())
     }
 }
