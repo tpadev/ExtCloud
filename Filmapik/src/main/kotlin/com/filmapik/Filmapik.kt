@@ -155,7 +155,7 @@ class Filmapik : MainAPI() {
     val document = app.get(data).document
 
     // 🎥 Ambil iframe dari player server
-    document.select("div.cframe iframe, iframe.metaframe").forEach { iframe ->
+    document.select("div.pframe iframe").forEach { iframe ->
         val src = iframe.attr("src")
         if (src.isNotBlank()) {
             loadExtractor(httpsify(src), data, subtitleCallback, callback)
