@@ -34,6 +34,8 @@ class Ngefilm : MainAPI() {
                             "Series Korea",
                     "/page/%d/?s=&search=advanced&post_type=tv&index=&orderby=&genre=&movieyear=&country=indonesia&quality=" to
                             "Series Indonesia",
+
+                    "country/indonesia/page/%d/" to "Film Indonesia",
             )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
