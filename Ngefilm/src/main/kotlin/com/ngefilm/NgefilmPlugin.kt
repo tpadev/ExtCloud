@@ -17,7 +17,7 @@ class NgefilmPlugin : Plugin() {
         registerExtractorAPI(Gdriveplayerto())
         registerExtractorAPI(Playerngefilm21())
         registerExtractorAPI(P2pplay())
-        registerExtractorAPI(Shorticu())
+        registerExtractorAPI(Xshotcok())
     }
 }
 
