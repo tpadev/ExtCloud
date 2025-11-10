@@ -9,7 +9,7 @@ import org.jsoup.nodes.Element
 
 class Zoronime : MainAPI() {
     override var mainUrl = "https://zoronime.com"
-    override var name = "Zoronime"
+    override var name = "Zoronime🍜"
     override val hasMainPage = true
     override var lang = "id"
     override val supportedTypes = setOf(

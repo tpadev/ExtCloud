@@ -31,7 +31,7 @@ import org.jsoup.nodes.Element
 
 open class Donghuastream : MainAPI() {
     override var mainUrl              = "https://donghuastream.org"
-    override var name                 = "Donghuastream"
+    override var name                 = "Donghuastream🎡"
     override val hasMainPage          = true
     override var lang                 = "zh"
     override val hasDownloadSupport   = true

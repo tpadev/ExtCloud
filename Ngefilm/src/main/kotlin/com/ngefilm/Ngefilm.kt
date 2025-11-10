@@ -18,7 +18,7 @@ class Ngefilm : MainAPI() {
 
     override var mainUrl = "https://new24.ngefilm.site"
     private var directUrl: String? = null
-    override var name = "Ngefilm"
+    override var name = "Ngefilm😎"
     override val hasMainPage = true
     override var lang = "id"
     override val supportedTypes =

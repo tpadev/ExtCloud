@@ -14,7 +14,7 @@ class LayarKacaProvider : MainAPI() {
     private var seriesUrl = "https://series.lk21.de"
     private var searchurl= "https://search.lk21.party"
 
-    override var name = "LayarKaca"
+    override var name = "LayarKaca🎞"
     override val hasMainPage = true
     override var lang = "id"
     override val supportedTypes = setOf(

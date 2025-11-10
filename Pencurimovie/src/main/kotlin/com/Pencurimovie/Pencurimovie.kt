@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.utils.*
 
 class Pencurimovie : MainAPI() {
     override var mainUrl = "https://ww73.pencurimovie.bond"
-    override var name = "Pencurimovie"
+    override var name = "Pencurimovie🍕"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true

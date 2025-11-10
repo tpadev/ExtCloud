@@ -19,7 +19,7 @@ class Melongmovie : MainAPI() {
 
     override var mainUrl = "https://tv11.melongmovies.com"
     private var directUrl: String? = null
-    override var name = "Melongmovie"
+    override var name = "Melongmovie🪁"
     override val hasMainPage = true
     override var lang = "id"
     override val supportedTypes =

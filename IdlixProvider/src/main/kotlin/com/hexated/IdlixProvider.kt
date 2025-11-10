@@ -16,7 +16,7 @@ import java.net.URI
 class IdlixProvider : MainAPI() {
     override var mainUrl = "https://idlixian.com"
     private var directUrl = mainUrl
-    override var name = "Idlix"
+    override var name = "Idlix🎄"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true

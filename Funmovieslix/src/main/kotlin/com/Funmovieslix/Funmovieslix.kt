@@ -27,7 +27,7 @@ import org.jsoup.nodes.Element
 
 class Funmovieslix : MainAPI() {
     override var mainUrl = "https://funmovieslix.com"
-    override var name = "Funmovieslix"
+    override var name = "Funmovieslix🎥"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true

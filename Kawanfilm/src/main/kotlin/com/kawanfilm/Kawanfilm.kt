@@ -18,7 +18,7 @@ class Kawanfilm : MainAPI() {
 
     override var mainUrl = "https://tv2.kawanfilm21.co"
     private var directUrl: String? = null
-    override var name = "Kawanfilm"
+    override var name = "Kawanfilm🎨"
     override val hasMainPage = true
     override var lang = "id"
     override val supportedTypes =

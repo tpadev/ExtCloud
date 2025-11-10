@@ -14,7 +14,7 @@ import org.jsoup.nodes.Element
 
 class NOXXProvider : MainAPI() { // all providers must be an instance of MainAPI
     override var mainUrl = "https://noxx.to"
-    override var name = "NOXX"
+    override var name = "NOXX🧵"
     override val hasMainPage = true
     override var lang = "en"
     override val hasDownloadSupport = true
