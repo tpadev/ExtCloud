@@ -11,5 +11,6 @@ class PusatfilmPlugin : Plugin() {
         // directly.
         registerMainAPI(Pusatfilm())
         registerExtractorAPI(Kotakajaib())
+        registerExtractorAPI(Turbovidhls())
     }
 }
