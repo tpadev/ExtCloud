@@ -10,6 +10,7 @@ import java.net.URI
 
 class WGFilm21 : MainAPI() {
     override var mainUrl = "https://go1.wgfilm21.com"
+    private var directUrl: String? = null
     override var name = "WGFilm21🌭"
     override val hasMainPage = true
     override var lang = "id"
