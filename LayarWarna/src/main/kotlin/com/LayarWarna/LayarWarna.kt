@@ -29,8 +29,6 @@ class LayarWarna : MainAPI() {
 		"animation/page/%d/" to "Animation",
         "country/indonesia/page/%d/" to "Indonesia",
         "country/china/page/%d/" to "China",
-        "country/philippines/page/%d/" to "Philippines",
-        "country/japan/page/%d/" to "Japan",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
