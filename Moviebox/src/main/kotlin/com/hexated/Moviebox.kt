@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.toNewSearchResponseList
 import com.lagradost.nicehttp.RequestBodyTypes
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -53,18 +54,25 @@ class Moviebox : MainAPI() {
         return newHomePageResponse(request.name, home)
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        return app.post(
-            "$mainUrl/wefeed-h5-bff/web/subject/search", requestBody = mapOf(
+    suspend fun fetchSearchResults(query: String, page: Int): List<SearchResponse> {
+        val response = app.post(
+            "$mainUrl/wefeed-h5-bff/web/subject/search",
+            requestBody = mapOf(
                 "keyword" to query,
-                "page" to "1",
-                "perPage" to "0",
-                "subjectType" to "0",
+                "page" to page.toString(),
+                "subjectType" to "0"
             ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
-        ).parsedSafe<Media>()?.data?.items?.map { it.toSearchResponse(this) }
-            ?: throw ErrorLoadingException()
+        ).parsedSafe<Media>() ?: return emptyList()
+
+        return response.data?.items?.map { it.toSearchResponse(this) } ?: emptyList()
+    }
+
+    override suspend fun quickSearch(query: String): List<SearchResponse> = fetchSearchResults(query, 1)
+
+    override suspend fun search(query: String, page: Int): SearchResponseList? {
+        val items = fetchSearchResults(query, page)
+        if (items.isEmpty()) return null
+        return items.toNewSearchResponseList()
     }
 
     override suspend fun load(url: String): LoadResponse {

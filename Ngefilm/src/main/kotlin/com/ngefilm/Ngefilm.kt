@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.toNewSearchResponseList
 import java.net.URI
 import org.jsoup.nodes.Element
 
@@ -90,11 +91,11 @@ private fun Element.toSearchResult(): SearchResponse? {
 }    
 
 
-    override suspend fun search(query: String): List<SearchResponse> {
-    val document = app.get("$mainUrl/?s=$query&post_type[]=post&post_type[]=tv", timeout = 50L).document
-    val results = document.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
-    return results
-}
+    override suspend fun search(query: String, page: Int): SearchResponseList? {
+		val document = app.get("$mainUrl/page/$page/?s=$query&post_type[]=post&post_type[]=tv", timeout = 50L).document
+		val results = document.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }.toNewSearchResponseList()
+		return results
+	}
 
         private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null

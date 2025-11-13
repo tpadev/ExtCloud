@@ -10,6 +10,7 @@ import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.toNewSearchResponseList
 import org.jsoup.nodes.Element
 import java.net.URI
 
@@ -101,19 +102,20 @@ class IdlixProvider : MainAPI() {
 
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        val req = app.get("$mainUrl/search/$query")
+    override suspend fun search(query: String, page: Int): SearchResponseList? {
+        val req = app.get("$mainUrl/search/$query/page/$page")
         mainUrl = getBaseUrl(req.url)
         val document = req.document
-        return document.select("div.result-item").map {
-            val title =
-                it.selectFirst("div.title > a")!!.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
+        val results = document.select("div.result-item").map {
+            val title = it.selectFirst("div.title > a")!!
+                .text().replace(Regex("\\(\\d{4}\\)"), "").trim()
             val href = getProperLink(it.selectFirst("div.title > a")!!.attr("href"))
             val posterUrl = it.selectFirst("img")!!.attr("src")
             newMovieSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
             }
         }
+        return results.toNewSearchResponseList()
     }
 
     override suspend fun load(url: String): LoadResponse {
