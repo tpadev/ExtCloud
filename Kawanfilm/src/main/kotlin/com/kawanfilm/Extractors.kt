@@ -154,3 +154,14 @@ open class Dintezuvio : ExtractorApi() {
             ).forEach(callback)
         }
     }
+
+    private fun getEmbedUrl(url: String): String {
+		return when {
+			url.contains("/d/") -> url.replace("/d/", "/v/")
+			url.contains("/download/") -> url.replace("/download/", "/v/")
+			url.contains("/file/") -> url.replace("/file/", "/v/")
+			else -> url.replace("/f/", "/v/")
+		}
+	}
+
+}
