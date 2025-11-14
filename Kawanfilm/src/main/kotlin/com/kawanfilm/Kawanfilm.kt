@@ -79,11 +79,14 @@ class Kawanfilm : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-        val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
-        val href = this.selectFirst("a")!!.attr("href")
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+    val title = this.selectFirst(".gmr-item-movie-title a")?.text()?.trim() ?: return null
+    val href = this.selectFirst("a")?.attr("href") ?: return null
+    val posterUrl = fixUrlNull(this.selectFirst(".content-thumbnail a img")?.getImageAttr()?.fixImageQuality())
+
+    return newMovieSearchResponse(title, href, TvType.Movie) {
+        this.posterUrl = posterUrl
     }
+}
 
     override suspend fun load(url: String): LoadResponse {
         val fetch = app.get(url)
