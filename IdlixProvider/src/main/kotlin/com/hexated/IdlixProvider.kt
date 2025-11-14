@@ -106,11 +106,21 @@ class IdlixProvider : MainAPI() {
         val req = app.get("$mainUrl/search/$query/page/$page")
         mainUrl = getBaseUrl(req.url)
         val document = req.document
-        val results = document.select("div.result-item").map {
-            val title = it.selectFirst("div.title > a")!!
-                .text().replace(Regex("\\(\\d{4}\\)"), "").trim()
-            val href = getProperLink(it.selectFirst("div.title > a")!!.attr("href"))
-            val posterUrl = it.selectFirst("img")!!.attr("src")
+        
+        val results = document.select("div.result-item").mapNotNull {
+            val titleElement = it.selectFirst("div.title > a") ?: return@mapNotNull null
+            val titleWithYear = titleElement.text().trim()
+
+            if (!titleWithYear.contains(Regex("\\(\\d{4}\\)"))) return@mapNotNull null
+
+            val title = titleWithYear.replace(Regex("\\(\\d{4}\\)"), "").trim()
+            val href = getProperLink(titleElement.attr("href"))
+            var posterUrl = it.selectFirst("img")?.attr("src")
+
+            if (posterUrl?.contains("image.tmdb.org/t/p") == true) {
+                posterUrl = posterUrl.replace(Regex("/w\\d+/"), "/w200/")
+            }
+
             newMovieSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
             }
