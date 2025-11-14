@@ -15,8 +15,9 @@ class KawanfilmPlugin : Plugin() {
         registerExtractorAPI(Ryderjet())
         registerExtractorAPI(Ghbrisk())
         registerExtractorAPI(Dhcplay())
-        registerExtractorAPI(Gofile())
+        registerExtractorAPI(Winvidse())
         registerExtractorAPI(Movearnpre())
         registerExtractorAPI(Vidshare())
+        registerExtractorAPI(Dintezuvio())
     }
 }
