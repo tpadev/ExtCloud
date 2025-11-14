@@ -15,7 +15,7 @@ import com.lagradost.cloudstream3.extractors.StreamWishExtractor
 import com.lagradost.cloudstream3.extractors.Gdriveplayer
 import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.extractors.Hxfile
-import com.lagradost.cloudstream3.extractors.DoodExtractor
+import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import java.net.URI
 
 class Movearnpre : Dingtezuni() {
