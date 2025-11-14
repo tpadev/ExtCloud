@@ -19,5 +19,7 @@ class DutaMoviePlugin : Plugin() {
         registerExtractorAPI(Movearnpre())
         registerExtractorAPI(Streamcasthub())
         registerExtractorAPI(Dm21upns())
+        registerExtractorAPI(Dm21())
+        registerExtractorAPI(Dintezuvio())
     }
 }
