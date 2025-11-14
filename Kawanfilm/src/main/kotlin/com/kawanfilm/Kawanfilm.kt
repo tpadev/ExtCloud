@@ -126,7 +126,7 @@ class Kawanfilm : MainAPI() {
                     ?.replace(Regex("\\D"), "")
                     ?.toIntOrNull()
         val recommendations =
-                document.select("div.idmuvi-rp ul li").mapNotNull { it.toRecommendResult() }
+    document.select("div.gmr-related article.item").mapNotNull { it.toRecommendResult() }
 
         return if (tvType == TvType.TvSeries) {
             val episodes =
