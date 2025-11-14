@@ -18,6 +18,7 @@ class NgefilmPlugin : Plugin() {
         registerExtractorAPI(Playerngefilm21())
         registerExtractorAPI(P2pplay())
         registerExtractorAPI(Xshotcok())
+        registerExtractorAPI(Dsvplay())
     }
 }
 

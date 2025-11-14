@@ -15,6 +15,7 @@ import com.lagradost.cloudstream3.extractors.StreamWishExtractor
 import com.lagradost.cloudstream3.extractors.Gdriveplayer
 import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.extractors.Hxfile
+import com.lagradost.cloudstream3.extractors.DoodExtractor
 import java.net.URI
 
 class Movearnpre : Dingtezuni() {
@@ -113,4 +114,9 @@ class P2pplay : VidStack() {
 class Xshotcok : Hxfile() {
     override val name = "Xshotcok"
     override val mainUrl = "https://xshotcok.com"
+    override val requiresReferer = true
+}
+
+class Dsvplay : DoodLaExtractor() {
+    override var mainUrl = "https://dsvplay.com"
 }
