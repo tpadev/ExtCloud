@@ -78,7 +78,7 @@ class DutaMovie : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-    val title = this.selectFirst("div.gmr-box-content")?.text()?.trim() ?: return null
+    val title = this.selectFirst("div.gmr-box-content h3.entry-title a")?.text()?.trim() ?: return null
     val href = this.selectFirst("a")?.attr("href") ?: return null
     val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
 
@@ -125,7 +125,7 @@ class DutaMovie : MainAPI() {
                     ?.replace(Regex("\\D"), "")
                     ?.toIntOrNull()
         val recommendations =
-                document.select("div.gmr-box-content").mapNotNull { it.toRecommendResult() }
+                document.select("div.gmr-box-content h3.entry-title a").mapNotNull { it.toRecommendResult() }
 
         return if (tvType == TvType.TvSeries) {
             val episodes =
