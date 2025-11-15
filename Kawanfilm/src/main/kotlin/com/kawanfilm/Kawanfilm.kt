@@ -79,7 +79,7 @@ class Kawanfilm : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-    val title = this.selectFirst(".gmr-item-movie-title a")?.text()?.trim() ?: return null
+    val title = this.selectFirst("div.gmr-grid.idmuvi-core article.item")?.text()?.trim() ?: return null
     val href = this.selectFirst("a")?.attr("href") ?: return null
     val posterUrl = fixUrlNull(this.selectFirst(".content-thumbnail a img")?.getImageAttr()?.fixImageQuality())
 
@@ -126,7 +126,7 @@ class Kawanfilm : MainAPI() {
                     ?.replace(Regex("\\D"), "")
                     ?.toIntOrNull()
         val recommendations =
-    document.select("div.gmr-related article.item").mapNotNull { it.toRecommendResult() }
+    document.select("div.gmr-grid.idmuvi-core article.item").mapNotNull { it.toRecommendResult() }
 
         return if (tvType == TvType.TvSeries) {
             val episodes =
