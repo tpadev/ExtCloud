@@ -78,19 +78,11 @@ class DutaMovie : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-    val title = this.selectFirst(".item-article h3.entry-title a")?.text()?.trim()
-        ?: return null
-    val href = this.selectFirst(".item-article h3.entry-title a")!!.attr("href")
-    val posterUrl = fixUrlNull(
-        this.selectFirst(".content-thumbnail a img")
-            ?.getImageAttr()
-            ?.fixImageQuality()
-    )
-    return newMovieSearchResponse(title, href, TvType.Movie) {
-        this.posterUrl = posterUrl
+        val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
+        val href = this.selectFirst("a")!!.attr("href")
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
+        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
-}
-
 
     override suspend fun load(url: String): LoadResponse {
         val fetch = app.get(url)
@@ -129,7 +121,8 @@ class DutaMovie : MainAPI() {
                     ?.text()
                     ?.replace(Regex("\\D"), "")
                     ?.toIntOrNull()
-        val recommendations = document.select("article.item").mapNotNull { it.toRecommendResult() }
+        val recommendations =
+                document.select("div.idmuvi-rp ul li").mapNotNull { it.toRecommendResult() }
 
         return if (tvType == TvType.TvSeries) {
             val episodes =
