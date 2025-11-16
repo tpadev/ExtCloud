@@ -149,14 +149,17 @@ class DutaMovie : MainAPI() {
     // ======================================================================
     //                             EPISODE FIX
     // ======================================================================
-    val episodes =
-    document.select("div.gmr-listseries a.button.button-shadow")
-        .filter { it.text().contains("Eps", ignoreCase = true) } // abaikan view all episodes
+    // Ambil halaman series
+val seriesUrl = url.substringBeforeLast("/eps/")
+val seriesDoc = app.get(seriesUrl).document
+
+val episodes =
+    seriesDoc.select("div.gmr-listseries a.button.button-shadow")
+        .filter { it.text().contains("Eps", ignoreCase = true) }
         .map { eps ->
             val href = fixUrl(eps.attr("href"))
             val name = eps.text().trim()
 
-            // Tangkap format seperti "S1 Eps1A" atau "S1 Eps1B"
             val regex = Regex("""S(\d+)\s*Eps(\d+)[A-Za-z]?""", RegexOption.IGNORE_CASE)
             val match = regex.find(name)
 
@@ -169,6 +172,7 @@ class DutaMovie : MainAPI() {
                 this.episode = episode
             }
         }
+
     // ======================================================================
 
 
