@@ -150,28 +150,30 @@ class DutaMovie : MainAPI() {
     //                             EPISODE FIX
     // ======================================================================
     // Ambil halaman series
-val seriesUrl = url.substringBeforeLast("/eps/")
-val seriesDoc = app.get(seriesUrl).document
+val seriesUrl = document.selectFirst("a[rel=tag]")?.attr("href")
+        ?: url.substringBefore("/eps/")
 
-val episodes =
-    seriesDoc.select("div.gmr-listseries a.button.button-shadow")
-        .filter { it.text().contains("Eps", ignoreCase = true) }
-        .map { eps ->
-            val href = fixUrl(eps.attr("href"))
-            val name = eps.text().trim()
+    val seriesDoc = app.get(seriesUrl).document
 
-            val regex = Regex("""S(\d+)\s*Eps(\d+)[A-Za-z]?""", RegexOption.IGNORE_CASE)
-            val match = regex.find(name)
+    val episodes =
+        seriesDoc.select("div.gmr-listseries a.button.button-shadow")
+            .filter { it.text().contains("Eps", ignoreCase = true) }
+            .map { eps ->
+                val href = fixUrl(eps.attr("href"))
+                val name = eps.text().trim()
 
-            val season = match?.groupValues?.getOrNull(1)?.toIntOrNull()
-            val episode = match?.groupValues?.getOrNull(2)?.toIntOrNull()
+                val regex = Regex("""S(\d+)\s*Eps(\d+)[A-Za-z]?""", RegexOption.IGNORE_CASE)
+                val match = regex.find(name)
 
-            newEpisode(href) {
-                this.name = name
-                this.season = season ?: 1
-                this.episode = episode
+                val season = match?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
+                val epNum = match?.groupValues?.getOrNull(2)?.toIntOrNull()
+
+                newEpisode(href) {
+                    this.name = name
+                    this.season = season
+                    this.episode = epNum
+                }
             }
-        }
 
     // ======================================================================
 
