@@ -145,29 +145,33 @@ class DutaMovie : MainAPI() {
         document.select("div.gmr-box-content .entry-title a")
             .mapNotNull { it.toRecommendResult() }
 
-
-    val episodes =
-        seriesDoc.select("div.gmr-listseries a.button.button-shadow")
-            .filter { it.text().contains("Eps", ignoreCase = true) } // hilangkan "View All Episodes"
-            .map { eps ->
-                val href = fixUrl(eps.attr("href"))
-                val name = eps.text().trim()
-
-               
-                val regex = Regex("""S(\d+)\s*Eps(\d+)[A-Za-z]?""", RegexOption.IGNORE_CASE)
-                val match = regex.find(name)
-
-                val season = match?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
-                val epNum = match?.groupValues?.getOrNull(2)?.toIntOrNull()
-
-                newEpisode(href) {
-                    this.name = name
-                    this.season = season
-                    this.episode = epNum
-                }
-            }
-
     return if (tvType == TvType.TvSeries) {
+
+        // ============================================
+        // EPISODE FIX - BAGIAN INI SAJA YANG DIREVISI
+        // ============================================
+        val episodes =
+            document.select("div.vid-episodes a, div.gmr-listseries a")
+                .map { eps ->
+                    val href = fixUrl(eps.attr("href"))
+                    val name = eps.text()
+
+                    // Regex baca format episode contoh:
+                    // S1 Eps1A, S1 Eps1B, S1 Eps2A, S1 Eps2B
+                    val regex = Regex("""S(\d+)\s*Eps(\d+)""", RegexOption.IGNORE_CASE)
+                    val match = regex.find(name)
+
+                    val season = match?.groupValues?.getOrNull(1)?.toIntOrNull()
+                    val episode = match?.groupValues?.getOrNull(2)?.toIntOrNull()
+
+                    newEpisode(href) {
+                        this.name = name
+                        this.episode = episode
+                        this.season = season
+                    }
+                }
+                .filter { it.episode != null }
+        // ============================================
 
         newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster
@@ -180,9 +184,7 @@ class DutaMovie : MainAPI() {
             this.duration = duration ?: 0
             addTrailer(trailer)
         }
-
     } else {
-
         newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl = poster
             this.year = year
