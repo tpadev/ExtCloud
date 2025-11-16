@@ -150,25 +150,25 @@ class DutaMovie : MainAPI() {
     //                             EPISODE FIX
     // ======================================================================
     val episodes =
-        document.select("div.vid-episodes a, div.gmr-listseries a")
-            .filter { it.text().contains("Eps", ignoreCase = true) }  // Hindari View All Episodes
-            .map { eps ->
-                val href = fixUrl(eps.attr("href"))
-                val name = eps.text().trim()
+    document.select("div.gmr-listseries a.button.button-shadow")
+        .filter { it.text().contains("Eps", ignoreCase = true) } // abaikan view all episodes
+        .map { eps ->
+            val href = fixUrl(eps.attr("href"))
+            val name = eps.text().trim()
 
-                // Regex baru mendukung huruf A/B setelah nomor episode
-                val regex = Regex("""S(\d+)\s*Eps(\d+)[A-Za-z]?""", RegexOption.IGNORE_CASE)
-                val match = regex.find(name)
+            // Tangkap format seperti "S1 Eps1A" atau "S1 Eps1B"
+            val regex = Regex("""S(\d+)\s*Eps(\d+)[A-Za-z]?""", RegexOption.IGNORE_CASE)
+            val match = regex.find(name)
 
-                val season = match?.groupValues?.getOrNull(1)?.toIntOrNull()
-                val episode = match?.groupValues?.getOrNull(2)?.toIntOrNull()
+            val season = match?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val episode = match?.groupValues?.getOrNull(2)?.toIntOrNull()
 
-                newEpisode(href) {
-                    this.name = name
-                    this.episode = episode
-                    this.season = season
-                }
+            newEpisode(href) {
+                this.name = name
+                this.season = season ?: 1
+                this.episode = episode
             }
+        }
     // ======================================================================
 
 
