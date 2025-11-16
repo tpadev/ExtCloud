@@ -158,7 +158,7 @@ class DutaMovie : MainAPI() {
 
                     // Regex baca format episode contoh:
                     // S1 Eps1A, S1 Eps1B, S1 Eps2A, S1 Eps2B
-                    val regex = Regex("""S(\d+)\s*Eps(\d+)""", RegexOption.IGNORE_CASE)
+                    Regex("""S(\d+)\s*Eps(\d+)([A-Za-z]?)""", RegexOption.IGNORE_CASE)
                     val match = regex.find(name)
 
                     val season = match?.groupValues?.getOrNull(1)?.toIntOrNull()
