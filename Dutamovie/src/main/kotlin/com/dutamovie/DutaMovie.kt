@@ -146,26 +146,6 @@ class DutaMovie : MainAPI() {
             .mapNotNull { it.toRecommendResult() }
 
 
-    // ======================================================================
-    //                             EPISODE FIX
-    // ======================================================================
-    // Ambil halaman series
-val seriesUrl = if (url.contains("/eps/")) {
-
-        // Contoh:
-        // /eps/menikah-jadi-yang-kedua-season-1-episode-1b/
-        // Menjadi:
-        // /tv/menikah-jadi-yang-kedua-season-1/
-        val getName = url.substringAfter("/eps/").substringBefore("-episode")
-        "${directUrl}/tv/${getName}/"
-
-    } else {
-        url
-    }
-
-    // Fetch halaman seri yang berisi daftar episode lengkap
-    val seriesDoc = app.get(seriesUrl).document
-
     val episodes =
         seriesDoc.select("div.gmr-listseries a.button.button-shadow")
             .filter { it.text().contains("Eps", ignoreCase = true) } // hilangkan "View All Episodes"
@@ -173,7 +153,7 @@ val seriesUrl = if (url.contains("/eps/")) {
                 val href = fixUrl(eps.attr("href"))
                 val name = eps.text().trim()
 
-                // Regex menangkap S1 Eps1A / S1 Eps1B / S1 Eps2A / S1 Eps2B
+               
                 val regex = Regex("""S(\d+)\s*Eps(\d+)[A-Za-z]?""", RegexOption.IGNORE_CASE)
                 val match = regex.find(name)
 
@@ -186,9 +166,6 @@ val seriesUrl = if (url.contains("/eps/")) {
                     this.episode = epNum
                 }
             }
-
-    // ======================================================================
-
 
     return if (tvType == TvType.TvSeries) {
 
