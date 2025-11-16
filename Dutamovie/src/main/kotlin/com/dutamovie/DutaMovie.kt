@@ -78,7 +78,7 @@ class DutaMovie : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-    val title = this.selectFirst(".entry-title a")?.text()?.trim() ?: return null
+    val title = this.selectFirst("div.gmr-related-title")?.text()?.trim() ?: return null
     val href = this.selectFirst("a")?.attr("href") ?: return null
     val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
 
