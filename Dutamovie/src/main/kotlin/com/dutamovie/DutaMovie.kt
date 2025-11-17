@@ -170,10 +170,9 @@ class DutaMovie : MainAPI() {
             val part = match?.groupValues?.getOrNull(3) // A/B
 
             newEpisode(href) {
-                this.name = name
+                this.name = "S${season} Eps${episodeNum}${part ?: ""}"
                 this.season = season
                 this.episode = episodeNum
-                this.extra = part
             }
         }
         .filter { it.episode != null }
