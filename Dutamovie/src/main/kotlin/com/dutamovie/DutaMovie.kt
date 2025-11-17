@@ -173,8 +173,7 @@ class DutaMovie : MainAPI() {
                 this.name = name
                 this.season = season
                 this.episode = episodeNum
-                // Kalau mau, kamu bisa tambahkan:
-                // this.extra = "Part $part"
+                this.part = part
             }
         }
         .filter { it.episode != null }
