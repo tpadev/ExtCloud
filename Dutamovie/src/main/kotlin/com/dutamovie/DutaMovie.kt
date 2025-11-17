@@ -175,9 +175,7 @@ class DutaMovie : MainAPI() {
                 this.episode = episodeNum
             }
         }
-        .filter { it.episode != null }
-       
-
+    
         newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster
             this.year = year
