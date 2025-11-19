@@ -156,11 +156,24 @@ val seriesUrl = if (url.contains("/eps/")) {
 
 println("Series URL final = $seriesUrl")
 
-val seriesDoc = app.get(seriesUrl).document
+
+val headers = mapOf(
+    "User-Agent" to USER_AGENT,
+    "Referer" to seriesUrl,
+    "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language" to "en-US,en;q=0.9"
+)
+
+
+val seriesDoc = app.get(seriesUrl, headers = headers).document
+
+
+println(seriesDoc.select("div.gmr-listseries").html())
 
 val episodes = seriesDoc
-    .select("div.gmr-listseries a.button.button-shadow:not(.active)")
+    .select("div.gmr-listseries a.button.button-shadow")
     .mapNotNull { eps ->
+
         val href = fixUrl(eps.attr("href"))
         val name = eps.text().trim()
 
@@ -176,6 +189,7 @@ val episodes = seriesDoc
             this.episode = epNum
         }
     }
+
     
         newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster
