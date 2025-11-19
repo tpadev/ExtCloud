@@ -148,33 +148,32 @@ class DutaMovie : MainAPI() {
     return if (tvType == TvType.TvSeries) {
 
  val seriesUrl = if (url.contains("/eps/")) {
-        val name = url.substringAfter("/eps/").substringBefore("-episode")
-        "${directUrl}/tv/$name/"
-    } else url
+    val name = url.substringAfter("/eps/").substringBefore("-episode")
+    "${directUrl}/tv/$name/"
+} else url
 
-    val seriesDoc = app.get(seriesUrl).document
+val seriesDoc = app.get(seriesUrl).document
 
-    val episodes = seriesDoc
-        .select("div.gmr-listseries a.button")
-        .filter { it.text().contains("Eps", true) }
-        .map { eps ->
-            val href = fixUrl(eps.attr("href"))
-            val name = eps.text().trim()
+val episodes = seriesDoc
+    .select("div.gmr-listseries a.button.button-shadow:not(.active)")
+    .map { eps ->
+        val href = fixUrl(eps.attr("href"))
+        val name = eps.text().trim()
 
-            // Regex menangkap: S1 Eps1A, S1 Eps1B, S1 Eps2A, S1 Eps2B
-            val regex = Regex("""S(\d+)\s*Eps(\d+)([A-Za-z]?)""")
-            val match = regex.find(name)
+        val regex = Regex("""S(\d+)\s*Eps(\d+)([A-Za-z]?)""", RegexOption.IGNORE_CASE)
+        val match = regex.find(name)
 
-            val season = match?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
-            val episodeNum = match?.groupValues?.getOrNull(2)?.toIntOrNull()
-            val part = match?.groupValues?.getOrNull(3) // A/B
+        val season = match?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
+        val episodeNum = match?.groupValues?.getOrNull(2)?.toIntOrNull()
+        val part = match?.groupValues?.getOrNull(3)
 
-            newEpisode(href) {
-                this.name = "S${season} Eps${episodeNum}${part ?: ""}"
-                this.season = season
-                this.episode = episodeNum
-            }
+        newEpisode(href) {
+            this.name = name
+            this.season = season
+            this.episode = episodeNum
         }
+    }
+    .filter { it.episode != null }
     
         newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster
