@@ -147,33 +147,35 @@ class DutaMovie : MainAPI() {
 
     return if (tvType == TvType.TvSeries) {
 
- val seriesUrl = if (url.contains("/eps/")) {
+val domain = url.substringBefore("/eps/")
+
+val seriesUrl = if (url.contains("/eps/")) {
     val name = url.substringAfter("/eps/").substringBefore("-episode")
-    "${directUrl}/tv/$name/"
+    "$domain/tv/$name/"
 } else url
+
+println("Series URL final = $seriesUrl")
 
 val seriesDoc = app.get(seriesUrl).document
 
 val episodes = seriesDoc
     .select("div.gmr-listseries a.button.button-shadow:not(.active)")
-    .map { eps ->
+    .mapNotNull { eps ->
         val href = fixUrl(eps.attr("href"))
         val name = eps.text().trim()
 
         val regex = Regex("""S(\d+)\s*Eps(\d+)([A-Za-z]?)""", RegexOption.IGNORE_CASE)
-        val match = regex.find(name)
+        val match = regex.find(name) ?: return@mapNotNull null
 
-        val season = match?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
-        val episodeNum = match?.groupValues?.getOrNull(2)?.toIntOrNull()
-        val part = match?.groupValues?.getOrNull(3)
+        val season = match.groupValues[1].toInt()
+        val epNum = match.groupValues[2].toInt()
 
         newEpisode(href) {
             this.name = name
             this.season = season
-            this.episode = episodeNum
+            this.episode = epNum
         }
     }
-    .filter { it.episode != null }
     
         newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster
