@@ -184,6 +184,9 @@ class DutaMovie : MainAPI() {
 
     // Parse episodes, pastikan nomor episode UNIK (pakai index)
     val episodes = episodeElements.mapIndexedNotNull { index, eps ->
+
+        if (eps.hasClass("active")) return@mapIndexedNotNull null
+        
         val href = fixUrl(eps.attr("href"))
         val name = eps.text().trim()
 
