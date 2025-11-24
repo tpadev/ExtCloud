@@ -115,7 +115,7 @@ class DutaMovie : MainAPI() {
             ?.substringBefore("Season")
             ?.substringBefore("Episode")
             ?.trim()
-            .toString()
+            .orEmpty()
 
     val poster =
         fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
@@ -125,9 +125,9 @@ class DutaMovie : MainAPI() {
 
     val year =
         document.select("div.gmr-moviedata strong:contains(Year:) > a")
-            .text()
-            .trim()
-            .toIntOrNull()
+            ?.text()
+            ?.trim()
+            ?.toIntOrNull()
 
     val tvType = if (url.contains("/tv/")) TvType.TvSeries else TvType.Movie
     val description = document.selectFirst("div[itemprop=description] > p")?.text()?.trim()
@@ -147,12 +147,14 @@ class DutaMovie : MainAPI() {
         ?.replace(Regex("\\D"), "")
         ?.toIntOrNull()
 
-    // ---- RECOMMENDATION (opsional, boleh dibiarkan seperti ini dulu) ----
     val recommendations =
         document.select("div.gmr-box-content .entry-title a")
             .mapNotNull { it.toRecommendResult() }
 
-    // Jika Movie, langsung return
+    // =========================
+    //  MOVIE
+    // =========================
+
     if (tvType == TvType.Movie) {
         return newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl = poster
@@ -167,45 +169,53 @@ class DutaMovie : MainAPI() {
         }
     }
 
+
     // =========================
     //  TV SERIES MODE
     // =========================
 
-    // Cari tombol “View All Episodes” untuk mendapatkan URL series
+    // Tombol “View All Episodes” → URL halaman series
     val seriesUrl =
         document.selectFirst("a.button.button-shadow.active")?.attr("href")
             ?: url.substringBefore("/eps/")
 
-    // Ambil halaman series pakai desktop UA
     val seriesDoc = app.get(seriesUrl, headers = desktopHeaders).document
 
     val episodeElements =
         seriesDoc.select("div.gmr-listseries a.button.button-shadow")
 
-    // Parse episodes, pastikan nomor episode UNIK (pakai index)
-    val episodes = episodeElements.mapIndexedNotNull { index, eps ->
+    // Nomor episode manual (agar tidak lompat)
+    var episodeCounter = 1
 
-        if (eps.hasClass("active")) return@mapIndexedNotNull null
-        
-        val href = fixUrl(eps.attr("href"))
+    val episodes = episodeElements.mapNotNull { eps ->
+        val href = fixUrl(eps.attr("href")).trim()
         val name = eps.text().trim()
 
-        if (href.isBlank() || name.isBlank()) return@mapIndexedNotNull null
+        // Skip tombol "View All Episodes"
+        if (name.contains("View All Episodes", ignoreCase = true)) return@mapNotNull null
 
-        // Ambil season dari teks kalau ada, default 1
-        val regex = Regex("""S(\d+)\s*Eps(\d+)([A-Za-z]?)""", RegexOption.IGNORE_CASE)
+        // Skip jika href sama dengan halaman series
+        if (href == seriesUrl) return@mapNotNull null
+
+        // Skip elemen non-episode
+        if (!name.contains("Eps", ignoreCase = true)) return@mapNotNull null
+
+        // Ambil season (default 1)
+        val regex = Regex("""S(\d+)\s*Eps""", RegexOption.IGNORE_CASE)
         val match = regex.find(name)
         val season = match?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
 
-        val epNum = index + 1 // <- SELALU UNIK: 1,2,3,4,5,...
+        // Nomor episode final
+        val epNum = episodeCounter++
 
         newEpisode(href) {
-            this.name = name           // "S1 Eps1A" dll tetap tampil di UI
+            this.name = name
             this.season = season
             this.episode = epNum
         }
     }
 
+    // Return response TV Series
     return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
         this.posterUrl = poster
         this.year = year
