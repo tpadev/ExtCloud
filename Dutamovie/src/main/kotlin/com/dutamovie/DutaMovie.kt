@@ -147,6 +147,7 @@ class DutaMovie : MainAPI() {
         ?.replace(Regex("\\D"), "")
         ?.toIntOrNull()
 
+    // ---- RECOMMENDATION (opsional, boleh dibiarkan seperti ini dulu) ----
     val recommendations =
         document.select("div.gmr-box-content .entry-title a")
             .mapNotNull { it.toRecommendResult() }
@@ -178,26 +179,29 @@ class DutaMovie : MainAPI() {
     // Ambil halaman series pakai desktop UA
     val seriesDoc = app.get(seriesUrl, headers = desktopHeaders).document
 
-    // Parse episodes
-    val episodes = seriesDoc
-        .select("div.gmr-listseries a.button.button-shadow")
-        .mapNotNull { eps ->
-            val href = fixUrl(eps.attr("href"))
-            val name = eps.text().trim()
+    val episodeElements =
+        seriesDoc.select("div.gmr-listseries a.button.button-shadow")
 
-            // Regex: S1 Eps1A, S1 Eps2B, dsb
-            val regex = Regex("""S(\d+)\s*Eps(\d+)([A-Za-z]?)""", RegexOption.IGNORE_CASE)
-            val match = regex.find(name) ?: return@mapNotNull null
+    // Parse episodes, pastikan nomor episode UNIK (pakai index)
+    val episodes = episodeElements.mapIndexedNotNull { index, eps ->
+        val href = fixUrl(eps.attr("href"))
+        val name = eps.text().trim()
 
-            val season = match.groupValues[1].toInt()
-            val epNum = match.groupValues[2].toInt()
+        if (href.isBlank() || name.isBlank()) return@mapIndexedNotNull null
 
-            newEpisode(href) {
-                this.name = name
-                this.season = season
-                this.episode = epNum
-            }
+        // Ambil season dari teks kalau ada, default 1
+        val regex = Regex("""S(\d+)\s*Eps(\d+)([A-Za-z]?)""", RegexOption.IGNORE_CASE)
+        val match = regex.find(name)
+        val season = match?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
+
+        val epNum = index + 1 // <- SELALU UNIK: 1,2,3,4,5,...
+
+        newEpisode(href) {
+            this.name = name           // "S1 Eps1A" dll tetap tampil di UI
+            this.season = season
+            this.episode = epNum
         }
+    }
 
     return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
         this.posterUrl = poster
@@ -211,6 +215,7 @@ class DutaMovie : MainAPI() {
         addTrailer(trailer)
     }
 }
+
 
 
     override suspend fun loadLinks(
