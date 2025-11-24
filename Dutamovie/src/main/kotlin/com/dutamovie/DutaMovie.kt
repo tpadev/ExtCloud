@@ -99,8 +99,14 @@ class DutaMovie : MainAPI() {
 }
 
     override suspend fun load(url: String): LoadResponse {
-    val fetch = app.get(url)
-    directUrl = getBaseUrl(fetch.url)
+    // Pakai Desktop User-Agent agar website tidak mengirim halaman mobile
+    val desktopHeaders = mapOf(
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language" to "en-US,en;q=0.9"
+    )
+
+    val fetch = app.get(url, headers = desktopHeaders)
     val document = fetch.document
 
     val title =
@@ -145,77 +151,67 @@ class DutaMovie : MainAPI() {
         document.select("div.gmr-box-content .entry-title a")
             .mapNotNull { it.toRecommendResult() }
 
-    return if (tvType == TvType.TvSeries) {
-
-val domain = url.substringBefore("/eps/")
-
-val seriesUrl = if (url.contains("/eps/")) {
-    val name = url.substringAfter("/eps/").substringBefore("-episode")
-    "$domain/tv/$name/"
-} else url
-
-println("Series URL final = $seriesUrl")
-
-
-val headers = mapOf(
-    "User-Agent" to USER_AGENT,
-    "Referer" to seriesUrl,
-    "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language" to "en-US,en;q=0.9"
-)
-
-
-val seriesDoc = app.get(seriesUrl, headers = headers).document
-
-
-println(seriesDoc.select("div.gmr-listseries").html())
-
-val episodes = seriesDoc
-    .select("div.gmr-listseries a.button.button-shadow")
-    .mapNotNull { eps ->
-
-        val href = fixUrl(eps.attr("href"))
-        val name = eps.text().trim()
-
-        val regex = Regex("""S(\d+)\s*Eps(\d+)([A-Za-z]?)""", RegexOption.IGNORE_CASE)
-        val match = regex.find(name) ?: return@mapNotNull null
-
-        val season = match.groupValues[1].toInt()
-        val epNum = match.groupValues[2].toInt()
-
-        newEpisode(href) {
-            this.name = name
-            this.season = season
-            this.episode = epNum
+    // Jika Movie, langsung return
+    if (tvType == TvType.Movie) {
+        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+            this.posterUrl = poster
+            this.year = year
+            this.plot = description
+            this.tags = tags
+            addScore(rating)
+            addActors(actors)
+            this.recommendations = recommendations
+            this.duration = duration ?: 0
+            addTrailer(trailer)
         }
     }
 
-    
-        newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-            this.posterUrl = poster
-            this.year = year
-            this.plot = description
-            this.tags = tags
-            addScore(rating)
-            addActors(actors)
-            this.recommendations = recommendations
-            this.duration = duration ?: 0
-            addTrailer(trailer)
+    // =========================
+    //  TV SERIES MODE
+    // =========================
+
+    // Cari tombol “View All Episodes” untuk mendapatkan URL series
+    val seriesUrl =
+        document.selectFirst("a.button.button-shadow.active")?.attr("href")
+            ?: url.substringBefore("/eps/")
+
+    // Ambil halaman series pakai desktop UA
+    val seriesDoc = app.get(seriesUrl, headers = desktopHeaders).document
+
+    // Parse episodes
+    val episodes = seriesDoc
+        .select("div.gmr-listseries a.button.button-shadow")
+        .mapNotNull { eps ->
+            val href = fixUrl(eps.attr("href"))
+            val name = eps.text().trim()
+
+            // Regex: S1 Eps1A, S1 Eps2B, dsb
+            val regex = Regex("""S(\d+)\s*Eps(\d+)([A-Za-z]?)""", RegexOption.IGNORE_CASE)
+            val match = regex.find(name) ?: return@mapNotNull null
+
+            val season = match.groupValues[1].toInt()
+            val epNum = match.groupValues[2].toInt()
+
+            newEpisode(href) {
+                this.name = name
+                this.season = season
+                this.episode = epNum
+            }
         }
-    } else {
-        newMovieLoadResponse(title, url, TvType.Movie, url) {
-            this.posterUrl = poster
-            this.year = year
-            this.plot = description
-            this.tags = tags
-            addScore(rating)
-            addActors(actors)
-            this.recommendations = recommendations
-            this.duration = duration ?: 0
-            addTrailer(trailer)
-        }
+
+    return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+        this.posterUrl = poster
+        this.year = year
+        this.plot = description
+        this.tags = tags
+        addScore(rating)
+        addActors(actors)
+        this.recommendations = recommendations
+        this.duration = duration ?: 0
+        addTrailer(trailer)
     }
 }
+
 
     override suspend fun loadLinks(
     data: String,
