@@ -118,9 +118,11 @@ private fun Element.toSearchResult(): SearchResponse? {
         ?: "Unknown Title"
 
     // ---------- POSTER ----------
-    val poster = fixUrlNull(
-        document.selectFirst("div.poster img")?.getImageAttr()
-    )?.fixImageQuality()
+    val poster =
+    document.selectFirst("div.poster img")
+        ?.getImageAttr()
+        ?.let { fixUrlNull(it).fixImageQuality() }
+
 
     // ---------- GENRE ----------
     val tags = document.select("span.generos a").map { it.text() }
@@ -213,7 +215,6 @@ private fun Element.toSearchResult(): SearchResponse? {
             this.plot = description
             this.tags = tags
             addActors(actors)
-            addTrailer(null)
             addScore(rating)
             this.recommendations = recommendations
         }
