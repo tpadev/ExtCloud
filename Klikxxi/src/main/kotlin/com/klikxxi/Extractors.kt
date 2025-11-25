@@ -1,4 +1,4 @@
-package com.Klikxxi
+package com.klikxxi
 
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
@@ -12,10 +12,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.extractors.StreamWishExtractor
-import com.lagradost.cloudstream3.extractors.Gdriveplayer
 import com.lagradost.cloudstream3.extractors.VidStack
-import com.lagradost.cloudstream3.extractors.Hxfile
-import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import java.net.URI
 
 
