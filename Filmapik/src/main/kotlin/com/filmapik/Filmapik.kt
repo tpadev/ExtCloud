@@ -33,73 +33,49 @@ class Filmapik : MainAPI() {
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val data = request.data.format(page)
-    val document = app.get("$mainUrl$data").document
-
-    val items = document.select(
-        "div.items article.item, article.item, div.result-item article"
-    )
-
-    val home = items.mapNotNull { it.toSearchResult() }
-
-    return newHomePageResponse(request.name, home)
-}
+        val data = request.data.format(page)
+        val document = app.get("$mainUrl/$data").document
+        val home = document.select("div.items.normal article.item").mapNotNull { it.toSearchResult() }
+        return newHomePageResponse(request.name, home)
+    }
 
     // =================== SEARCH RESULT PARSER ===================
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = selectFirst("div.data > h3")?.text()?.trim() ?: return null
+    val a = this.selectFirst("a[href][title]") ?: return null
+    val title = a.attr("title").trim()
+    val href = fixUrl(a.attr("href"))
 
-        // link play tombol biru
-        val href = selectFirst("a.see")
-            ?.attr("href")
-            ?.let { fixUrl(it) }
-            ?: return null
+    val posterUrl = fixUrlNull(this.selectFirst("img[src]")?.attr("src")).fixImageQuality()
 
-        val posterUrl = fixUrlNull(
-            selectFirst("div.poster img")?.getImageAttr()
-        ).fixImageQuality()
+    // Ambil rating (angka seperti 5.3)
+    val ratingText = this.selectFirst("div.rating")?.ownText()?.trim()
+    val score = ratingText?.toDoubleOrNull()?.let { Score.from10(it) }
 
-        val quality = selectFirst("span.quality")?.text()?.trim().orEmpty()
+    // Ambil kualitas video (WEBDL, WEBRip, BluRay, dll)
+    val quality = this.selectFirst("span.quality")?.text()?.trim()
 
-        val ratingText = selectFirst("div.rating")
-            ?.ownText()
-            ?.trim()
-            ?.replace("*", "")
-
-        return if (quality.isEmpty()) {
-            // Anggap sebagai TvSeries jika tidak ada quality
-            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                this.posterUrl = posterUrl
-                this.score = Score.from10(ratingText?.toDoubleOrNull())
-            }
-        } else {
-            newMovieSearchResponse(title, href, TvType.Movie) {
-                this.posterUrl = posterUrl
-                addQuality(quality)
-                this.score = Score.from10(ratingText?.toDoubleOrNull())
-            }
-        }
+    return newMovieSearchResponse(title, href, TvType.Movie) {
+        this.posterUrl = posterUrl
+        if (quality != null && quality.isNotEmpty()) addQuality(quality)
+        this.score = Score.from10(ratingText?.toDoubleOrNull())
     }
+}
 
     // =================== SEARCH ===================
 
-    override suspend fun search(query: String, page: Int): SearchResponseList? {
-        val url = if (page == 1) {
-            "$mainUrl/?s=$query"
-        } else {
-            "$mainUrl/?s=$query&paged=$page"
-        }
+    private fun Element.toRecommendResult(): SearchResponse? {
+    val a = this.selectFirst("a[href]") ?: return null
+    val href = fixUrl(a.attr("href"))
 
-        val document = app.get(url, timeout = 50L).document
+    val img = a.selectFirst("img[src][alt]") ?: return null
+    val title = img.attr("alt").trim()
+    val posterUrl = fixUrlNull(img.attr("src")).fixImageQuality()
 
-        val results = document
-            .select("div.search-result-item article, article")
-            .mapNotNull { it.toSearchResult() }
-            .toNewSearchResponseList()
-
-        return results
+    return newMovieSearchResponse(title, href, TvType.Movie) {
+        this.posterUrl = posterUrl
     }
+}
 
     // =================== RECOMMENDATION CARD PARSER ===================
 
