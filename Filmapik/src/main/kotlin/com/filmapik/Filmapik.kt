@@ -97,111 +97,135 @@ class Filmapik : MainAPI() {
     // =================== LOAD (MOVIE & SERIES) ===================
 
     override suspend fun load(url: String): LoadResponse {
-        val fetch = app.get(url)
-        directUrl = getBaseUrl(fetch.url)
-        val document = fetch.document
+    val fetch = app.get(url)
+    directUrl = getBaseUrl(fetch.url)
+    val document = fetch.document
 
-        // ---------- TITLE ----------
-        val title = document.selectFirst("h1[itemprop=name]")
-            ?.text()
-            ?.trim()
+    // ---------- TITLE (Support Semua Struktur Filmapik) ----------
+    val rawTitle =
+        document.selectFirst("h1[itemprop=name]")?.text()
+            ?: document.selectFirst("h1.header")?.text()
+            ?: document.selectFirst("h1")?.text()
+            ?: document.selectFirst("h2")?.text()
+            ?: document.selectFirst("span.title")?.text()
             ?: "Unknown Title"
 
-        // ---------- POSTER ----------
-        val poster = document.selectFirst("div.poster img")
-            ?.getImageAttr()
-            ?.let { fixUrlNull(it).fixImageQuality() }
+    val title = rawTitle
+        .replace(Regex("(?i)^Nonton Film\\s*"), "")
+        .replace(Regex("(?i)^Nonton\\s*"), "")
+        .trim()
 
-        // ---------- GENRE ----------
-        val tags = document.select("span.generos a").map { it.text() }
+    // ---------- POSTER ----------
+    val poster = document.selectFirst("div.poster img")
+        ?.getImageAttr()
+        ?.let { fixUrlNull(it).fixImageQuality() }
 
-        // ---------- YEAR ----------
-        val year = document.selectFirst("span[itemprop=dateCreated]")
-            ?.text()
-            ?.trim()
-            ?.toIntOrNull()
+    // ---------- GENRE ----------
+    val tags = document.select("span.generos a").map { it.text() }
 
-        // ---------- ACTORS ----------
-        val actors = document.select("span[itemprop=actor]").map { it.text() }
+    // ---------- YEAR ----------
+    val year = document.selectFirst("span[itemprop=dateCreated]")
+        ?.text()
+        ?.trim()
+        ?.toIntOrNull()
 
-        // ---------- DESCRIPTION / SINOPSIS ----------
-        val description = document.select("div.sbox p").joinToString("\n") {
-            it.text().trim()
+    // ---------- ACTORS ----------
+    val actors = document.select("span[itemprop=actor]").map { it.text() }
+
+    // ---------- DESCRIPTION ----------
+    val description = document.select("div.sbox p")
+        .joinToString("\n") { it.text().trim() }
+
+    // ---------- IMDb RATING ----------
+    val rating = document.selectFirst("span.imdb")
+        ?.text()
+        ?.replace("IMDb", "")
+        ?.trim()
+
+    // ---------- RECOMMENDATIONS ----------
+    val recommendations = document.select("div.relacionados_item")
+        .mapNotNull { it.toRecommendResult() }
+
+    // ---------- DETECT SERIES ----------
+    val isSeries =
+        url.contains("/tvshows/") ||
+        url.contains("/episodes/") ||
+        document.select("#seasons").isNotEmpty()
+
+    // =====================================================================
+    // =========================== TV SERIES ===============================
+    // =====================================================================
+    if (isSeries) {
+
+        val episodeList = mutableListOf<Episode>()
+
+        val seasonBlocks = document.select("#seasons .se-c")
+
+        for (i in seasonBlocks.indices) {
+
+            val seasonNumber =
+                seasonBlocks[i].selectFirst("span.set")
+                    ?.text()
+                    ?.toIntOrNull()
+                    ?: (i + 1)
+
+            // ambil div.se-a setelah se-c
+            val episodeBlock = seasonBlocks[i].nextElementSibling() ?: continue
+
+            val eps = episodeBlock.select("ul.episodios li a")
+
+            eps.forEach { ep ->
+                val name = ep.text().trim()
+                val href = fixUrl(ep.attr("href"))
+                val episodeNumber = name.filter { it.isDigit() }.toIntOrNull()
+
+                episodeList.add(
+                    newEpisode(href) {
+                        this.name = name
+                        this.season = seasonNumber
+                        this.episode = episodeNumber
+                    }
+                )
+            }
         }
 
-        // ---------- IMDb RATING ----------
-        val rating = document.selectFirst("span.imdb")
-            ?.text()
-            ?.replace("IMDb", "")
-            ?.trim()
-
-        // ---------- RECOMMENDATIONS ----------
-        val recommendations = document.select("div.relacionados_item")
-            .mapNotNull { rec -> rec.toRecommendResult() }
-
-        // ---------- DETECT TV SERIES OR MOVIE ----------
-        val isSeries = url.contains("/tvshows/") || document.select("#seasons").isNotEmpty()
-
-        // =====================================================================
-        // =========================== TV SERIES ===============================
-        // =====================================================================
-        if (isSeries) {
-            val episodeList = mutableListOf<Episode>()
-
-            val seasonBlocks = document.select("#seasons .se-c")
-            for (i in seasonBlocks.indices) {
-                // Season number
-                val seasonNumber =
-                    seasonBlocks[i].selectFirst("span.set")
-                        ?.text()
-                        ?.toIntOrNull()
-                        ?: (i + 1)
-
-                // <div class="se-a"> setelah .se-c
-                val episodeBlock = seasonBlocks[i].nextElementSibling() ?: continue
-
-                val eps = episodeBlock.select("ul.episodios li a")
-
-                eps.forEach { ep ->
-                    val name = ep.text().trim()          // Contoh: EP1-2
-                    val href = fixUrl(ep.attr("href"))
-
-                    val episodeNumber = name.filter { it.isDigit() }.toIntOrNull()
-
-                    episodeList.add(
-                        newEpisode(href) {
-                            this.name = name
-                            this.season = seasonNumber
-                            this.episode = episodeNumber
-                        }
-                    )
+        // ---------- FALLBACK jika halaman episode tidak punya struktur #seasons ----------
+        if (episodeList.isEmpty()) {
+            episodeList.add(
+                newEpisode(url) {
+                    this.name = "Episode 1"
+                    this.episode = 1
+                    this.season = 1
                 }
-            }
-
-            return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodeList) {
-                this.posterUrl = poster
-                this.year = year
-                this.plot = description
-                this.tags = tags
-                addActors(actors)
-                addScore(rating)
-                this.recommendations = recommendations
-            }
+            )
         }
 
-        // =====================================================================
-        // ============================= MOVIE =================================
-        // =====================================================================
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodeList) {
             this.posterUrl = poster
             this.year = year
             this.plot = description
             this.tags = tags
-            addScore(rating)
             addActors(actors)
+            addScore(rating)
             this.recommendations = recommendations
         }
     }
+
+    // =====================================================================
+    // ============================= MOVIE =================================
+    // =====================================================================
+
+    return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        this.posterUrl = poster
+        this.year = year
+        this.plot = description
+        this.tags = tags
+        addScore(rating)
+        addActors(actors)
+        this.recommendations = recommendations
+    }
+}
+
 
     // =================== LOAD LINKS ===================
 
