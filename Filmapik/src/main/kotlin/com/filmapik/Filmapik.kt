@@ -64,18 +64,13 @@ class Filmapik : MainAPI() {
 
     // =================== SEARCH ===================
 
-    private fun Element.toRecommendResult(): SearchResponse? {
-    val a = this.selectFirst("a[href]") ?: return null
-    val href = fixUrl(a.attr("href"))
-
-    val img = a.selectFirst("img[src][alt]") ?: return null
-    val title = img.attr("alt").trim()
-    val posterUrl = fixUrlNull(img.attr("src")).fixImageQuality()
-
-    return newMovieSearchResponse(title, href, TvType.Movie) {
-        this.posterUrl = posterUrl
+    override suspend fun search(query: String): List<SearchResponse> {
+        val document =
+                app.get("${mainUrl}?s=$query&post_type[]=post&post_type[]=tv", timeout = 50L)
+                        .document
+        val results = document.select("article.item").mapNotNull { it.toSearchResult() }
+        return results
     }
-}
 
     // =================== RECOMMENDATION CARD PARSER ===================
 
