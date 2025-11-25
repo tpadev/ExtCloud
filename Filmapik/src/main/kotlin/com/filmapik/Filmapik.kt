@@ -27,23 +27,18 @@ class Filmapik : MainAPI() {
 
     override val mainPage =
         mainPageOf(
-            "/category/box-office/page/%d/" to "Box Office",
-            "/tvshows/page/%d/" to "Tv Show",
-            "/latest/page/%d/" to "Film Terbaru",
+            "category/box-office/page/%d/" to "Box Office",
+            "tvshows/page/%d/" to "Tv Show",
+            "latest/page/%d/" to "Film Terbaru",
         )
 
+    
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val data = request.data.format(page)
-    val document = app.get("$mainUrl$data").document
-
-    val items = document.select(
-        "div.items article.item, article.item, div.result-item article"
-    )
-
-    val home = items.mapNotNull { it.toSearchResult() }
-
-    return newHomePageResponse(request.name, home)
-}
+        val data = request.data.format(page)
+        val document = app.get("$mainUrl/$data").document
+        val home = document.select("article.item").mapNotNull { it.toSearchResult() }
+        return newHomePageResponse(request.name, home)
+    }
 
     // =================== SEARCH RESULT PARSER ===================
 
