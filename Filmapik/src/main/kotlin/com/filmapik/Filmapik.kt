@@ -182,32 +182,32 @@ private fun Element.toSearchResult(): SearchResponse? {
         val episodeList = mutableListOf<Episode>()
 
         val seasonBlocks = document.select("#seasons .se-c")
-        for (i in seasonBlocks.indices) {
 
-            val seasonNumber =
-                seasonBlocks[i].selectFirst("span.set")?.text()?.toIntOrNull() ?: (i + 1)
+for (i in seasonBlocks.indices) {
 
-            val episodeBlock = seasonBlocks[i].nextElementSibling() // <div class="se-a">
+    val seasonNumber =
+        seasonBlocks[i].selectFirst("span.set")?.text()?.toIntOrNull() ?: (i + 1)
 
-            val eps = episodeBlock.select("ul.episodios li a")
+    val episodeBlock = seasonBlocks[i].nextElementSibling() ?: continue
 
-            eps.forEach { ep ->
+    val eps = episodeBlock.select("ul.episodios li a")
 
-                val name = ep.text().trim()    // EP1-2
-                val href = fixUrl(ep.attr("href"))
+    eps.forEach { ep ->
+        val name = ep.text().trim()
+        val href = fixUrl(ep.attr("href"))
 
-                val episodeNumber =
-                    name.filter { it.isDigit() }.toIntOrNull() // Ambil nomor terbesar
+        val episodeNumber = name.filter { it.isDigit() }.toIntOrNull()
 
-                episodeList.add(
-                    newEpisode(href) {
-                        this.name = name
-                        this.season = seasonNumber
-                        this.episode = episodeNumber
-                    }
-                )
+        episodeList.add(
+            newEpisode(href) {
+                this.name = name
+                this.season = seasonNumber
+                this.episode = episodeNumber
             }
-        }
+        )
+    }
+}
+
 
         return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodeList) {
             this.posterUrl = poster
