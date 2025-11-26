@@ -32,16 +32,16 @@ class Klikxxi : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val url = if (page == 1) {
-        "$mainUrl/${request.data.replace("%d", "")}"
-            .replace("//", "/")
-            .replace(":/", "://")
+        // Hapus "page/%d/" dan biarkan jadi "tv/"
+        "$mainUrl/${request.data.replace("page/%d/", "")}"
     } else {
         "$mainUrl/${request.data.format(page)}"
-    }
+    }.replace("//", "/")
+     .replace(":/", "://")
 
     val document = app.get(url).document
 
-    val items = document.select("article.has-post-thumbnail")
+    val items = document.select("article.has-post-thumbnail, article.item, article.item-infinite")
         .mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(request.name, items)
