@@ -79,12 +79,11 @@ class Klikxxi : MainAPI() {
         return if (isSeries) {
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
-                if (!quality.isNullOrBlank()) addQuality(quality)
             }
         } else {
             newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
-                if (!quality.isNullOrBlank()) addQuality(quality)
+                addQuality(quality)
             }
         }
     }
