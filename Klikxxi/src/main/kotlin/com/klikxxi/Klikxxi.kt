@@ -289,42 +289,31 @@ class Klikxxi : MainAPI() {
 
     /** Ambil URL poster terbaik (srcset terbesar, data-lazy-src, dst) */
     private fun Element?.fixPoster(): String? {
-        if (this == null) return null
+    if (this == null) return null
 
-        // Prioritas: srcset (ambil terbesar) -> data-lazy-src -> data-src -> src
-        var link: String? = null
-
-        if (this.hasAttr("srcset")) {
-            val srcset = this.attr("abs:srcset")
-            link = srcset.split(",")
-                .map { it.trim().split(" ")[0] }
-                .lastOrNull()
-        }
-
-        if (link.isNullOrBlank() && this.hasAttr("data-lazy-src")) {
-            link = this.attr("abs:data-lazy-src")
-        }
-
-        if (link.isNullOrBlank() && this.hasAttr("data-src")) {
-            link = this.attr("abs:data-src")
-        }
-
-        if (link.isNullOrBlank()) {
-            link = this.attr("abs:src")
-        }
-
-        if (link.isNullOrBlank()) return null
-
-        // Hilangkan suffix ukuran kecil: -170x255, -300x450, dll
-        link = link.fixImageQuality()
-
-        // Jika //example.com -> https://example.com
-        if (link.startsWith("//")) {
-            link = "https:$link"
-        }
-
-        return link
+    // Prioritas 1: srcset (ambil resolusi terbesar)
+    if (this.hasAttr("srcset")) {
+        val srcset = this.attr("srcset").trim()
+        val best = srcset.split(",")
+            .map { it.trim().split(" ")[0] }
+            .lastOrNull()  // paling besar selalu di akhir
+        if (!best.isNullOrBlank()) return fixUrl(best.fixImageQuality())
     }
+
+    // Prioritas 2: data-src atau data-lazy
+    val dataSrc = when {
+        this.hasAttr("data-lazy-src") -> this.attr("data-lazy-src")
+        this.hasAttr("data-src") -> this.attr("data-src")
+        else -> null
+    }
+    if (!dataSrc.isNullOrBlank()) return fixUrl(dataSrc.fixImageQuality())
+
+    // Prioritas 3: src biasa
+    val src = this.attr("src")
+    if (!src.isNullOrBlank()) return fixUrl(src.fixImageQuality())
+
+    return null
+}
 
     /** Ambil src untuk iframe, support data-litespeed-src */
     private fun Element?.getIframeAttr(): String? {
