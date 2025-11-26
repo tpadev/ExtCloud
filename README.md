@@ -19,7 +19,7 @@ Berikut adalah daftar ekstensi yang tersedia di repositori ExtCloud:
 | Kawanfilm     | OK                                |
 | LayarKaca     | OK                                |
 | LayarWarna    | OK                                |
-| Melongmovie   | OK, Sebagian Link Error           |
+| Melongmovie   | OK, Sebagian Link Error           
 | MovieBox      | OK                                |
 | NOXX          | OK                                |
 | Ngefilm       | OK                                |
