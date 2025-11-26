@@ -108,7 +108,7 @@ class Klikxxi : MainAPI() {
             newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
                 if (!quality.isNullOrBlank()) addQuality(quality)
-                if (rating != null) addScore(rating.toString(), 10)
+                this.score = Score.from10(ratingText?.toDoubleOrNull())
             }
         }
     }
