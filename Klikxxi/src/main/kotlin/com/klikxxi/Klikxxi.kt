@@ -40,7 +40,8 @@ class Klikxxi : MainAPI() {
     }
 
     val document = app.get(url).document
-    val items = document.select("article.item")
+
+    val items = document.select("article.has-post-thumbnail")
         .mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(request.name, items)
