@@ -68,10 +68,8 @@ class Klikxxi : MainAPI() {
         if (title.isBlank()) return null
 
         // Poster – support src, srcset, data-lazy-src, dll + ambil resolusi terbesar
-        val posterElement = selectFirst("a img")
-        val posterUrl = posterElement
-            .fixPoster()
-            ?.let { fixUrl(it) }
+        val posterElement = this.selectFirst("img.wp-post-image, img.attachment-large, img")
+        val posterUrl = posterElement?.fixPoster()?.let { fixUrl(it) }
 
         val quality = selectFirst("span.gmr-quality-item")?.text()?.trim()
         val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
