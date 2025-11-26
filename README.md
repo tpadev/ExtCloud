@@ -14,7 +14,8 @@ Berikut adalah daftar ekstensi yang tersedia di repositori ExtCloud:
 | Dutamovie     | OK                                |
 | Funmovieslix  | OK                                |
 | Idlix         | OK                                |
-| KLIKXXI       | OK, Sebagian Poster Tidak Tampil  |
+| KLIKXXI       | OK  
+|
 | Kawanfilm     | OK                                |
 | LayarKaca     | OK                                |
 | LayarWarna    | OK                                |
