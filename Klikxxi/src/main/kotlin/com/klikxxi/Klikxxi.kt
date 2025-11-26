@@ -71,7 +71,30 @@ class Klikxxi : MainAPI() {
         val posterElement = this.selectFirst("img.wp-post-image, img.attachment-large, img")
         val posterUrl = posterElement?.fixPoster()?.let { fixUrl(it) }
 
-        val quality = selectFirst(".gmr-quality-item")?.text()?.trim()
+        val quality = this.selectFirst(".gmr-quality-item")?.let { el ->
+    // 1. Check if text directly available: <div class="gmr-quality-item">HD</div>
+        val directText = el.text().trim()
+        if (directText.isNotEmpty()) {
+        directText
+        } else {
+        // 2. Inside <a> : <a>HDTS2</a>
+        val aText = el.selectFirst("a")?.text()?.trim()
+        if (!aText.isNullOrBlank()) {
+            aText
+        } else {
+            // 3. Fallback from class: hd, sd, hdrip, hdts2, etc.
+            el.classNames().firstOrNull { cls ->
+                cls.matches(
+                    Regex(
+                        "hd|sd|cam|ts|hdts|hdts2|hdrip|webrip|bluray|brrip|fhd|uhd|4k",
+                        RegexOption.IGNORE_CASE
+                    )
+                )
+            }?.uppercase()
+        }
+    }
+}
+
         val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
 
         val isSeries = typeText.equals("TV Show", ignoreCase = true)
