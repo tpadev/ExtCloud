@@ -71,7 +71,7 @@ class Klikxxi : MainAPI() {
         val posterElement = this.selectFirst("img.wp-post-image, img.attachment-large, img")
         val posterUrl = posterElement?.fixPoster()?.let { fixUrl(it) }
 
-        val quality = selectFirst("span.gmr-quality-item")?.text()?.trim()
+        val quality = selectFirst(".gmr-quality-item")?.text()?.trim()
         val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
 
         val isSeries = typeText.equals("TV Show", ignoreCase = true)
@@ -83,7 +83,7 @@ class Klikxxi : MainAPI() {
         } else {
             newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
-                addQuality(quality)
+                if (!quality.isNullOrBlank()) addQuality(quality)
             }
         }
     }
