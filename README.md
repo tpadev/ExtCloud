@@ -14,12 +14,11 @@ Berikut adalah daftar ekstensi yang tersedia di repositori ExtCloud:
 | Dutamovie     | OK                                |
 | Funmovieslix  | OK                                |
 | Idlix         | OK                                |
-| KLIKXXI       | OK  
-|
+| KLIKXXI       | OK                                |
 | Kawanfilm     | OK                                |
 | LayarKaca     | OK                                |
 | LayarWarna    | OK                                |
-| Melongmovie   | OK, Sebagian Link Error           
+| Melongmovie   | OK, Sebagian Link Error           |
 | MovieBox      | OK                                |
 | NOXX          | OK                                |
 | Ngefilm       | OK                                |
@@ -49,6 +48,7 @@ Berikut adalah daftar ekstensi yang tersedia di repositori ExtCloud:
 4.  Phisher98 : https://github.com/phisher98/cloudstream-extensions-phisher
 5.  Zeeorepo : https://github.com/funeelo/zeeorepo
 6.  Sofie99 : https://github.com/Sofie99/cloudstream-extensions-sofie
+
 
 
 
