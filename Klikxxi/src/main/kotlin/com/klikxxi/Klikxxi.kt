@@ -94,7 +94,6 @@ class Klikxxi : MainAPI() {
         }
     }
 }
-        val rating = this.selectFirst(".gmr-rating-item")?.ownText()?.trim()?.toDoubleOrNull()
 
         val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
 
@@ -108,9 +107,6 @@ class Klikxxi : MainAPI() {
             newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
                 if (!quality.isNullOrBlank()) addQuality(quality)
-                if (rating != null) {
-    this.score = (rating * 10).toInt()
-}
             }
         }
     }
