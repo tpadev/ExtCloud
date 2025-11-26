@@ -96,7 +96,7 @@ class Klikxxi : MainAPI() {
 }
 
         val typeText = selectFirst(".gmr-posttype-item")?.text()?.trim()
-
+        val ratingText = this.selectFirst("div.gmr-rating-item")?.ownText()?.trim()
         val isSeries = typeText.equals("TV Show", ignoreCase = true)
 
         return if (isSeries) {
@@ -107,6 +107,7 @@ class Klikxxi : MainAPI() {
             newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
                 if (!quality.isNullOrBlank()) addQuality(quality)
+                this.score = Score.from10(ratingText?.toDoubleOrNull())
             }
         }
     }
