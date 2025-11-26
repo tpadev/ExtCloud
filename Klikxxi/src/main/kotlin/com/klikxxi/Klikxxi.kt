@@ -30,29 +30,22 @@ class Klikxxi : MainAPI() {
         "tv/page/%d/" to "Series Terbaru",
     )
 
-    override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
-    ): HomePageResponse {
-        // Untuk halaman 1 biasanya banyak theme WordPress tidak pakai /page/1/
-        val data = if (page == 1) {
-            request.data
-                .replace("/page/%d/", "/")     // tv/page/%d/  -> tv/
-                .replace("paged=%d", "")       // paged=%d     -> ""
-                .replace("&&", "&")            // bereskan double &
-                .trimEnd('&', '?')
-        } else {
-            request.data.format(page)
-        }
-
-        val url = if (data.startsWith("http")) data else "$mainUrl/$data"
-        val document = app.get(url).document
-
-        val items = document.select("article.item")
-            .mapNotNull { it.toSearchResult() }
-
-        return newHomePageResponse(request.name, items)
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+    val url = if (page == 1) {
+        "$mainUrl/${request.data.replace("%d", "")}"
+            .replace("//", "/")
+            .replace(":/", "://")
+    } else {
+        "$mainUrl/${request.data.format(page)}"
     }
+
+    val document = app.get(url).document
+    val items = document.select("article.item")
+        .mapNotNull { it.toSearchResult() }
+
+    return newHomePageResponse(request.name, items)
+}
+
 
     /* =======================
        Search & List Handling
