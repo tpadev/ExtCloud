@@ -190,7 +190,10 @@ class Klikxxi : MainAPI() {
             .map { it.text() }
             .takeIf { it.isNotEmpty() }
 
-        val recommendations = document.select("div.content-thumbnail").mapNotNull { it.toRecommendResult() }
+        val recommendations = document
+    .select("article.item.col-md-20 div.gmr-box-content")
+    .mapNotNull { it.toRecommendResult() }
+
 
         /* ===== Ambil Episodes (kalau TV Series) ===== */
 
