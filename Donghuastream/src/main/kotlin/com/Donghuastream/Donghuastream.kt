@@ -87,12 +87,35 @@ open class Donghuastream : MainAPI() {
         return searchResponse
     }
 
+    private fun Element.toRecommendResult(): SearchResponse? {
+    // Judul berada di <div class="tt">
+    val title = selectFirst("div.tt")?.text()?.trim() ?: return null
+
+    // URL film di <a href="">
+    val href = selectFirst("a")?.attr("href") ?: return null
+
+    // Poster dari gambar dalam <a>
+    val img = selectFirst("img")
+    val posterUrl = img?.attr("src")
+        ?.takeIf { it.isNotBlank() }
+        ?: img?.attr("data-src")
+        ?: img?.attr("srcset")?.split(" ")?.firstOrNull()
+
+    return newAnimeSearchResponse(title, href) {
+        this.posterUrl = fixUrlNull(posterUrl)
+    }
+}
+
+
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
         val title       = document.selectFirst("h1.entry-title")?.text()?.trim().toString()
         val href=document.selectFirst(".eplister li > a")?.attr("href") ?:""
         var poster = document.select("div.ime > img").attr("data-src")
         val description = document.selectFirst("div.entry-content")?.text()?.trim()
+        val recommendations = document
+    .select("div.listupd article.bs")
+    .mapNotNull { it.toRecommendResult() }
         val type=document.selectFirst(".spe")?.text().toString()
         val tvtag=if (type.contains("Movie")) TvType.Movie else TvType.TvSeries
         return if (tvtag == TvType.TvSeries) {
@@ -116,6 +139,7 @@ open class Donghuastream : MainAPI() {
             newTvSeriesLoadResponse(title, url, TvType.Anime, episodes.reversed()) {
                 this.posterUrl = poster
                 this.plot = description
+                this.recommendations = recommendations
             }
         } else {
             if (poster.isEmpty())
@@ -125,6 +149,7 @@ open class Donghuastream : MainAPI() {
             newMovieLoadResponse(title, url, TvType.Movie, href) {
                 this.posterUrl = poster
                 this.plot = description
+                this.recommendations = recommendations
             }
         }
     }
