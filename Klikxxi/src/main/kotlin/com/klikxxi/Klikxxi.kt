@@ -120,23 +120,21 @@ class Klikxxi : MainAPI() {
     /** Kadang rekomendasi punya struktur HTML beda */
  private fun Element.toRecommendResult(): SearchResponse? {
 
-    // ambil url
-    val href = selectFirst("a")?.attr("href") ?: return null
-    val url = fixUrl(href)
+    val url = fixUrl(selectFirst("a")?.attr("href") ?: return null)
 
-    // ambil title dari atribut image <img title="">
-    val title = selectFirst("img")?.attr("title")?.trim() ?: return null
+    val img = selectFirst("img") ?: return null
 
-    // ambil poster dari src atau data-src
-    val img = selectFirst("img")
-    val posterUrl = img?.attr("src").takeIf { !it.isNullOrEmpty() }
-        ?: img?.attr("data-src")
+    val title = img.attr("title").ifEmpty { null } ?: return null
+
+    val poster = img.attr("src")
+        .takeIf { it.isNotBlank() }
+        ?: img.attr("data-src")
+        ?: img.attr("srcset")?.split(" ")?.firstOrNull()
 
     return newMovieSearchResponse(title, url, TvType.Movie) {
-        this.posterUrl = posterUrl
+        this.posterUrl = poster
     }
 }
-
 
     /* =======================
        Load Detail Page
@@ -193,8 +191,9 @@ class Klikxxi : MainAPI() {
             .takeIf { it.isNotEmpty() }
 
         val recommendations = document
-    .select("article.item.col-md-20")
+    .select("article.item.col-md-20 div.gmr-box-archive")
     .mapNotNull { it.toRecommendResult() }
+
 
 
         /* ===== Ambil Episodes (kalau TV Series) ===== */
