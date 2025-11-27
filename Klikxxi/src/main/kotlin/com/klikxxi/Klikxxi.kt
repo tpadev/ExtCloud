@@ -118,27 +118,12 @@ class Klikxxi : MainAPI() {
     }
 
     /** Kadang rekomendasi punya struktur HTML beda */
- private fun Element.toRecommendResult(): SearchResponse? {
-
-    val a = selectFirst("a") ?: return null
-    val url = fixUrl(a.attr("href"))
-
-    val img = selectFirst("img") ?: return null
-
-    val title = img.attr("title")
-        .ifBlank { img.attr("alt") }
-        .ifBlank { a.attr("title") }
-        .ifBlank { null }
-        ?: return null
-
-    val poster = img.attr("src")
-        .ifBlank { img.attr("data-src") }
-        .ifBlank { img.attr("srcset")?.split(" ")?.firstOrNull() }
-
-    return newMovieSearchResponse(title, url, TvType.Movie) {
-        this.posterUrl = poster
+    private fun Element.toRecommendResult(): SearchResponse? {
+        val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
+        val href = this.selectFirst("a")!!.attr("href")
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
+        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
-}
 
 
     /* =======================
@@ -195,9 +180,8 @@ class Klikxxi : MainAPI() {
             .map { it.text() }
             .takeIf { it.isNotEmpty() }
 
-        val recommendations = document
-    .select("h3.gmr-related-title + .row.grid-container article.item.col-md-20")
-    .mapNotNull { it.toRecommendResult() }
+        val recommendations =
+                document.select("div.idmuvi-rp ul li").mapNotNull { it.toRecommendResult() }
 
 
         /* ===== Ambil Episodes (kalau TV Series) ===== */
