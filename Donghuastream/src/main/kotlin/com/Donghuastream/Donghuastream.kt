@@ -88,25 +88,11 @@ open class Donghuastream : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-
-    // Title ada di <div class="tt">
-    val title = selectFirst("div.tt")?.text()?.trim() ?: return null
-
-    // URL film
-    val href = selectFirst("a")?.attr("href") ?: return null
-
-    // POSTER — ambil dari <div class="bsx"> img
-    val img = selectFirst("div.bsx img")
-    val posterUrl =
-        img?.attr("src")
-            ?.takeIf { it.isNotBlank() }
-            ?: img?.attr("data-src")
-            ?: img?.attr("data-lazy-src")
-            ?: img?.attr("data-lazyloaded")      // fallback website lite loader
-            ?: img?.attr("srcset")?.split(" ")?.firstOrNull()
-
-    return newMovieSearchResponse(title, href, TvType.Anime) {
-        this.posterUrl = fixUrlNull(posterUrl)
+    val title = this.selectFirst("div.tt")?.text()?.trim() ?: return null
+    val href = this.selectFirst("a")?.attr("href") ?: return null
+    val posterUrl = this.selectFirst("img")?.getImageAttr()?.let { fixUrlNull(it) }
+    return newMovieSearchResponse(title, href, TvType.Movie) {
+        this.posterUrl = posterUrl
     }
 }
 
@@ -115,6 +101,8 @@ open class Donghuastream : MainAPI() {
         val title       = document.selectFirst("h1.entry-title")?.text()?.trim().toString()
         val href=document.selectFirst(".eplister li > a")?.attr("href") ?:""
         var poster = document.select("div.ime > img").attr("data-src")
+        val recommendations = document.select("div.listupd article.bs")
+        .mapNotNull { it.toRecommendResult() }
         val description = document.selectFirst("div.entry-content")?.text()?.trim()
         val recommendations = document
     .select("div.listupd article.bs")
@@ -206,5 +194,25 @@ open class Donghuastream : MainAPI() {
         }
 
         return true
+    }
+
+    private fun Element.getImageAttr(): String {
+        return when {
+            this.hasAttr("data-src") -> this.attr("abs:data-src")
+            this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
+            this.hasAttr("srcset") -> this.attr("abs:srcset").substringBefore(" ")
+            else -> this.attr("abs:src")
+        }
+    }
+
+    private fun Element?.getIframeAttr(): String? {
+        return this?.attr("data-litespeed-src").takeIf { it?.isNotEmpty() == true }
+                ?: this?.attr("src")
+    }
+
+    private fun String?.fixImageQuality(): String? {
+        if (this == null) return null
+        val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues?.get(0) ?: return this
+        return this.replace(regex, "")
     }
 }
