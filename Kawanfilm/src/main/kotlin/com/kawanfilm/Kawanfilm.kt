@@ -79,12 +79,28 @@ class Kawanfilm : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-    val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
-    val href = this.selectFirst("a")?.attr("href") ?: return null
-    val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
+
+    // Ambil judul dari <h2 class="entry-title"><a>
+    val title = selectFirst("h2.entry-title > a")
+        ?.text()
+        ?.trim()
+        ?: return null
+
+    // Ambil link dari anchor di entry-title
+    val href = selectFirst("h2.entry-title > a")
+        ?.attr("href")
+        ?.trim()
+        ?: return null
+
+    // Poster dari elemen img di content-thumbnail
+    val img = selectFirst("div.content-thumbnail img")
+    val posterUrl =
+        img?.attr("src")
+            ?.ifBlank { img.attr("data-src") }
+            ?.ifBlank { img.attr("srcset")?.split(" ")?.firstOrNull() }
 
     return newMovieSearchResponse(title, href, TvType.Movie) {
-        this.posterUrl = posterUrl
+        this.posterUrl = fixUrlNull(posterUrl)
     }
 }
 
@@ -125,8 +141,9 @@ class Kawanfilm : MainAPI() {
                     ?.text()
                     ?.replace(Regex("\\D"), "")
                     ?.toIntOrNull()
-        val recommendations =
-    document.select("div.idmuvi-rp ul li").mapNotNull { it.toRecommendResult() }
+        val recommendations = document
+    .select("article.item.col-md-20")
+    .mapNotNull { it.toRecommendResult() }
 
         return if (tvType == TvType.TvSeries) {
             val episodes =
