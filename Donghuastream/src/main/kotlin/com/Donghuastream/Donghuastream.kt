@@ -88,21 +88,22 @@ open class Donghuastream : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-    // Judul berada di <div class="tt">
+    // Title dari <div class="tt">
     val title = selectFirst("div.tt")?.text()?.trim() ?: return null
 
-    // URL film di <a href="">
+    // URL film dari <a>
     val href = selectFirst("a")?.attr("href") ?: return null
 
-    // Poster dari gambar dalam <a>
-    val img = selectFirst("img")
+    // Poster dari <div class="bsx"> <img>
+    val img = selectFirst("div.bsx img")
     val posterUrl = img?.attr("src")
         ?.takeIf { it.isNotBlank() }
         ?: img?.attr("data-src")
+        ?: img?.attr("data-lazy-src")
         ?: img?.attr("srcset")?.split(" ")?.firstOrNull()
 
     return newMovieSearchResponse(title, href, TvType.Anime) {
-        this.posterUrl = fixUrlNull(posterUrl)
+        this.posterUrl = posterUrl
     }
 }
 
