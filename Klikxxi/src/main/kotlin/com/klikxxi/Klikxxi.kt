@@ -121,7 +121,8 @@ class Klikxxi : MainAPI() {
     private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("div.content-thumbnail")?.text()?.trim() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
-        val posterUrl = fixUrlNull(this.selectFirst("a")?.fixPoster().fixImageQuality())
+        val posterElement = this.selectFirst("img.wp-post-image, img.attachment-large, img")
+        val posterUrl = posterElement?.fixPoster()?.let { fixUrl(it) }
         return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
 
