@@ -104,9 +104,6 @@ open class Donghuastream : MainAPI() {
         val recommendations = document.select("div.listupd article.bs")
         .mapNotNull { it.toRecommendResult() }
         val description = document.selectFirst("div.entry-content")?.text()?.trim()
-        val recommendations = document
-    .select("div.listupd article.bs")
-    .mapNotNull { it.toRecommendResult() }
         val type=document.selectFirst(".spe")?.text().toString()
         val tvtag=if (type.contains("Movie")) TvType.Movie else TvType.TvSeries
         return if (tvtag == TvType.TvSeries) {
