@@ -88,25 +88,27 @@ open class Donghuastream : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-    // Title dari <div class="tt">
+
+    // Title ada di <div class="tt">
     val title = selectFirst("div.tt")?.text()?.trim() ?: return null
 
-    // URL film dari <a>
+    // URL film
     val href = selectFirst("a")?.attr("href") ?: return null
 
-    // Poster dari <div class="bsx"> <img>
+    // POSTER — ambil dari <div class="bsx"> img
     val img = selectFirst("div.bsx img")
-    val posterUrl = img?.attr("src")
-        ?.takeIf { it.isNotBlank() }
-        ?: img?.attr("data-src")
-        ?: img?.attr("data-lazy-src")
-        ?: img?.attr("srcset")?.split(" ")?.firstOrNull()
+    val posterUrl =
+        img?.attr("src")
+            ?.takeIf { it.isNotBlank() }
+            ?: img?.attr("data-src")
+            ?: img?.attr("data-lazy-src")
+            ?: img?.attr("data-lazyloaded")      // fallback website lite loader
+            ?: img?.attr("srcset")?.split(" ")?.firstOrNull()
 
     return newMovieSearchResponse(title, href, TvType.Anime) {
-        this.posterUrl = posterUrl
+        this.posterUrl = fixUrlNull(posterUrl)
     }
 }
-
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
