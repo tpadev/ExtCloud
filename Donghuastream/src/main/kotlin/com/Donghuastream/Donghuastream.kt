@@ -101,7 +101,7 @@ open class Donghuastream : MainAPI() {
         ?: img?.attr("data-src")
         ?: img?.attr("srcset")?.split(" ")?.firstOrNull()
 
-    return newAnimeSearchResponse(title, href) {
+    return newMovieSearchResponse(title, href, TvType.Anime) {
         this.posterUrl = fixUrlNull(posterUrl)
     }
 }
