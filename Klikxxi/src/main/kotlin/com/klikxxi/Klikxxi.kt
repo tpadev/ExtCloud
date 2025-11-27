@@ -191,7 +191,7 @@ class Klikxxi : MainAPI() {
             .takeIf { it.isNotEmpty() }
 
         val recommendations = document
-    .select("article.item.col-md-20 div.gmr-box-content")
+    .select("div.gmr-box-content.gmr-box-archive")
     .mapNotNull { it.toRecommendResult() }
 
 
