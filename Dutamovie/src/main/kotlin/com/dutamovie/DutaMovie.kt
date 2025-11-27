@@ -78,11 +78,31 @@ class DutaMovie : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-        val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
-        val href = this.selectFirst("a")!!.attr("href")
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+
+    // Ambil judul dari <h2 class="entry-title"><a>
+    val title = selectFirst("h2.entry-title > a")
+        ?.text()
+        ?.trim()
+        ?: return null
+
+    // Ambil link dari anchor di entry-title
+    val href = selectFirst("h2.entry-title > a")
+        ?.attr("href")
+        ?.trim()
+        ?: return null
+
+    // Poster dari elemen img di content-thumbnail
+    val img = selectFirst("div.content-thumbnail img")
+    val posterUrl =
+        img?.attr("src")
+            ?.ifBlank { img.attr("data-src") }
+            ?.ifBlank { img.attr("srcset")?.split(" ")?.firstOrNull() }
+
+    return newMovieSearchResponse(title, href, TvType.Movie) {
+        this.posterUrl = fixUrlNull(posterUrl)
     }
+}
+
 
     override suspend fun load(url: String): LoadResponse {
     // Pakai Desktop User-Agent agar website tidak mengirim halaman mobile
@@ -136,6 +156,7 @@ class DutaMovie : MainAPI() {
     val recommendations = document
     .select("article.item.col-md-20")
     .mapNotNull { it.toRecommendResult() }
+
 
     // =========================
     //  MOVIE
