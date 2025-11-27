@@ -70,6 +70,14 @@ class Pusatfilm : MainAPI() {
         return document.select("article.item").mapNotNull { it.toSearchResult() }
     }
 
+    private fun Element.toRecommendResult(): SearchResponse? {
+        val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
+        val href = this.selectFirst("a")!!.attr("href")
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
+        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+    }
+
+
     override suspend fun load(url: String): LoadResponse {
         val fetch = app.get(url)
         val document = fetch.document
@@ -86,6 +94,8 @@ class Pusatfilm : MainAPI() {
         val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().trim().toIntOrNull()
         val tvType = if (url.contains("/tv/")) TvType.TvSeries else TvType.Movie
         val description = document.selectFirst("div[itemprop=description] > p")?.text()?.trim()
+        val recommendations =
+                document.select("div.idmuvi-rp ul li").mapNotNull { it.toRecommendResult() }
         val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
         val score = Score.from10(
     document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()
@@ -117,6 +127,7 @@ class Pusatfilm : MainAPI() {
                 this.tags = tags
                 this.score = score
                 this.duration = duration ?: 0
+                this.recommendations = recommendations
                 addActors(actors)
                 addTrailer(trailer)
             }
@@ -128,6 +139,7 @@ class Pusatfilm : MainAPI() {
                 this.tags = tags
                 this.score = score
                 this.duration = duration ?: 0
+                this.recommendations = recommendations
                 addActors(actors)
                 addTrailer(trailer)
             }
