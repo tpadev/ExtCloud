@@ -118,23 +118,25 @@ class Klikxxi : MainAPI() {
     }
 
     /** Kadang rekomendasi punya struktur HTML beda */
-    private fun Element.toRecommendResult(): SearchResponse? {
-        val title = selectFirst("a > span.idmuvi-rp-title")
-            ?.text()
-            ?.trim()
-            ?: return null
+ private fun Element.toRecommendResult(): SearchResponse? {
 
-        val href = fixUrl(selectFirst("a")?.attr("href") ?: return null)
+    // ambil url
+    val href = selectFirst("a")?.attr("href") ?: return null
+    val url = fixUrl(href)
 
-        val posterElement = selectFirst("a > img")
-        val posterUrl = posterElement
-            .fixPoster()
-            ?.let { fixUrl(it) }
+    // ambil title dari atribut image <img title="">
+    val title = selectFirst("img")?.attr("title")?.trim() ?: return null
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = posterUrl
-        }
+    // ambil poster dari src atau data-src
+    val img = selectFirst("img")
+    val posterUrl = img?.attr("src").takeIf { !it.isNullOrEmpty() }
+        ?: img?.attr("data-src")
+
+    return newMovieSearchResponse(title, url, TvType.Movie) {
+        this.posterUrl = posterUrl
     }
+}
+
 
     /* =======================
        Load Detail Page
@@ -191,7 +193,7 @@ class Klikxxi : MainAPI() {
             .takeIf { it.isNotEmpty() }
 
         val recommendations = document
-    .select("div.gmr-box-content.gmr-box-archive")
+    .select("article.item.col-md-20")
     .mapNotNull { it.toRecommendResult() }
 
 
