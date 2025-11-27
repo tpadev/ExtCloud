@@ -78,25 +78,11 @@ class DutaMovie : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-    val title = this.selectFirst("div.gmr-box-content .entry-title a")
-        ?.text()
-        ?.trim()
-        ?: return null
-
-    val href = this.selectFirst("div.gmr-box-content .entry-title a")
-        ?.attr("href")
-        ?: return null
-
-    val posterUrl = fixUrlNull(
-        this.selectFirst("div.gmr-box-content .content-thumbnail img")
-            ?.getImageAttr()
-            ?.fixImageQuality()
-    )
-
-    return newMovieSearchResponse(title, href, TvType.Movie) {
-        this.posterUrl = posterUrl
+        val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
+        val href = this.selectFirst("a")!!.attr("href")
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
+        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
-}
 
     override suspend fun load(url: String): LoadResponse {
     // Pakai Desktop User-Agent agar website tidak mengirim halaman mobile
@@ -147,9 +133,9 @@ class DutaMovie : MainAPI() {
         ?.replace(Regex("\\D"), "")
         ?.toIntOrNull()
 
-    val recommendations =
-        document.select("div.gmr-box-content .entry-title a")
-            .mapNotNull { it.toRecommendResult() }
+    val recommendations = document
+    .select("article.item.col-md-20")
+    .mapNotNull { it.toRecommendResult() }
 
     // =========================
     //  MOVIE
