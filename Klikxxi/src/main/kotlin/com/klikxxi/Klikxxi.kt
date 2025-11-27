@@ -119,7 +119,7 @@ class Klikxxi : MainAPI() {
 
     /** Kadang rekomendasi punya struktur HTML beda */
     private fun Element.toRecommendResult(): SearchResponse? {
-        val title = this.selectFirst("div.content-thumbnail")?.text()?.trim() ?: return null
+        val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
         val posterElement = this.selectFirst("img.wp-post-image, img.attachment-large, img")
         val posterUrl = posterElement?.fixPoster()?.let { fixUrl(it) }
