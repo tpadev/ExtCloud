@@ -23,7 +23,6 @@ class Co4nxtrl : Filesim() {
 class F16px : Filesim() {
     override val mainUrl = "https://f16px.com"
     override val name = "F16px"
-    override val requiresReferer = true
 }
 
 open class Hownetwork : ExtractorApi() {
