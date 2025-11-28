@@ -20,9 +20,15 @@ class Co4nxtrl : Filesim() {
     override val requiresReferer = true
 }
 
+class F16px : Filesim() {
+    override val mainUrl = "https://f16px.com"
+    override val name = "F16px"
+    override val requiresReferer = true
+}
+
 open class Hownetwork : ExtractorApi() {
     override val name = "Hownetwork"
-    override val mainUrl = "https://stream.hownetwork.xyz"
+    override val mainUrl = "https://cloud.hownetwork.xyz"
     override val requiresReferer = true
 
     override suspend fun getUrl(
@@ -57,10 +63,6 @@ open class Hownetwork : ExtractorApi() {
 class Furher : Filesim() {
     override val name = "Furher"
     override var mainUrl = "https://furher.in"
-}
-
-class Cloudhownetwork : Hownetwork() {
-    override var mainUrl = "https://cloud.hownetwork.xyz"
 }
 
 class Furher2 : Filesim() {
