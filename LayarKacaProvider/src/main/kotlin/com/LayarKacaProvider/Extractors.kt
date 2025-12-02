@@ -25,37 +25,37 @@ class F16px : Filesim() {
     override val name = "F16px"
 }
 
-open class Hownetwork : ExtractorApi() {
+class Hownetwork : ExtractorApi() {
     override val name = "Hownetwork"
     override val mainUrl = "https://cloud.hownetwork.xyz"
     override val requiresReferer = true
 
     override suspend fun getUrl(
-            url: String,
-            referer: String?,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ) {
-        val id = url.substringAfter("id=")
-        val response = app.post(
-                "$mainUrl/api.php?id=$id",
-                data = mapOf(
-                        "r" to "",
-                        "d" to mainUrl,
-                ),
-                referer = url,
-                headers = mapOf(
-                        "X-Requested-With" to "XMLHttpRequest"
-                )
-        ).text
-        val json = JSONObject(response)
-        val file = json.optString("file")
-        Log.d("Phisher", file)
+
+        // Langkah 1: ambil HTML video.php?id=xxx
+        val html = app.get(url, referer = url).text
+
+        // Langkah 2: sesuai website — file video ada di JS sebagai "file: "....m3u8"
+        val file = Regex("""file\s*:\s*"([^"]+\.m3u8[^"]*)"""")
+            .find(html)
+            ?.groupValues?.get(1)
+
+        if (file != null) {
+            // Langkah 3: generate link m3u8
             M3u8Helper.generateM3u8(
-                this.name,
+                name,
                 file,
-                file
+                url
             ).forEach(callback)
+            return
+        }
+
+        Log.e("Hownetwork", "Tidak menemukan link M3U8 pada halaman.")
     }
 }
 
