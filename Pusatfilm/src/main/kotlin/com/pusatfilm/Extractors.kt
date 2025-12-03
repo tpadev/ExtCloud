@@ -34,5 +34,5 @@ open class Kotakajaib : ExtractorApi() {
 
 class Turbovidhls : Filesim() {
     override val name = "Turbovidhls"
-    override var mainUrl = "https://turbovidhls.com"
+    override var mainUrl = "https://emturbovid.com"
 }
