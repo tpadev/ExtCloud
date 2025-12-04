@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.mvvm.safeApiCall
@@ -14,10 +15,11 @@ import java.net.URI
 
 class Kitanonton : MainAPI() {
     override var mainUrl = "https://kitanonton2.live"
-    override var name = "Kitanonton"
+    private var directUrl: String? = null
+    override var name = "Rebahin"
     override val hasMainPage = true
     override var lang = "id"
-    override val hasDownloadSupport = true
+    open var mainServer = "https://kitanonton2.live"
 
     override val supportedTypes = setOf(
         TvType.Movie,
@@ -100,7 +102,7 @@ override suspend fun search(query: String): List<SearchResponse> {
         val tvType = if (url.contains("/series/")) TvType.TvSeries else TvType.Movie
         val description = document.select("span[itemprop=reviewBody] > p").text().trim()
         val trailer = fixUrlNull(document.selectFirst("div.modal-body-trailer iframe")?.attr("src"))
-        val rating = document.selectFirst("span[itemprop=ratingValue]")?.text()?.toRatingInt()
+        val rating = document.selectFirst("span[itemprop=ratingValue]")?.text()?.trim()
         val duration = document.selectFirst(".mvici-right > p:nth-child(1)")!!
             .ownText().replace(Regex("[^0-9]"), "").toIntOrNull()
         val actors = document.select("span[itemprop=actor] > a").map { it.select("span").text() }
@@ -124,7 +126,7 @@ override suspend fun search(query: String): List<SearchResponse> {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                this.rating = rating
+                addScore(rating)
                 this.duration = duration
                 addActors(actors)
                 addTrailer(trailer)
@@ -140,7 +142,7 @@ override suspend fun search(query: String): List<SearchResponse> {
                 this.year = year
                 this.plot = description
                 this.tags = tags
-                this.rating = rating
+                addScore(rating)
                 this.duration = duration
                 addActors(actors)
                 addTrailer(trailer)
@@ -155,21 +157,18 @@ override suspend fun search(query: String): List<SearchResponse> {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        data.removeSurrounding("[", "]").split(",").map { it.trim() }.apmap { link ->
-            safeApiCall {
-                when {
-                    link.startsWith(mainServer) -> invokeLokalSource(
-                        link,
-                        subtitleCallback,
-                        callback
-                    )
-                    else -> {
-                        loadExtractor(link, "$directUrl/", subtitleCallback, callback)
-                    }
-                }
+    data.removeSurrounding("[", "]")
+    .split(",")
+    .map { it.trim() }
+    .forEach { link ->
+        safeApiCall {
+            if (link.startsWith(mainServer)) {
+                invokeLokalSource(link, subtitleCallback, callback)
+            } else {
+                loadExtractor(link, "$directUrl/", subtitleCallback, callback)
             }
         }
-
+    }
         return true
     }
 
