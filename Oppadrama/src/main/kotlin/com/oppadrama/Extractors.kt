@@ -14,5 +14,5 @@ class Smoothpre: VidHidePro() {
 
 class Turbovidhls : Filesim() {
     override val name = "Turbovidhls"
-    override var mainUrl = "https://emturbovid.com"
+    override var mainUrl = "https://turbovidhls.com"
 }
