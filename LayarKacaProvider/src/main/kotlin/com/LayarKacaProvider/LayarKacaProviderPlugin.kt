@@ -17,6 +17,6 @@ class LayarKacaProviderPlugin: BasePlugin() {
         registerExtractorAPI(Furher2())
         registerExtractorAPI(Turbovidhls())
         registerExtractorAPI(Co4nxtrl())
-        registerExtractorAPI(F16px())
+        registerExtractorAPI(Playeriframe())
     }
 }

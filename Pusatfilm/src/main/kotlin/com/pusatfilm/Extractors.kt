@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.loadExtractor
 
+
 open class Kotakajaib : ExtractorApi() {
     override val name = "Kotakajaib"
     override val mainUrl = "https://kotakajaib.me"
