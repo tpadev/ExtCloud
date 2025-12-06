@@ -62,6 +62,10 @@ open class Jeniusplay : ExtractorApi() {
                 .contains("bahasa", true) -> "Indonesian"
             else -> str
         }
+<<<<<<< HEAD
     }
 
 }
+=======
+    }
+>>>>>>> a83bcfdd3cc0298ceb049c9ab3a816e96c8bde0b
