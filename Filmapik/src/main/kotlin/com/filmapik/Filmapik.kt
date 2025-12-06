@@ -231,7 +231,7 @@ override suspend fun search(query: String): List<SearchResponse> {
 
     val document = app.get(data).document
 
-   
+    
     val servers = document.select("li.dooplay_player_option")
         .mapNotNull { it.attr("data-url") }
         .filter { it.isNotBlank() }
@@ -239,18 +239,19 @@ override suspend fun search(query: String): List<SearchResponse> {
     
     val iframeDefault = document.selectFirst("iframe")?.attr("src")
     if (!iframeDefault.isNullOrBlank()) {
-        loadExtractor(iframeDefault, data, subtitleCallback, callback)
+        loadExtractor(fixUrl(iframeDefault), data, subtitleCallback, callback)
     }
 
-    
-    servers.apmap { serverUrl ->
+    for (serverUrl in servers) {
         val fixed = fixUrl(serverUrl)
-        loadExtractor(fixed, data, subtitleCallback, callback)
+        try {
+            loadExtractor(fixed, data, subtitleCallback, callback)
+        } catch (_: Exception) {
+        }
     }
 
     return true
 }
-
 
 
 
