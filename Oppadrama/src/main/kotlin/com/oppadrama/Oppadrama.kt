@@ -168,6 +168,7 @@ val episodes = document.select("div.eplister li a").map { ep ->
 
 }
     
+    
     override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
@@ -177,13 +178,16 @@ val episodes = document.select("div.eplister li a").map { ep ->
 
     val document = app.get(data).document
 
-    // ===== CASE 1: iframe utama =====
-    val defaultIframe = document.selectFirst("div.player-embed iframe")?.getIframeAttr()
-    if (!defaultIframe.isNullOrBlank()) {
-        loadExtractor(httpsify(defaultIframe), data, subtitleCallback, callback)
-    }
 
-    // ===== CASE 2: server <select class="mirror"> =====
+    // ===== CASE 1: IFRAME PLAYER UTAMA (emturbovid) =====
+    document.selectFirst("div.player-embed iframe")
+        ?.getIframeAttr()
+        ?.let { iframe ->
+            loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
+        }
+
+
+    // ===== CASE 2: MIRROR SERVER (TurboVID / HydraX / FileLions) =====
     val mirrorOptions = document.select("select.mirror option[value]:not([disabled])")
 
     for (opt in mirrorOptions) {
@@ -191,17 +195,22 @@ val episodes = document.select("div.eplister li a").map { ep ->
         if (base64.isBlank()) continue
 
         try {
-            // Decode base64 menjadi HTML
-            val decodedHtml = base64Decode(base64)
+            // Fix untuk base64 yang diselipkan whitespace
+            val cleanedBase64 = base64.replace("\\s".toRegex(), "")
+            val decodedHtml = base64Decode(cleanedBase64)
 
-            // Cari iframe di dalam HTML decode
-            val iframeUrl = Jsoup.parse(decodedHtml)
-                .selectFirst("iframe")
-                ?.getIframeAttr()
-                ?.let(::httpsify)
+            val iframeTag = Jsoup.parse(decodedHtml).selectFirst("iframe")
 
-            if (!iframeUrl.isNullOrBlank()) {
-                loadExtractor(iframeUrl, data, subtitleCallback, callback)
+            val mirrorUrl = when {
+                iframeTag?.attr("src")?.isNotBlank() == true ->
+                    iframeTag.attr("src")
+                iframeTag?.attr("data-src")?.isNotBlank() == true ->
+                    iframeTag.attr("data-src")
+                else -> null
+            }
+
+            if (!mirrorUrl.isNullOrBlank()) {
+                loadExtractor(httpsify(mirrorUrl), data, subtitleCallback, callback)
             }
 
         } catch (e: Exception) {
@@ -209,15 +218,18 @@ val episodes = document.select("div.eplister li a").map { ep ->
         }
     }
 
-    // ===== CASE 3: download links dari .dlbox =====
+
+    // ===== CASE 3: DOWNLOAD LINKS (.dlbox) =====
     val downloadLinks = document.select("div.dlbox li span.e a[href]")
 
     for (a in downloadLinks) {
         val url = a.attr("href")?.trim()
+
         if (!url.isNullOrBlank()) {
             loadExtractor(httpsify(url), data, subtitleCallback, callback)
         }
     }
+
 
     return true
 }
