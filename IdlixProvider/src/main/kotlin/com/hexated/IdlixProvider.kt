@@ -215,12 +215,6 @@ class IdlixProvider : MainAPI() {
     ): Boolean {
 
         val document = app.get(data).document
-        val scriptRegex = """window\.idlixNonce=['"]([a-f0-9]+)['"].*?window\.idlixTime=(\d+).*?""".toRegex(RegexOption.DOT_MATCHES_ALL)
-        val script = document.select("script:containsData(window.idlix)").toString()
-        val match = scriptRegex.find(script)
-        val idlixNonce = match?.groups?.get(1)?.value ?: ""
-        val idlixTime = match?.groups?.get(2)?.value ?: ""
-
         document.select("ul#playeroptionsul > li").map {
                 Triple(
                     it.attr("data-post"),
@@ -231,67 +225,55 @@ class IdlixProvider : MainAPI() {
             val json = app.post(
                 url = "$directUrl/wp-admin/admin-ajax.php",
                 data = mapOf(
-                    "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type, "_n" to idlixNonce, "_p" to id, "_t" to idlixTime
+                    "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
                 ),
                 referer = data,
                 headers = mapOf("Accept" to "*/*", "X-Requested-With" to "XMLHttpRequest")
             ).parsedSafe<ResponseHash>() ?: return@amap
-            val metrix = AppUtils.parseJson<AesData>(json.embed_url).m
-            val password = createKey(json.key, metrix)
+            val metrix = parseJson<AesData>(json.embed_url).m
+            val password = generateKey(json.key, metrix)
             val decrypted =
                 AesHelper.cryptoAESHandler(json.embed_url, password.toByteArray(), false)
                     ?.fixBloat() ?: return@amap
-            Log.d("Phisher",decrypted.toJson())
 
             when {
-                !decrypted.contains("youtube") ->
-                    loadExtractor(decrypted,directUrl,subtitleCallback,callback)
+                !decrypted.contains("youtube") -> IdlixPlayer().getUrl(
+                    decrypted,
+                    "$directUrl/",
+                    subtitleCallback,
+                    callback
+                )
+
                 else -> return@amap
             }
-
         }
 
         return true
     }
 
-    private fun createKey(r: String, m: String): String {
-        val rList = r.split("\\x").filter { it.isNotEmpty() }.toTypedArray()
+    private fun generateKey(r: String, m: String): String {
+        val rList = r.split("\\x").toTypedArray()
         var n = ""
-        var reversedM = m.split("").reversed().joinToString("")
-        while (reversedM.length % 4 != 0) reversedM += "="
-        val decodedBytes = try {
-            base64Decode(reversedM)
-        } catch (_: Exception) {
-            return ""
-        }
-        val decodedM = String(decodedBytes.toCharArray())
+        val decodedM = safeBase64Decode(m.reversed())
         for (s in decodedM.split("|")) {
-            try {
-                val index = Integer.parseInt(s)
-                if (index in rList.indices) {
-                    n += "\\x" + rList[index]
-                }
-            } catch (_: Exception) {
-            }
+            n += "\\x" + rList[Integer.parseInt(s) + 1]
         }
         return n
+    }
+
+    private fun safeBase64Decode(input: String): String {
+        var paddedInput = input
+        val remainder = input.length % 4
+        if (remainder != 0) {
+            paddedInput += "=".repeat(4 - remainder)
+        }
+        return base64Decode(paddedInput)
     }
 
     private fun String.fixBloat(): String {
         return this.replace("\"", "").replace("\\", "")
     }
 
-    data class ResponseSource(
-        @JsonProperty("hls") val hls: Boolean,
-        @JsonProperty("videoSource") val videoSource: String,
-        @JsonProperty("securedLink") val securedLink: String?,
-    )
-
-    data class Tracks(
-        @JsonProperty("kind") val kind: String?,
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String?,
-    )
 
     data class ResponseHash(
         @JsonProperty("embed_url") val embed_url: String,
@@ -301,6 +283,5 @@ class IdlixProvider : MainAPI() {
     data class AesData(
         @JsonProperty("m") val m: String,
     )
-
 
 }
