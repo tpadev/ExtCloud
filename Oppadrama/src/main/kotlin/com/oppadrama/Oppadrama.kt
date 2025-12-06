@@ -183,15 +183,38 @@ val episodes = document.select("div.eplister li a").map { ep ->
         loadExtractor(httpsify(defaultIframe), data, subtitleCallback, callback)
     }
 
-    // ===== CASE 3: link download dari .dlbox =====
+    // ===== CASE 2: server <select class="mirror"> =====
+    val mirrorOptions = document.select("select.mirror option[value]:not([disabled])")
+
+    for (opt in mirrorOptions) {
+        val base64 = opt.attr("value")
+        if (base64.isBlank()) continue
+
+        try {
+            // Decode base64 menjadi HTML
+            val decodedHtml = base64Decode(base64)
+
+            // Cari iframe di dalam HTML decode
+            val iframeUrl = Jsoup.parse(decodedHtml)
+                .selectFirst("iframe")
+                ?.getIframeAttr()
+                ?.let(::httpsify)
+
+            if (!iframeUrl.isNullOrBlank()) {
+                loadExtractor(iframeUrl, data, subtitleCallback, callback)
+            }
+
+        } catch (e: Exception) {
+            println("Mirror decode error: ${e.localizedMessage}")
+        }
+    }
+
+    // ===== CASE 3: download links dari .dlbox =====
     val downloadLinks = document.select("div.dlbox li span.e a[href]")
 
     for (a in downloadLinks) {
         val url = a.attr("href")?.trim()
-        val quality = a.parent()?.previousElementSibling()?.text()?.trim() ?: ""
-
         if (!url.isNullOrBlank()) {
-            // Kirim ke extractor
             loadExtractor(httpsify(url), data, subtitleCallback, callback)
         }
     }
