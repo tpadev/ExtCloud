@@ -13,6 +13,6 @@ class Smoothpre: VidHidePro() {
 }
 
 class Emturbovid : EmturbovidExtractor() {
-    override val name = "Emturbovid"
+    override var name = "Emturbovid"
     override var mainUrl = "https://emturbovid.com"
 }
