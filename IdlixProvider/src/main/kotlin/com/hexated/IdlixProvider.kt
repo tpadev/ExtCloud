@@ -230,20 +230,15 @@ class IdlixProvider : MainAPI() {
                 referer = data,
                 headers = mapOf("Accept" to "*/*", "X-Requested-With" to "XMLHttpRequest")
             ).parsedSafe<ResponseHash>() ?: return@amap
-            val metrix = parseJson<AesData>(json.embed_url).m
+            val metrix = AppUtils.parseJson<AesData>(json.embed_url).m
             val password = generateKey(json.key, metrix)
             val decrypted =
                 AesHelper.cryptoAESHandler(json.embed_url, password.toByteArray(), false)
                     ?.fixBloat() ?: return@amap
 
-            when {
-                !decrypted.contains("youtube") -> IdlixPlayer().getUrl(
-                    decrypted,
-                    "$directUrl/",
-                    subtitleCallback,
-                    callback
-                )
-
+          when {
+                !decrypted.contains("youtube") ->
+                    loadExtractor(decrypted,directUrl,subtitleCallback,callback)
                 else -> return@amap
             }
         }
