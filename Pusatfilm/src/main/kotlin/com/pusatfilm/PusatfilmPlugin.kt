@@ -2,7 +2,6 @@ package com.pusatfilm
 
 import android.content.Context
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.plugins.Plugin
 
 @CloudstreamPlugin
@@ -12,7 +11,6 @@ class PusatfilmPlugin : Plugin() {
         // directly.
         registerMainAPI(Pusatfilm())
         registerExtractorAPI(Kotakajaib())
-        registerExtractorAPI(Turbovidhls())
-        registerExtractorAPI(EmturbovidExtractor())
+        registerExtractorAPI(Emturbovid())
     }
 }
