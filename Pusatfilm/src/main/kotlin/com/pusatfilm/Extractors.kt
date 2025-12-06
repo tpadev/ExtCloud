@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.apmap
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.utils.ExtractorApi
+import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -33,7 +34,7 @@ open class Kotakajaib : ExtractorApi() {
     }
 }
 
-class Turbovidhls : Filesim() {
-    override val name = "Turbovidhls"
-    override var mainUrl = "https://turbovidhls.com"
+class Emturbovid : EmturbovidExtractor() {
+    override var name = "Emturbovid"
+    override var mainUrl = "https://emturbovid.com"
 }
