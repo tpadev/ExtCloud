@@ -174,40 +174,30 @@ val episodes = document.select("div.eplister li a").map { ep ->
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
+
     val document = app.get(data).document
 
-    // ===== CASE 1: iframe default =====
+    // ===== CASE 1: iframe utama =====
     val defaultIframe = document.selectFirst("div.player-embed iframe")?.getIframeAttr()
     if (!defaultIframe.isNullOrBlank()) {
         loadExtractor(httpsify(defaultIframe), data, subtitleCallback, callback)
     }
 
-    // ===== CASE 2: ambil semua server dari <select.mirror> =====
-    val options = document.select("select.mirror option[value]:not([disabled])")
-    for (option in options) {
-        val base64 = option.attr("value")
-        if (base64.isBlank()) continue
-        val label = option.text().trim()
+    // ===== CASE 3: link download dari .dlbox =====
+    val downloadLinks = document.select("div.dlbox li span.e a[href]")
 
-        try {
-            // decode base64 → iframe HTML
-            val decodedHtml = base64Decode(base64)
-            val iframeUrl = Jsoup.parse(decodedHtml)
-                .selectFirst("iframe")
-                ?.getIframeAttr()
-                ?.let(::httpsify)
+    for (a in downloadLinks) {
+        val url = a.attr("href")?.trim()
+        val quality = a.parent()?.previousElementSibling()?.text()?.trim() ?: ""
 
-            if (!iframeUrl.isNullOrBlank()) {
-                loadExtractor(iframeUrl, data, subtitleCallback, callback)
-            }
-        } catch (e: Exception) {
-            println("OppaDrama loadLinks decode error: ${e.localizedMessage}")
+        if (!url.isNullOrBlank()) {
+            // Kirim ke extractor
+            loadExtractor(httpsify(url), data, subtitleCallback, callback)
         }
     }
 
     return true
 }
-
 
 
     private fun Element.getImageAttr(): String {
