@@ -13,7 +13,6 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.fasterxml.jackson.annotation.JsonProperty
 
 class Jeniusplay : ExtractorApi() {
-
     override var name = "Jeniusplay"
     override var mainUrl = "https://jeniusplay.com"
     override val requiresReferer = true
@@ -37,21 +36,20 @@ class Jeniusplay : ExtractorApi() {
             headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsed<ResponseSource>()
 
+
         val realSource = response.securedLink?.ifBlank { null } ?: response.videoSource
 
-        val hlsHeaders = mapOf(
-            "Referer" to mainUrl,
-            "Origin" to mainUrl,
-            "User-Agent" to USER_AGENT,
-            "X-Requested-With" to "XMLHttpRequest"
-        )
 
-        // Generate kualitas
+        // HLS tetap butuh referer = mainUrl
+        val streamReferer = mainUrl
+
+
+        // Karena build Anda tidak mendukung headers / quality / isM3u8
+        // gunakan newExtractorLink versi SIMPLE
         M3u8Helper.generateM3u8(
             name,
             realSource,
-            pageRef,
-            headers = hlsHeaders
+            streamReferer
         ).forEach { stream ->
 
             callback.invoke(
@@ -59,20 +57,17 @@ class Jeniusplay : ExtractorApi() {
                     name = "$name ${stream.quality}p",
                     source = name,
                     url = stream.url,
-                    referer = pageRef,
-                    quality = stream.quality,
-                    isM3u8 = true,
-                    headers = hlsHeaders,
+                    referer = streamReferer,
                     type = ExtractorLinkType.M3U8
                 )
             )
         }
 
-        // Subtitle dari eval JS
+
+        // Subtitle
         document.select("script").forEach { script ->
             val data = script.data()
-            if (data.contains("eval(function(p,a,c,k,e,d)")) {
-
+            if (data.contains("eval(function")) {
                 val unpack = getAndUnpack(data)
 
                 val subJson = unpack
@@ -91,13 +86,16 @@ class Jeniusplay : ExtractorApi() {
         }
     }
 
+
     private fun getLanguage(str: String): String {
         return when {
             str.contains("indonesia", true) ||
-            str.contains("bahasa", true) -> "Indonesian"
+                    str.contains("bahasa", true) -> "Indonesian"
+
             else -> str
         }
     }
+
 
     data class ResponseSource(
         @JsonProperty("hls") val hls: Boolean?,
@@ -111,9 +109,10 @@ class Jeniusplay : ExtractorApi() {
         @JsonProperty("label") val label: String?
     )
 
+
     companion object {
         private const val USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
 }
