@@ -13,6 +13,6 @@ class AnimasuPlugin: Plugin() {
         registerExtractorAPI(Archivd())
         registerExtractorAPI(Newuservideo())
         registerExtractorAPI(Vidhidepro())
-        registerExtractorAPI(Vidhidevip())
+        registerExtractorAPI(EarnVids())
     }
 }
