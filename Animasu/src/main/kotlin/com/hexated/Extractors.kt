@@ -114,7 +114,8 @@ class Vidhidepro : Filesim() {
     override val name = "Vidhidepro"
 }
 
-class Earnvids : Filesim() {
-    override val mainUrl = "https://vidhidevip.com"
-    override val name = "Earnvids"
+
+class Vidhidevip : Filesim() {
+    override var name = "Vidhidevip"
+    override var mainUrl = "https://vidhidevip.com"
 }
