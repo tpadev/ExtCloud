@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.Filesim
-import com.lagradost.cloudstream3.extractors.VideHidePro
+import com.lagradost.cloudstream3.extractors.VidHidePro
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
