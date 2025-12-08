@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.Filesim
+import com.lagradost.cloudstream3.extractors.VideHidePro
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -115,7 +116,7 @@ class Vidhidepro : Filesim() {
 }
 
 
-class Vidhidevip : Filesim() {
-    override var name = "Vidhidevip"
+class EarnVids: VidHidePro() {
+    override var name = "EarnVids"
     override var mainUrl = "https://vidhidevip.com"
 }
