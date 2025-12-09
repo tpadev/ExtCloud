@@ -115,7 +115,6 @@ class P2pplay : VidStack() {
 class Xshotcok : Hxfile() {
     override val name = "Xshotcok"
     override val mainUrl = "https://xshotcok.com"
-    override val redirect = false
 }
 
 class Dsvplay : DoodLaExtractor() {
