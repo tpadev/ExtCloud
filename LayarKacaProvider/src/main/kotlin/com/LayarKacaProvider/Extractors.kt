@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorApi
+import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.M3u8Helper
@@ -72,4 +73,9 @@ class Furher2 : Filesim() {
 class Turbovidhls : Filesim() {
     override val name = "Turbovidhls"
     override var mainUrl = "https://turbovidhls.com"
+}
+
+class Emturbovid : EmturbovidExtractor() {
+    override var name = "Emturbovid"
+    override var mainUrl = "https://emturbovid.com"
 }
