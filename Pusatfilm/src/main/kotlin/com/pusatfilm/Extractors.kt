@@ -37,6 +37,5 @@ open class Kotakajaib : ExtractorApi() {
 class Emturbovid : EmturbovidExtractor() {
     override var name = "Emturbovid"
     override var mainUrl = "https://turbovidhls.com"
-     override val requiresReferer = true
 }
 
