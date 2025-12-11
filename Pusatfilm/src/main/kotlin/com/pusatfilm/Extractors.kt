@@ -40,6 +40,6 @@ class Emturbovid : EmturbovidExtractor() {
 }
 
 class Turbovidhls : EmturbovidExtractor() {
-    override val name = "Turbovidhls"
+    override var name = "Turbovidhls"
     override var mainUrl = "https://turbovidhls.com"
 }
