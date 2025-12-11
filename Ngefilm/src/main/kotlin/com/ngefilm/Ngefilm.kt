@@ -120,7 +120,7 @@ private fun Element.toSearchResult(): SearchResponse? {
                 fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
                         ?.fixImageQuality()
 
-        val tags = document.select("a[rel='category tag']").map { it.text().trim() }.distinct().toMutableList()
+        val tags = document.select("a[rel='category tag']").map { it.text() }.toMutableList()
 
         val year =
                 document.select("div.gmr-moviedata strong:contains(Year:) > a")
