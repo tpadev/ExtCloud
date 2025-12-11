@@ -39,7 +39,7 @@ class Emturbovid : EmturbovidExtractor() {
     override var mainUrl = "https://emturbovid.com"
 }
 
-class Turbovidhls : Filesim() {
+class Turbovidhls : EmturbovidExtractor() {
     override val name = "Turbovidhls"
     override var mainUrl = "https://turbovidhls.com"
 }
