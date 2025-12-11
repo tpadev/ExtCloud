@@ -120,7 +120,9 @@ private fun Element.toSearchResult(): SearchResponse? {
                 fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
                         ?.fixImageQuality()
 
-        val tags = document.select("a[rel='category tag']").map { it.text() }.toMutableList()
+        val tags = document.select("a[rel='category tag']")
+            .map { it.text().trim() }
+            .toMutableList()
 
         val year =
                 document.select("div.gmr-moviedata strong:contains(Year:) > a")
@@ -177,6 +179,7 @@ private fun Element.toSearchResult(): SearchResponse? {
                 this.recommendations = recommendations
                 this.duration = duration ?: 0
                 addTrailer(trailer)
+                this.disableMeta = true
             }
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, url) {
@@ -189,6 +192,7 @@ private fun Element.toSearchResult(): SearchResponse? {
                 this.recommendations = recommendations
                 this.duration = duration ?: 0
                 addTrailer(trailer)
+                this.disableMeta = true
             }
         }
     }
