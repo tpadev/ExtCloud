@@ -119,8 +119,9 @@ private fun Element.toSearchResult(): SearchResponse? {
         val poster =
                 fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
                         ?.fixImageQuality()
-        val tags =
-                document.select("div.gmr-moviedata a").map { it.text() }
+
+        val tags = document.select("a[rel='category tag']").map { it.text() }
+
 
         val year =
                 document.select("div.gmr-moviedata strong:contains(Year:) > a")
