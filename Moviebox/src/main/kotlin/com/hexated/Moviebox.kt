@@ -26,73 +26,54 @@ class Moviebox : MainAPI() {
         TvType.AsianDrama
     )
 
-    //    override val mainPage = mainPageOf(
-//        "872031290915189720" to "Trending Now",
-//        "997144265920760504" to "Popular Movie",
-//        "5283462032510044280" to "Drama Indonesia Terkini",
-//        "6528093688173053896" to "Trending Indonesian Movies",
-//        "4380734070238626200" to "K-Drama",
-//        "7736026911486755336" to "Western TV",
-//        "8624142774394406504" to "Most Popular C-Drama",
-//        "5404290953194750296" to "Trending Anime",
-//        "5848753831881965888" to "Indonesian Horror Stories",
-//        "1164329479448281992" to "Thai-Drama",
-//        "7132534597631837112" to "Animated Film",
-//    )
-
-    override val mainPage: List<MainPageData> = mainPageOf(
-        "1,ForYou" to "Movie ForYou",
-        "1,Hottest" to "Movie Hottest",
-        "1,Latest" to "Movie Latest",
-        "1,Rating" to "Movie Rating",
-        "2,ForYou" to "TVShow ForYou",
-        "2,Hottest" to "TVShow Hottest",
-        "2,Latest" to "TVShow Latest",
-        "2,Rating" to "TVShow Rating",
-        "1006,ForYou" to "Animation ForYou",
-        "1006,Hottest" to "Animation Hottest",
-        "1006,Latest" to "Animation Latest",
-        "1006,Rating" to "Animation Rating",
+        override val mainPage = mainPageOf(
+        "872031290915189720" to "Trending Now",
+        "997144265920760504" to "Popular Movie",
+        "5283462032510044280" to "Drama Indonesia Terkini",
+        "6528093688173053896" to "Trending Indonesian Movies",
+        "4380734070238626200" to "K-Drama",
+        "7736026911486755336" to "Western TV",
+        "8624142774394406504" to "Most Popular C-Drama",
+        "5404290953194750296" to "Trending Anime",
+        "5848753831881965888" to "Indonesian Horror Stories",
+        "1164329479448281992" to "Thai-Drama",
+        "7132534597631837112" to "Animated Film",
     )
+
 
         override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest,
     ): HomePageResponse {
-//        val url = "$mainUrl/wefeed-h5-bff/web/ranking-list/content?id=${request.data}&page=$page&perPage=12"
-//
-//        val home = app.get(url).parsedSafe<Media>()?.data?.subjectList?.map {
-//            it.toSearchResponse(this)
-//        } ?: throw ErrorLoadingException("No Data Found")
+        val url =
+            "$mainUrl/wefeed-h5-bff/web/ranking-list/content?id=${request.data}&page=$page&perPage=12"
 
-        val params = request.data.split(",")
-        val body = mapOf(
-            "channelId" to params.first(),
-            "page" to page,
-            "perPage" to "24",
-            "sort" to params.last()
-        ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
-
-        val home = app.post("$mainUrl/wefeed-h5-bff/web/filter", requestBody = body)
-            .parsedSafe<Media>()?.data?.items?.map {
-                it.toSearchResponse(this)
-            } ?: throw ErrorLoadingException("No Data Found")
+        val home = app.get(url).parsedSafe<Media>()?.data?.subjectList?.map {
+            it.toSearchResponse(this)
+        } ?: throw ErrorLoadingException("No Data Found")
 
         return newHomePageResponse(request.name, home)
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        return app.post(
-            "$mainUrl/wefeed-h5-bff/web/subject/search", requestBody = mapOf(
+    suspend fun fetchSearchResults(query: String, page: Int): List<SearchResponse> {
+        val response = app.post(
+            "$mainUrl/wefeed-h5-bff/web/subject/search",
+            requestBody = mapOf(
                 "keyword" to query,
-                "page" to "1",
-                "perPage" to "0",
-                "subjectType" to "0",
+                "page" to page.toString(),
+                "subjectType" to "0"
             ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
-        ).parsedSafe<Media>()?.data?.items?.map { it.toSearchResponse(this) }
-            ?: throw ErrorLoadingException()
+        ).parsedSafe<Media>() ?: return emptyList()
+
+        return response.data?.items?.map { it.toSearchResponse(this) } ?: emptyList()
+    }
+
+    override suspend fun quickSearch(query: String): List<SearchResponse> = fetchSearchResults(query, 1)
+
+    override suspend fun search(query: String, page: Int): SearchResponseList? {
+        val items = fetchSearchResults(query, page)
+        if (items.isEmpty()) return null
+        return items.toNewSearchResponseList()
     }
 
     override suspend fun load(url: String): LoadResponse {
