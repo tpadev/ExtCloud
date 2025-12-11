@@ -119,7 +119,7 @@ class Kawanfilm : MainAPI() {
         val poster =
                 fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
                         ?.fixImageQuality()
-        val tags = document.select("div.gmr-moviedata a").map { it.text() }
+        val tags = document.select("strong:contains(Genre) ~ a").eachText()
 
         val year =
                 document.select("div.gmr-moviedata strong:contains(Year:) > a")

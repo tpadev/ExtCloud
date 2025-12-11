@@ -90,7 +90,7 @@ class Pusatfilm : MainAPI() {
             .toString()
 
         val poster = fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
-        val tags = document.select("div.gmr-moviedata a").map { it.text() }
+        val tags = document.select("strong:contains(Genre) ~ a").eachText()
         val year = document.select("div.gmr-moviedata strong:contains(Year:) > a").text().trim().toIntOrNull()
         val tvType = if (url.contains("/tv/")) TvType.TvSeries else TvType.Movie
         val description = document.selectFirst("div[itemprop=description] > p")?.text()?.trim()
