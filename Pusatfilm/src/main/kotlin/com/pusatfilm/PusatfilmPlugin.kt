@@ -12,7 +12,5 @@ class PusatfilmPlugin : Plugin() {
         registerMainAPI(Pusatfilm())
         registerExtractorAPI(Kotakajaib())
         registerExtractorAPI(Emturbovid())
-
-registerExtractorAPI(Turbovidhls())
     }
 }
