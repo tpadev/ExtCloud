@@ -27,9 +27,6 @@ class Melongmovie : MainAPI() {
 
     override val mainPage = mainPageOf(
     "$mainUrl/latest-movies/page/%d/" to "Movie Terbaru",
-    "$mainUrl/country/usa/page/%d/" to "Film Barat",
-    "$mainUrl/country/south-korea/page/%d/" to "Film Korea",
-    "$mainUrl/country/thailand/page/%d/" to "Film Thailand",
     )
 
 
