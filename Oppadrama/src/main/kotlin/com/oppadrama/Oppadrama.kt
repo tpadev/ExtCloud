@@ -137,6 +137,7 @@ class Oppadrama : MainAPI() {
         ?.ownText()
         ?.replace(":", "")
         ?.trim()
+        ?: ""
 )
 
     // Rekomendasi
