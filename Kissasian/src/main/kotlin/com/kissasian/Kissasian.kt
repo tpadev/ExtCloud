@@ -134,21 +134,27 @@ class Kissasian : MainAPI() {
         ?: ""
 )
 
-    // Rekomendasi
+    
     val recommendations = document.select("div.listupd article.bs")
         .mapNotNull { it.toRecommendResult() }
 
-    // Episodes list (jika TV Series)
+    
 val episodes = document.select("div.eplister li a").map { ep ->
     val href = fixUrl(ep.attr("href"))
     val name = ep.selectFirst("div.epl-title")?.text() ?: "Episode"
-    val episode = name.filter { it.isDigit() }.toIntOrNull()
+
+    val episode = Regex("Episode\\s*(\\d+)", RegexOption.IGNORE_CASE)
+        .find(name)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.toIntOrNull()
 
     newEpisode(href) {
         this.name = name
         this.episode = episode
     }
 }
+
 
     return if (episodes.size > 1) {
     // TV Series
