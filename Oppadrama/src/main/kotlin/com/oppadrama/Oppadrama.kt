@@ -121,6 +121,11 @@ class Oppadrama : MainAPI() {
     ?.toDoubleOrNull()
 
     val trailer = document.selectFirst("div.bixbox.trailer iframe")?.attr("src")
+    val status = document
+    .select("div.info-content div.spe span")
+    .firstOrNull()
+    ?.ownText()
+    ?.trim()
 
     // Rekomendasi
     val recommendations = document.select("div.listupd article.bs")
@@ -145,6 +150,7 @@ val episodes = document.select("div.eplister li a").map { ep ->
         this.year = year
         this.plot = description
         this.tags = tags
+        showStatus = status
         this.recommendations = recommendations
         this.duration = duration ?: 0
         if (rating != null) addScore(rating.toString(), 10)
