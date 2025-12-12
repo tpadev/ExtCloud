@@ -98,7 +98,7 @@ class Oppadrama : MainAPI() {
         ?.filter { it.isDigit() }?.take(4)?.toIntOrNull()
 
     // Status, durasi, negara, tipe
-    val status = document.selectFirst("span:matchesOwn(Status:)")?.ownText()?.trim()
+    
     val duration = document.selectFirst("div.spe span:contains(Durasi:)")?.ownText()?.let {
     val h = Regex("(\\d+)\\s*hr").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
     val m = Regex("(\\d+)\\s*min").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
