@@ -139,26 +139,18 @@ class Kissasian : MainAPI() {
         .mapNotNull { it.toRecommendResult() }
 
     
-val episodes = document.select("table tbody tr")
-    .reversed() 
-    .mapIndexedNotNull { index, row ->
-        val aTag = row.selectFirst("td a") ?: return@mapIndexedNotNull null
+val episodeElements = document.select("div.eplister ul li a")
 
+val episodes = episodeElements
+    .reversed() // karena biasanya terbaru di atas
+    .mapIndexed { index, aTag ->
         val href = fixUrl(aTag.attr("href"))
 
-        
-        val rawName = aTag.text()
-        val cleanName = rawName
-            .replace(Regex("^\\d+\\s*"), "")
-            .replace(Regex("(?i)episode\\s*\\d+"), "")
-            .trim()
-
         newEpisode(href) {
-            this.name = cleanName.ifBlank { "Episode ${index + 1}" }
+            this.name = "Episode ${index + 1}"
             this.episode = index + 1
         }
     }
-
 
 
     return if (episodes.size > 1) {
