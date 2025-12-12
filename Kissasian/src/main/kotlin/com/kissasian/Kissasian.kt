@@ -139,21 +139,16 @@ class Kissasian : MainAPI() {
         .mapNotNull { it.toRecommendResult() }
 
     
-val episodes = document.select("div.eplister li a").map { ep ->
-    val href = fixUrl(ep.attr("href"))
-    val name = ep.selectFirst("div.epl-title")?.text() ?: "Episode"
+val episodes = document.select("div.eplister li a")
+    .mapIndexed { index, ep ->
+        val href = fixUrl(ep.attr("href"))
+        val name = ep.text()
 
-    val episode = Regex("Episode\\s*(\\d+)", RegexOption.IGNORE_CASE)
-        .find(name)
-        ?.groupValues
-        ?.getOrNull(1)
-        ?.toIntOrNull()
-
-    newEpisode(href) {
-        this.name = name
-        this.episode = episode
+        newEpisode(href) {
+            this.name = name
+            this.episode = index + 1
+        }
     }
-}
 
 
     return if (episodes.size > 1) {
