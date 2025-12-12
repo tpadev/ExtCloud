@@ -200,26 +200,21 @@ val episodes = episodeElements
             loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
         }
 
-    val mirrorOptions = document.select("select.mirror option[value]")
+    
+    document.select("select.mirror option[value]")
+        .forEach { opt ->
+            val mirrorUrl = fixUrl(opt.attr("value"))
 
-    for (opt in mirrorOptions) {
-        val mirrorPageUrl = opt.attr("value").trim()
-        if (mirrorPageUrl.isBlank() || !mirrorPageUrl.startsWith("http")) continue
-
-        try {
-            val mirrorDoc = app.get(mirrorPageUrl).document
-
-            mirrorDoc.selectFirst("div.player-embed iframe")
-                ?.attr("src")
-                ?.takeIf { it.isNotBlank() }
-                ?.let { iframe ->
-                    loadExtractor(httpsify(iframe), mirrorPageUrl, subtitleCallback, callback)
-                }
-
-        } catch (e: Exception) {
-            println("Mirror load error: ${e.localizedMessage}")
+            if (mirrorUrl.isNotBlank()) {
+              
+                loadExtractor(
+                    mirrorUrl,
+                    data,
+                    subtitleCallback,
+                    callback
+                )
+            }
         }
-    }
 
     return true
 }
