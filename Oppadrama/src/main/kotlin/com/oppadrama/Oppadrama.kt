@@ -152,7 +152,6 @@ val episodes = document.select("div.eplister li a").map { ep ->
         this.plot = description
         this.tags = tags
         val showStatus = when {
-        val showStatus = when {
         rawStatus?.contains("ongoing") == true -> ShowStatus.Ongoing
         rawStatus?.contains("completed") == true -> ShowStatus.Completed
             else -> null
