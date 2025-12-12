@@ -158,9 +158,7 @@ class Klikxxi : MainAPI() {
             ?.text()
             ?.trim()
 
-        val tags = document
-            .select("div.gmr-moviedata strong:contains(Genre:) > a")
-            .map { it.text() }
+        val tags = document.select("strong:contains(Genre) ~ a").eachText()
 
         val year = document
             .select("div.gmr-moviedata strong:contains(Year:) > a")
