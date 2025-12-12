@@ -193,6 +193,7 @@ val episodes = episodeElements
 
     val document = app.get(data).document
 
+    // SERVER AKTIF
     document.selectFirst("div.player-embed iframe")
         ?.attr("src")
         ?.takeIf { it.isNotBlank() }
@@ -200,21 +201,41 @@ val episodes = episodeElements
             loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
         }
 
-    
-    document.select("select.mirror option[value]")
-        .forEach { opt ->
-            val mirrorUrl = fixUrl(opt.attr("value"))
+    val mirrorOptions = document.select("select.mirror option[value]")
 
-            if (mirrorUrl.isNotBlank()) {
-              
+    for (opt in mirrorOptions) {
+        val mirrorPageUrl = fixUrl(opt.attr("value"))
+        if (mirrorPageUrl.isBlank()) continue
+
+        try {
+            val mirrorDoc = app.get(mirrorPageUrl).document
+
+            val iframe = mirrorDoc
+                .selectFirst("div.player-embed iframe")
+                ?.attr("src")
+
+            if (!iframe.isNullOrBlank()) {
+                // Server 1 & 3 (iframe statis)
                 loadExtractor(
-                    mirrorUrl,
+                    httpsify(iframe),
+                    mirrorPageUrl,
+                    subtitleCallback,
+                    callback
+                )
+            } else {
+                // 🔥 SERVER 2 FALLBACK (JS-based)
+                loadExtractor(
+                    mirrorPageUrl,
                     data,
                     subtitleCallback,
                     callback
                 )
             }
+
+        } catch (e: Exception) {
+            println("Mirror load error: ${e.localizedMessage}")
         }
+    }
 
     return true
 }
