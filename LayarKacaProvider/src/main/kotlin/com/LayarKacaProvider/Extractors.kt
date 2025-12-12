@@ -4,6 +4,7 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.Filesim
+import com.lagradost.cloudstream3.extractors.FilemoonV2
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
@@ -56,10 +57,6 @@ open class Hownetwork : ExtractorApi() {
     }
 }
 
-class Playeriframe : Hownetwork() {
-    override var mainUrl = "https://playeriframe.sbs"
-}
-
 class Furher : Filesim() {
     override val name = "Furher"
     override var mainUrl = "https://furher.in"
@@ -70,12 +67,13 @@ class Furher2 : Filesim() {
     override var mainUrl = "723qrh1p.fun"
 }
 
-class Turbovidhls : Filesim() {
-    override val name = "Turbovidhls"
-    override var mainUrl = "https://turbovidhls.com"
-}
 
 class Emturbovid : EmturbovidExtractor() {
     override var name = "Emturbovid"
-    override var mainUrl = "https://emturbovid.com"
+    override var mainUrl = "https://turbovidhls.com"
+}
+
+class F16px : FilemoonV2() {
+    override var mainUrl = "https://f16px.com"
+    override var name = "F16px"
 }
