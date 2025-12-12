@@ -92,22 +92,22 @@ class Oppadrama : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
-    // Judul
+    
     val title = document.selectFirst("h1.entry-title")?.text()?.trim().orEmpty()
 
-    // Poster
+    
     val poster = document.selectFirst("div.bigcontent img")?.getImageAttr()?.let { fixUrlNull(it) }
 
-    // Sinopsis (gabungkan semua paragraf)
+    
     val description = document.select("div.entry-content p")
         .joinToString("\n") { it.text() }
         .trim()
 
-    // Tahun rilis (ambil angka dari span Dirilis)
+ 
     val year = document.selectFirst("span:matchesOwn(Dirilis:)")?.ownText()
         ?.filter { it.isDigit() }?.take(4)?.toIntOrNull()
 
-    // Status, durasi, negara, tipe
+    
     
     val duration = document.selectFirst("div.spe span:contains(Durasi:)")?.ownText()?.let {
     val h = Regex("(\\d+)\\s*hr").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
@@ -140,21 +140,23 @@ class Oppadrama : MainAPI() {
         ?: ""
 )
 
-    // Rekomendasi
+    
     val recommendations = document.select("div.listupd article.bs")
         .mapNotNull { it.toRecommendResult() }
 
-    // Episodes list (jika TV Series)
-val episodes = document.select("div.eplister li a").map { ep ->
-    val href = fixUrl(ep.attr("href"))
-    val name = ep.selectFirst("div.epl-title")?.text() ?: "Episode"
-    val episode = name.filter { it.isDigit() }.toIntOrNull()
+    
+val episodeElements = document.select("div.eplister ul li a")
 
-    newEpisode(href) {
-        this.name = name
-        this.episode = episode
+val episodes = episodeElements
+    .reversed() // karena biasanya terbaru di atas
+    .mapIndexed { index, aTag ->
+        val href = fixUrl(aTag.attr("href"))
+
+        newEpisode(href) {
+            this.name = "Episode ${index + 1}"
+            this.episode = index + 1
+        }
     }
-}
 
     return if (episodes.size > 1) {
     // TV Series
