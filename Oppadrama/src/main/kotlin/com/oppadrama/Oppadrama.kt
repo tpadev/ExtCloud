@@ -121,11 +121,12 @@ class Oppadrama : MainAPI() {
     ?.toDoubleOrNull()
 
     val trailer = document.selectFirst("div.bixbox.trailer iframe")?.attr("src")
-    val status = document
-    .select("div.info-content div.spe span")
-    .firstOrNull()
+
+    val rawStatus = document
+    .selectFirst("div.info-content div.spe span")
     ?.ownText()
     ?.trim()
+    ?.lowercase()
 
     // Rekomendasi
     val recommendations = document.select("div.listupd article.bs")
