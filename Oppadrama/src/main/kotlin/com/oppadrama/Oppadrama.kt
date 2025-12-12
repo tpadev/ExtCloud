@@ -122,11 +122,12 @@ class Oppadrama : MainAPI() {
 
     val trailer = document.selectFirst("div.bixbox.trailer iframe")?.attr("src")
 
-    val rawStatus = document
-    .selectFirst("div.info-content div.spe span")
-    ?.ownText()
-    ?.trim()
-    ?.lowercase()
+    val status = getStatus(
+    document.selectFirst("div.info-content div.spe span")
+        ?.ownText()
+        ?.replace(":", "")
+        ?.trim()
+)
 
     // Rekomendasi
     val recommendations = document.select("div.listupd article.bs")
@@ -151,11 +152,7 @@ val episodes = document.select("div.eplister li a").map { ep ->
         this.year = year
         this.plot = description
         this.tags = tags
-        val showStatus = when {
-        rawStatus?.contains("ongoing") == true -> ShowStatus.Ongoing
-        rawStatus?.contains("completed") == true -> ShowStatus.Completed
-            else -> null
-        }
+        showStatus = status
         this.recommendations = recommendations
         this.duration = duration ?: 0
         if (rating != null) addScore(rating.toString(), 10)
@@ -178,8 +175,7 @@ val episodes = document.select("div.eplister li a").map { ep ->
 }
 
 }
-    
-    
+       
     override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
