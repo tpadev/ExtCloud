@@ -24,6 +24,16 @@ class Oppadrama : MainAPI() {
     override var lang = "id"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
+    companion object {
+        fun getStatus(t: String): ShowStatus {
+            return when (t) {
+                "Completed" -> ShowStatus.Completed
+                "Ongoing" -> ShowStatus.Ongoing
+                else -> ShowStatus.Completed
+            }
+        }
+    }
+
     override val mainPage = mainPageOf(
         "series/?status=&type=&order=update" to "Update Terbaru",
         "series/?country%5B%5D=japan&type=Movie&order=update" to "Film Jepang",
