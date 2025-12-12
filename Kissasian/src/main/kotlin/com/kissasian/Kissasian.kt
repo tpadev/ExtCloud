@@ -190,61 +190,37 @@ val episodes = document.select("div.eplister li a").map { ep ->
 
     val document = app.get(data).document
 
-
-    // ===== CASE 1: IFRAME PLAYER UTAMA (emturbovid) =====
     document.selectFirst("div.player-embed iframe")
-        ?.getIframeAttr()
+        ?.attr("src")
+        ?.takeIf { it.isNotBlank() }
         ?.let { iframe ->
             loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
         }
 
-
-    // ===== CASE 2: MIRROR SERVER (TurboVID / HydraX / FileLions) =====
-    val mirrorOptions = document.select("select.mirror option[value]:not([disabled])")
+    val mirrorOptions = document.select("select.mirror option[value]")
 
     for (opt in mirrorOptions) {
-        val base64 = opt.attr("value")
-        if (base64.isBlank()) continue
+        val mirrorPageUrl = opt.attr("value").trim()
+        if (mirrorPageUrl.isBlank() || !mirrorPageUrl.startsWith("http")) continue
 
         try {
-            // Fix untuk base64 yang diselipkan whitespace
-            val cleanedBase64 = base64.replace("\\s".toRegex(), "")
-            val decodedHtml = base64Decode(cleanedBase64)
+            val mirrorDoc = app.get(mirrorPageUrl).document
 
-            val iframeTag = Jsoup.parse(decodedHtml).selectFirst("iframe")
-
-            val mirrorUrl = when {
-                iframeTag?.attr("src")?.isNotBlank() == true ->
-                    iframeTag.attr("src")
-                iframeTag?.attr("data-src")?.isNotBlank() == true ->
-                    iframeTag.attr("data-src")
-                else -> null
-            }
-
-            if (!mirrorUrl.isNullOrBlank()) {
-                loadExtractor(httpsify(mirrorUrl), data, subtitleCallback, callback)
-            }
+            mirrorDoc.selectFirst("div.player-embed iframe")
+                ?.attr("src")
+                ?.takeIf { it.isNotBlank() }
+                ?.let { iframe ->
+                    loadExtractor(httpsify(iframe), mirrorPageUrl, subtitleCallback, callback)
+                }
 
         } catch (e: Exception) {
-            println("Mirror decode error: ${e.localizedMessage}")
+            println("Mirror load error: ${e.localizedMessage}")
         }
     }
-
-
-    // ===== CASE 3: DOWNLOAD LINKS (.dlbox) =====
-    val downloadLinks = document.select("div.dlbox li span.e a[href]")
-
-    for (a in downloadLinks) {
-        val url = a.attr("href")?.trim()
-
-        if (!url.isNullOrBlank()) {
-            loadExtractor(httpsify(url), data, subtitleCallback, callback)
-        }
-    }
-
 
     return true
 }
+
 
 
     private fun Element.getImageAttr(): String {
