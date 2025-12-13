@@ -16,6 +16,6 @@ class Myvidplay : DoodLaExtractor() {
 }
 
 class Justplay  : ByseSX() {
-    override var name = "JustPlay"
+    override var name = "Justplay"
     override var mainUrl = "https://justplay.cam"
 }
