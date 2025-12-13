@@ -23,6 +23,10 @@ class Strcloud : StreamTape() {
     override var mainUrl = "https://strcloud.in"
 }
 
+class Streamtape2 : StreamTape() {
+    override var mainUrl = "https://streamtape.to"
+}
+
 class Myvidplay : DoodLaExtractor() {
     override var mainUrl = "https://myvidplay.com"
 }
