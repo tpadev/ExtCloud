@@ -39,7 +39,6 @@ class GdriveWeb : ExtractorApi() {
     ) {
         val doc = app.get(url, referer = referer).document
 
-        // ambil langsung dari <video src>
         doc.select("video[src]").forEach { video ->
             val src = video.attr("src")
             if (src.contains("googlevideo.com")) {
@@ -49,11 +48,10 @@ class GdriveWeb : ExtractorApi() {
                         name,
                         src,
                         INFER_TYPE
-                    ) {
-                        quality = Qualities.HD.value
-                    }
+                    )
                 )
             }
         }
     }
 }
+
