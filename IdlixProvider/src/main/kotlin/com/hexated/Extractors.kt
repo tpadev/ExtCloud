@@ -24,7 +24,10 @@ class Jeniusplay : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val pageRef = referer ?: "$mainUrl/"
+
+        // ⬅️ INI REFERER YANG BENAR
+        val pageRef = referer ?: url
+
         val document = app.get(url, referer = pageRef).document
 
         val hash = url.substringAfter("data=").substringBefore("&")
@@ -36,18 +39,17 @@ class Jeniusplay : ExtractorApi() {
             headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsed<ResponseSource>()
 
-        // pilih securedLink jika ada
-        val m3u8Url = response.securedLink?.ifBlank { null }
+        // fallback aman
+        val m3u8Url = response.securedLink?.takeIf { it.isNotBlank() }
             ?: response.videoSource
 
-        // ⬇️ INI BAGIAN PALING PENTING UNTUK QUALITY
+        // 🔥 REFERER M3U8 = PAGE URL
         M3u8Helper.generateM3u8(
             name,
             m3u8Url,
-            mainUrl
+            pageRef
         ).forEach { stream ->
 
-            // quality DIMASUKKAN KE NAME
             val label = if (stream.quality > 0)
                 "$name ${stream.quality}p"
             else
@@ -63,13 +65,13 @@ class Jeniusplay : ExtractorApi() {
             )
         }
 
-        // ================= SUBTITLE =================
+        // ===== SUBTITLE =====
         document.select("script").forEach { script ->
             val data = script.data()
             if (data.contains("eval(function")) {
-                val unpacked = getAndUnpack(data)
+                val unpack = getAndUnpack(data)
 
-                val subJson = unpacked
+                val subJson = unpack
                     .substringAfter("\"tracks\":[")
                     .substringBefore("],")
 
