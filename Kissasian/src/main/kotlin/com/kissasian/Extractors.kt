@@ -4,6 +4,7 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
+import com.lagradost.cloudstream3.extractors.ByseSX
 
 
 class Strcloud : StreamTape() {
@@ -12,4 +13,9 @@ class Strcloud : StreamTape() {
 
 class Myvidplay : DoodLaExtractor() {
     override var mainUrl = "https://myvidplay.com"
+}
+
+class Justplay  : ByseSX() {
+    override var name = "JustPlay"
+    override var mainUrl = "https://justplay.cam"
 }
