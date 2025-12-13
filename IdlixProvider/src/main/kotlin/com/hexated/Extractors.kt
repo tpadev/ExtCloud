@@ -25,9 +25,7 @@ class Jeniusplay : ExtractorApi() {
         callback: (ExtractorLink) -> Unit
     ) {
 
-        // ⬅️ INI REFERER YANG BENAR
         val pageRef = referer ?: url
-
         val document = app.get(url, referer = pageRef).document
 
         val hash = url.substringAfter("data=").substringBefore("&")
@@ -39,25 +37,30 @@ class Jeniusplay : ExtractorApi() {
             headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsed<ResponseSource>()
 
-        // fallback aman
         val m3u8Url = response.securedLink?.takeIf { it.isNotBlank() }
             ?: response.videoSource
 
-        // 🔥 REFERER M3U8 = PAGE URL
+        // ================== FALLBACK WAJIB ==================
+        // Kirim m3u8 mentah supaya LINK PASTI MUNCUL
+        callback.invoke(
+            newExtractorLink(
+                name = name,
+                source = name,
+                url = m3u8Url,
+                type = ExtractorLinkType.M3U8
+            )
+        )
+
+        // ================== OPTIONAL QUALITY =================
+        // Kalau berhasil parse, quality akan muncul
         M3u8Helper.generateM3u8(
             name,
             m3u8Url,
             pageRef
         ).forEach { stream ->
-
-            val label = if (stream.quality > 0)
-                "$name ${stream.quality}p"
-            else
-                name
-
             callback.invoke(
                 newExtractorLink(
-                    name = label,
+                    name = "$name ${stream.quality}p",
                     source = name,
                     url = stream.url,
                     type = ExtractorLinkType.M3U8
@@ -65,12 +68,11 @@ class Jeniusplay : ExtractorApi() {
             )
         }
 
-        // ===== SUBTITLE =====
+        // ================== SUBTITLE ==================
         document.select("script").forEach { script ->
             val data = script.data()
             if (data.contains("eval(function")) {
                 val unpack = getAndUnpack(data)
-
                 val subJson = unpack
                     .substringAfter("\"tracks\":[")
                     .substringBefore("],")
@@ -88,11 +90,10 @@ class Jeniusplay : ExtractorApi() {
     }
 
     private fun getLanguage(str: String): String {
-        return when {
+        return if (
             str.contains("indonesia", true) ||
-            str.contains("bahasa", true) -> "Indonesian"
-            else -> str
-        }
+            str.contains("bahasa", true)
+        ) "Indonesian" else str
     }
 
     data class ResponseSource(
