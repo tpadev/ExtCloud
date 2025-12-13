@@ -17,7 +17,7 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import org.jsoup.Jsoup
 
-class Oppadrama : MainAPI() {
+class Anichin : MainAPI() {
     override var mainUrl = "https://anichin.watch"
     override var name = "Anichin🍷"
     override val hasMainPage = true
