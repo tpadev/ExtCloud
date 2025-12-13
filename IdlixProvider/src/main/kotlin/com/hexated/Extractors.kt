@@ -8,7 +8,6 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
@@ -24,7 +23,6 @@ class Jeniusplay : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-
         val pageRef = referer ?: url
         val document = app.get(url, referer = pageRef).document
 
@@ -32,16 +30,19 @@ class Jeniusplay : ExtractorApi() {
 
         val response = app.post(
             url = "$mainUrl/player/index.php?data=$hash&do=getVideo",
-            data = mapOf("hash" to hash, "r" to pageRef),
+            data = mapOf(
+                "hash" to hash,
+                "r" to pageRef
+            ),
             referer = pageRef,
             headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsed<ResponseSource>()
 
+        // ⬅️ AMBIL LINK HLS LANGSUNG (PALING STABIL)
         val m3u8Url = response.securedLink?.takeIf { it.isNotBlank() }
             ?: response.videoSource
 
-        // ================== FALLBACK WAJIB ==================
-        // Kirim m3u8 mentah supaya LINK PASTI MUNCUL
+        // ⬅️ KIRIM LANGSUNG KE PLAYER (TANPA PARSE)
         callback.invoke(
             newExtractorLink(
                 name = name,
@@ -51,24 +52,7 @@ class Jeniusplay : ExtractorApi() {
             )
         )
 
-        // ================== OPTIONAL QUALITY =================
-        // Kalau berhasil parse, quality akan muncul
-        M3u8Helper.generateM3u8(
-            name,
-            m3u8Url,
-            pageRef
-        ).forEach { stream ->
-            callback.invoke(
-                newExtractorLink(
-                    name = "$name ${stream.quality}p",
-                    source = name,
-                    url = stream.url,
-                    type = ExtractorLinkType.M3U8
-                )
-            )
-        }
-
-        // ================== SUBTITLE ==================
+        // ===== SUBTITLE (AMAN) =====
         document.select("script").forEach { script ->
             val data = script.data()
             if (data.contains("eval(function")) {
@@ -90,10 +74,11 @@ class Jeniusplay : ExtractorApi() {
     }
 
     private fun getLanguage(str: String): String {
-        return if (
+        return when {
             str.contains("indonesia", true) ||
-            str.contains("bahasa", true)
-        ) "Indonesian" else str
+            str.contains("bahasa", true) -> "Indonesian"
+            else -> str
+        }
     }
 
     data class ResponseSource(
