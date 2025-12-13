@@ -12,5 +12,6 @@ class KissasianPlugin : Plugin() {
         registerExtractorAPI(Strcloud())
         registerExtractorAPI(Myvidplay()) 
         registerExtractorAPI(Justplay())
+        registerExtractorAPI(ByseSX())
     }
 }
