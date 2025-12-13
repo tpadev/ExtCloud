@@ -193,12 +193,17 @@ val episodes = episodeElements
 
     val document = app.get(data).document
 
-    // SERVER AKTIF
+    
     document.selectFirst("div.player-embed iframe")
         ?.attr("src")
         ?.takeIf { it.isNotBlank() }
         ?.let { iframe ->
-            loadExtractor(httpsify(iframe), data, subtitleCallback, callback)
+            loadExtractor(
+                httpsify(iframe),
+                data,
+                subtitleCallback,
+                callback
+            )
         }
 
     val mirrorOptions = document.select("select.mirror option[value]")
@@ -210,36 +215,24 @@ val episodes = episodeElements
         try {
             val mirrorDoc = app.get(mirrorPageUrl).document
 
-            val iframe = mirrorDoc
-                .selectFirst("div.player-embed iframe")
+            mirrorDoc.selectFirst("div.player-embed iframe")
                 ?.attr("src")
+                ?.takeIf { it.isNotBlank() }
+                ?.let { iframe ->
+                    loadExtractor(
+                        httpsify(iframe),
+                        mirrorPageUrl,
+                        subtitleCallback,
+                        callback
+                    )
+                }
 
-            if (!iframe.isNullOrBlank()) {
-                // Server 1 & 3 (iframe statis)
-                loadExtractor(
-                    httpsify(iframe),
-                    mirrorPageUrl,
-                    subtitleCallback,
-                    callback
-                )
-            } else {
-                // 🔥 SERVER 2 FALLBACK (JS-based)
-                loadExtractor(
-                    mirrorPageUrl,
-                    data,
-                    subtitleCallback,
-                    callback
-                )
-            }
-
-        } catch (e: Exception) {
-            println("Mirror load error: ${e.localizedMessage}")
+        } catch (_: Exception) {
         }
     }
 
     return true
 }
-
 
 
     private fun Element.getImageAttr(): String {
