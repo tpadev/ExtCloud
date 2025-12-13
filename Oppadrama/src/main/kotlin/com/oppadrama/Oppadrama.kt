@@ -17,7 +17,7 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import org.jsoup.Jsoup
 
-class Oppadrama : MainAPI() {
+open class Oppadrama : MainAPI() {
     override var mainUrl = "http://45.11.57.168"
     override var name = "Oppadrama🧦"
     override val hasMainPage = true
