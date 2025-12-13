@@ -1,5 +1,6 @@
 package com.hexated
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.newSubtitleFile
@@ -10,7 +11,6 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.newExtractorLink
-import com.fasterxml.jackson.annotation.JsonProperty
 
 class Jeniusplay : ExtractorApi() {
 
@@ -24,7 +24,6 @@ class Jeniusplay : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-
         val pageRef = referer ?: "$mainUrl/"
         val document = app.get(url, referer = pageRef).document
 
@@ -32,30 +31,31 @@ class Jeniusplay : ExtractorApi() {
 
         val response = app.post(
             url = "$mainUrl/player/index.php?data=$hash&do=getVideo",
-            data = mapOf(
-                "hash" to hash,
-                "r" to pageRef
-            ),
+            data = mapOf("hash" to hash, "r" to pageRef),
             referer = pageRef,
             headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsed<ResponseSource>()
 
-        // pakai securedLink kalau ada, fallback ke videoSource
-        val realSource = response.securedLink?.ifBlank { null } ?: response.videoSource
+        // pilih securedLink jika ada
+        val m3u8Url = response.securedLink?.ifBlank { null }
+            ?: response.videoSource
 
-        // referer untuk HLS (M3u8Helper akan set referer di dalam request)
-        val streamReferer = mainUrl
-
-        // generate semua stream kualitas
+        // ⬇️ INI BAGIAN PALING PENTING UNTUK QUALITY
         M3u8Helper.generateM3u8(
             name,
-            realSource,
-            streamReferer
+            m3u8Url,
+            mainUrl
         ).forEach { stream ->
+
+            // quality DIMASUKKAN KE NAME
+            val label = if (stream.quality > 0)
+                "$name ${stream.quality}p"
+            else
+                name
 
             callback.invoke(
                 newExtractorLink(
-                    name = "$name ${stream.quality}p",
+                    name = label,
                     source = name,
                     url = stream.url,
                     type = ExtractorLinkType.M3U8
@@ -63,14 +63,13 @@ class Jeniusplay : ExtractorApi() {
             )
         }
 
-        // ========== SUBTITLE ================
+        // ================= SUBTITLE =================
         document.select("script").forEach { script ->
             val data = script.data()
             if (data.contains("eval(function")) {
+                val unpacked = getAndUnpack(data)
 
-                val unpack = getAndUnpack(data)
-
-                val subJson = unpack
+                val subJson = unpacked
                     .substringAfter("\"tracks\":[")
                     .substringBefore("],")
 
@@ -86,24 +85,20 @@ class Jeniusplay : ExtractorApi() {
         }
     }
 
-
     private fun getLanguage(str: String): String {
         return when {
             str.contains("indonesia", true) ||
-                    str.contains("bahasa", true) -> "Indonesian"
+            str.contains("bahasa", true) -> "Indonesian"
             else -> str
         }
     }
 
-
-    // Response JSON dari jeniusplay/player/index.php
     data class ResponseSource(
         @JsonProperty("hls") val hls: Boolean?,
         @JsonProperty("videoSource") val videoSource: String,
         @JsonProperty("securedLink") val securedLink: String?
     )
 
-    // Subtitle JSON
     data class Tracks(
         @JsonProperty("kind") val kind: String?,
         @JsonProperty("file") val file: String,
