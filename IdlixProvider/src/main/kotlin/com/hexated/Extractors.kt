@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
-open class IdlixPlayer : ExtractorApi() {
+class IdlixPlayer : ExtractorApi() {
 
     override val name = "Jeniusplay"
     override val mainUrl = "https://jeniusplay.com"
@@ -22,30 +22,45 @@ open class IdlixPlayer : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        // 🔑 referer yang BENAR
+        // 🔑 REFERER HARUS ROOT
         val pageRef = "$mainUrl/"
 
-        val document = app.get(url, referer = pageRef).document
+        // Load embed page (buat subtitle & cookie awal)
+        val document = app.get(
+            url = url,
+            referer = pageRef,
+            headers = mapOf(
+                "User-Agent" to UA
+            )
+        ).document
 
-        val hash = url.substringAfter("data=").substringBefore("&")
+        // Ambil video id (aman untuk /video/xxxx atau data=xxxx)
+        val videoId = when {
+            url.contains("/video/") -> url.substringAfterLast("/")
+            url.contains("data=") -> url.substringAfter("data=").substringBefore("&")
+            else -> return
+        }
 
+        // 🔑 REQUEST TOKEN BARU
         val response = app.post(
-            url = "$mainUrl/player/index.php?data=$hash&do=getVideo",
+            url = "$mainUrl/player/index.php?do=getVideo&data=$videoId",
             data = mapOf(
-                "hash" to hash,
+                "hash" to videoId,
                 "r" to pageRef
             ),
             referer = pageRef,
             headers = mapOf(
-                "X-Requested-With" to "XMLHttpRequest"
+                "X-Requested-With" to "XMLHttpRequest",
+                "Origin" to mainUrl,
+                "User-Agent" to UA,
+                "Accept" to "*/*"
             )
         ).parsed<ResponseSource>()
 
-        // ✅ PAKAI securedLink DULU
-        val m3u8Url = response.securedLink?.takeIf { it.isNotBlank() }
-            ?: response.videoSource
+        // ❗ WAJIB securedLink
+        val m3u8Url = response.securedLink ?: return
 
-        // ✅ KIRIM 1 LINK AUTO SAJA (PALING STABIL)
+        // 🎯 KIRIM KE PLAYER DENGAN HEADER BROWSER
         callback.invoke(
             newExtractorLink(
                 name,
@@ -53,14 +68,22 @@ open class IdlixPlayer : ExtractorApi() {
                 m3u8Url,
                 ExtractorLinkType.M3U8
             ) {
-                
                 this.referer = pageRef
+                this.headers = mapOf(
+                    "Origin" to mainUrl,
+                    "Referer" to pageRef,
+                    "User-Agent" to UA,
+                    "Accept" to "*/*",
+                    "Connection" to "keep-alive"
+                )
             }
         )
 
+        // ===== SUBTITLE =====
         document.select("script").forEach { script ->
             if (script.data().contains("eval(function")) {
-                val subData = getAndUnpack(script.data())
+                val unpack = getAndUnpack(script.data())
+                val subData = unpack
                     .substringAfter("\"tracks\":[")
                     .substringBefore("],")
 
@@ -77,14 +100,18 @@ open class IdlixPlayer : ExtractorApi() {
     }
 
     private fun getLanguage(str: String): String =
-        if (
-            str.contains("indonesia", true) ||
-            str.contains("bahasa", true)
-        ) "Indonesian" else str
+        if (str.contains("indonesia", true) || str.contains("bahasa", true))
+            "Indonesian" else str
+
+    companion object {
+        private const val UA =
+            "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    }
 
     data class ResponseSource(
-        @JsonProperty("hls") val hls: Boolean,
-        @JsonProperty("videoSource") val videoSource: String,
+        @JsonProperty("hls") val hls: Boolean?,
+        @JsonProperty("videoSource") val videoSource: String?,
         @JsonProperty("securedLink") val securedLink: String?
     )
 
