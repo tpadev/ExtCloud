@@ -127,8 +127,8 @@ class Dm21 : VidStack() {
     override var requiresReferer = true
 }
 
-class 4mplayer : VidStack() {
-    override var name = "4mplayer"
+class 4meplayer : VidStack() {
+    override var name = "4meplayer"
     override var mainUrl = "https://video.4meplayer.com"
     override var requiresReferer = true
 }
