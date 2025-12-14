@@ -14,7 +14,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import java.net.URI
 import org.jsoup.nodes.Element
 
-class DutaMovie : MainAPI() {
+open class DutaMovie : MainAPI() {
 
     override var mainUrl = "https://pilots-music.com"
     private var directUrl: String? = null
