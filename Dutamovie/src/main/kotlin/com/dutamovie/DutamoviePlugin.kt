@@ -8,8 +8,8 @@ import com.lagradost.cloudstream3.plugins.Plugin
 class DutaMoviePlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(DutaMovie())
-               registerMainAPI(Pusatmovie())
- registerExtractorAPI(Dingtezuni())
+        registerMainAPI(PusatMovie())
+        registerExtractorAPI(Dingtezuni())
         registerExtractorAPI(Bingezove())
         registerExtractorAPI(Mivalyo())
         registerExtractorAPI(Hglink())
