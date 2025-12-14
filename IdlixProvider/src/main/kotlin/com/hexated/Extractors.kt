@@ -26,100 +26,76 @@ class IdlixPlayer : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+        // Referer paling aman untuk CDN Jeniusplay
         val pageRef = "$mainUrl/"
 
+        // Ambil halaman embed (cookie awal + subtitle)
         val document = app.get(
-            url,
+            url = url,
             referer = pageRef,
-            headers = mapOf("User-Agent" to UA)
+            headers = mapOf(
+                "User-Agent" to UA,
+                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language" to "en-US,en;q=0.9",
+                "Connection" to "keep-alive"
+            )
         ).document
 
+        // Ambil video ID (support /video/xxxx dan data=xxxx)
         val videoId = when {
             url.contains("/video/") -> url.substringAfterLast("/")
             url.contains("data=") -> url.substringAfter("data=").substringBefore("&")
-            else -> return
-        }
+            else -> url.substringAfterLast("/")
+        }.trim()
 
+        if (videoId.isBlank()) return
+
+        // Request token HLS (INI SUMBER TOKEN)
         val response = app.post(
             url = "$mainUrl/player/index.php?do=getVideo&data=$videoId",
-            data = mapOf("hash" to videoId, "r" to pageRef),
+            data = mapOf(
+                "hash" to videoId,
+                "r" to pageRef
+            ),
             referer = pageRef,
             headers = mapOf(
                 "X-Requested-With" to "XMLHttpRequest",
                 "Origin" to mainUrl,
-                "User-Agent" to UA
+                "User-Agent" to UA,
+                "Accept" to "*/*",
+                "Connection" to "keep-alive"
             )
         ).parsed<ResponseSource>()
 
-        val masterM3u8 = response.securedLink ?: return
+        // WAJIB pakai securedLink (lebih stabil dari videoSource)
+        val m3u8Url = response.securedLink?.takeIf { it.isNotBlank() } ?: return
 
-        val headers = mapOf(
-            "Origin" to mainUrl,
-            "Referer" to pageRef,
-            "User-Agent" to UA
-        )
-
-        // ================= AUTO =================
+        // Kirim SATU link AUTO saja (PALING STABIL)
         callback.invoke(
             newExtractorLink(
                 name = "Jenius AUTO",
                 source = name,
-                url = masterM3u8,
+                url = m3u8Url,
                 type = ExtractorLinkType.M3U8
             ) {
                 this.referer = pageRef
-                this.headers = headers
+                this.headers = mapOf(
+                    "Origin" to mainUrl,
+                    "Referer" to pageRef,
+                    "User-Agent" to UA,
+                    "Accept" to "*/*",
+                    "Accept-Language" to "en-US,en;q=0.9",
+                    "Connection" to "keep-alive"
+                )
             }
         )
 
-        // ================= PARSE VARIANT =================
-        val playlist = app.get(masterM3u8, headers = headers).text
-        val lines = playlist.lines()
-
-        var bandwidth: Int? = null
-        val added = mutableSetOf<String>()
-
-        for (line in lines) {
-            if (line.startsWith("#EXT-X-STREAM-INF")) {
-                bandwidth = Regex("BANDWIDTH=(\\d+)")
-                    .find(line)?.groupValues?.get(1)?.toIntOrNull()
-            } else if (
-                bandwidth != null &&
-                line.isNotBlank() &&
-                !line.startsWith("#")
-            ) {
-                val quality = when {
-                    bandwidth!! >= 2_500_000 -> "720p"
-                    bandwidth!! >= 1_200_000 -> "480p"
-                    else -> null
-                }
-
-                if (quality != null && added.add(quality)) {
-                    val variantUrl =
-                        if (line.startsWith("http")) line
-                        else masterM3u8.substringBeforeLast("/") + "/" + line
-
-                    callback.invoke(
-                        newExtractorLink(
-                            name = "Jenius $quality",
-                            source = name,
-                            url = variantUrl,
-                            type = ExtractorLinkType.M3U8
-                        ) {
-                            this.referer = pageRef
-                            this.headers = headers
-                        }
-                    )
-                }
-                bandwidth = null
-            }
-        }
-
         // ================= SUBTITLE =================
         document.select("script").forEach { script ->
-            if (script.data().contains("eval(function")) {
-                val unpack = getAndUnpack(script.data())
-                val subData = unpack
+            val data = script.data()
+            if (data.contains("eval(function")) {
+                val unpacked = getAndUnpack(data)
+                val subData = unpacked
                     .substringAfter("\"tracks\":[")
                     .substringBefore("],")
 
@@ -135,10 +111,14 @@ class IdlixPlayer : ExtractorApi() {
         }
     }
 
-    private fun getLanguage(str: String): String =
-        if (str.contains("indonesia", true) || str.contains("bahasa", true))
-            "Indonesian" else str
+    private fun getLanguage(str: String): String {
+        return when {
+            str.contains("indonesia", true) || str.contains("bahasa", true) -> "Indonesian"
+            else -> str
+        }
+    }
 
+    // ================= RESPONSE MODEL =================
     data class ResponseSource(
         @JsonProperty("hls") val hls: Boolean?,
         @JsonProperty("videoSource") val videoSource: String?,
