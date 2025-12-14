@@ -16,7 +16,7 @@ class DutaMoviePlugin : Plugin() {
         registerExtractorAPI(Ryderjet())
         registerExtractorAPI(Ghbrisk())
         registerExtractorAPI(Dhcplay())
-        registerExtractorAPI(Gofile())
+        registerExtractorAPI(Pm21p2p())
         registerExtractorAPI(Movearnpre())
         registerExtractorAPI(Streamcasthub())
         registerExtractorAPI(Dm21upns())
