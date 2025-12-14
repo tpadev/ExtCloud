@@ -1,0 +1,7 @@
+package com.dutamovie
+
+
+class Pusatmovie : Dutamovie() {
+    override var mainUrl = "https://marcuspryor.com"
+    override var name = "Pusatmovie🥳"
+}
