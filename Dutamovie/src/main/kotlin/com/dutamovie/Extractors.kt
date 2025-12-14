@@ -127,6 +127,12 @@ class Dm21 : VidStack() {
     override var requiresReferer = true
 }
 
+class 4mplayer : VidStack() {
+    override var name = "4mplayer"
+    override var mainUrl = "https://video.4meplayer.com"
+    override var requiresReferer = true
+}
+
 open class Dintezuvio : ExtractorApi() {
     override val name = "Earnvids"
     override val mainUrl = "https://dintezuvio.com"

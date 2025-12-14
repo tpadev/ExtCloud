@@ -22,5 +22,6 @@ class DutaMoviePlugin : Plugin() {
         registerExtractorAPI(Dm21upns())
         registerExtractorAPI(Dm21())
         registerExtractorAPI(Dintezuvio())
+        registerExtractorAPI(4mplayer())
     }
 }
