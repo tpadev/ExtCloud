@@ -8,7 +8,6 @@ import com.lagradost.cloudstream3.plugins.Plugin
 class DutaMoviePlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(DutaMovie())
-        registerMainAPI(PusatMovie())
         registerExtractorAPI(Dingtezuni())
         registerExtractorAPI(Bingezove())
         registerExtractorAPI(Mivalyo())
@@ -16,12 +15,10 @@ class DutaMoviePlugin : Plugin() {
         registerExtractorAPI(Ryderjet())
         registerExtractorAPI(Ghbrisk())
         registerExtractorAPI(Dhcplay())
-        registerExtractorAPI(Pm21p2p())
         registerExtractorAPI(Movearnpre())
         registerExtractorAPI(Streamcasthub())
         registerExtractorAPI(Dm21upns())
         registerExtractorAPI(Dm21())
         registerExtractorAPI(Dintezuvio())
-        registerExtractorAPI(Meplayer())
     }
 }

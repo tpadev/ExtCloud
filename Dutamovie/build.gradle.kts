@@ -1,7 +1,7 @@
 version = 11
 
 cloudstream {
-    description = "Include Pusatmovie"
+    description = "DutaMovie"
     language = "id"
     authors = listOf("Duro92")
 
