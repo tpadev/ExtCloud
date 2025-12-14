@@ -26,7 +26,6 @@ class IdlixPlayer : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-
         val pageRef = "$mainUrl/"
 
         val document = app.get(
@@ -57,11 +56,10 @@ class IdlixPlayer : ExtractorApi() {
         val headers = mapOf(
             "Origin" to mainUrl,
             "Referer" to pageRef,
-            "User-Agent" to UA,
-            "Accept" to "*/*"
+            "User-Agent" to UA
         )
 
-        // ===== AUTO SOURCE =====
+        // ================= AUTO =================
         callback.invoke(
             newExtractorLink(
                 name = "Jenius AUTO",
@@ -74,48 +72,50 @@ class IdlixPlayer : ExtractorApi() {
             }
         )
 
-        // ===== PARSE VARIANT → JENIUS 720 / 480 =====
-        try {
-            val text = app.get(masterM3u8, headers = headers).text
-            val lines = text.lines()
+        // ================= PARSE VARIANT =================
+        val playlist = app.get(masterM3u8, headers = headers).text
+        val lines = playlist.lines()
 
-            var height: Int? = null
-            val added = mutableSetOf<Int>()
+        var bandwidth: Int? = null
+        val added = mutableSetOf<String>()
 
-            for (line in lines) {
-                if (line.startsWith("#EXT-X-STREAM-INF")) {
-                    height = Regex("RESOLUTION=\\d+x(\\d+)")
-                        .find(line)?.groupValues?.get(1)?.toIntOrNull()
-                } else if (
-                    height != null &&
-                    !line.startsWith("#") &&
-                    line.isNotBlank() &&
-                    height in listOf(720, 480)
-                ) {
-                    if (added.add(height!!)) {
-                        val variantUrl =
-                            if (line.startsWith("http")) line
-                            else masterM3u8.substringBeforeLast("/") + "/" + line
-
-                        callback.invoke(
-                            newExtractorLink(
-                                name = "Jenius ${height}p",
-                                source = name,
-                                url = variantUrl,
-                                type = ExtractorLinkType.M3U8
-                            ) {
-                                this.referer = pageRef
-                                this.headers = headers
-                            }
-                        )
-                    }
-                    height = null
+        for (line in lines) {
+            if (line.startsWith("#EXT-X-STREAM-INF")) {
+                bandwidth = Regex("BANDWIDTH=(\\d+)")
+                    .find(line)?.groupValues?.get(1)?.toIntOrNull()
+            } else if (
+                bandwidth != null &&
+                line.isNotBlank() &&
+                !line.startsWith("#")
+            ) {
+                val quality = when {
+                    bandwidth!! >= 2_500_000 -> "720p"
+                    bandwidth!! >= 1_200_000 -> "480p"
+                    else -> null
                 }
+
+                if (quality != null && added.add(quality)) {
+                    val variantUrl =
+                        if (line.startsWith("http")) line
+                        else masterM3u8.substringBeforeLast("/") + "/" + line
+
+                    callback.invoke(
+                        newExtractorLink(
+                            name = "Jenius $quality",
+                            source = name,
+                            url = variantUrl,
+                            type = ExtractorLinkType.M3U8
+                        ) {
+                            this.referer = pageRef
+                            this.headers = headers
+                        }
+                    )
+                }
+                bandwidth = null
             }
-        } catch (_: Throwable) {
         }
 
-        // ===== SUBTITLE =====
+        // ================= SUBTITLE =================
         document.select("script").forEach { script ->
             if (script.data().contains("eval(function")) {
                 val unpack = getAndUnpack(script.data())
