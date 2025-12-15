@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64DecodeArray
 import com.lagradost.cloudstream3.extractors.VidhideExtractor
 import com.lagradost.cloudstream3.utils.ExtractorApi
+import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
@@ -38,7 +39,7 @@ class VideyV2 : ExtractorApi() {
         url: String,
         referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (newExtractorLink) -> Unit
+        callback: (ExtractorLink) -> Unit
     ) {
         val sid = url.substringAfterLast("/")
         Log.d("Phisher", "sid=$sid")
@@ -79,10 +80,12 @@ class VideyV2 : ExtractorApi() {
                 this.name,
                 this.name,
                 decrypted,
-                url,
-                Qualities.P1080.value,
-                type = if (decrypted.endsWith(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8,
+                if (decrypted.endsWith(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
             )
+            {
+                this.referer = url
+                this.quality = Qualities.P1080.value
+            }
         )
     }
 }
