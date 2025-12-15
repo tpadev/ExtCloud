@@ -11,7 +11,7 @@ import org.jsoup.nodes.Document
 
 
 class OploverzProvider : MainAPI() {
-    override var mainUrl = "https://anime.oploverz.ac"
+    override var mainUrl = "https://anime.oploverz.ac🍓"
     private val backAPI = "https://backapi.oploverz.ac"
     override var name = "Oploverz"
     override val hasMainPage = true
