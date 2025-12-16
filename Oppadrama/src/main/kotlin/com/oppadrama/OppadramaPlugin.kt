@@ -11,5 +11,6 @@ class OppadramaPlugin : Plugin() {
         registerMainAPI(Oppadrama())
         registerExtractorAPI(Smoothpre())
         registerExtractorAPI(Emturbovid())
+        registerExtractorAPI(BuzzServer())
     }
 }

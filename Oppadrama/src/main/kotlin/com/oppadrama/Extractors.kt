@@ -5,6 +5,8 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.extractors.VidHidePro
 import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.SubtitleFile
 
 
 
