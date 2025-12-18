@@ -35,8 +35,10 @@ class Kissasian : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
+        "series/?order=latest" to "Baru ditambahkan",
         "series/?status=&type=&order=update" to "Update Terbaru",
-        "series/?type=Movie&order=title" to "Movie A-Z",
+        "series/?status=&type=Movie&order=latest" to "Movie Terbaru",
+        "series/?status=&type=&order=popular" to "Terpopuler",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
