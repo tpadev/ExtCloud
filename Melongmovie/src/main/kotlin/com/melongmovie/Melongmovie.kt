@@ -27,20 +27,28 @@ class Melongmovie : MainAPI() {
 
     override val mainPage = mainPageOf(
     "$mainUrl/latest-movies/page/%d/" to "Movie Terbaru",
-    "$mainUrl/advanced-search/page/%d/?order=latest&type%5b%5d=series" to "Series Terbaru",
-    "$mainUrl/advanced-search/page/%d/?order=popular&type%5b%5d=series" to "Series Terpopuler",
-    "$mainUrl/advanced-search/page/%d/?order=popular&type%5b%5d=post" to "Movie Terpopuler",
+    "$mainUrl/advanced-search/page/%d/?order=popular&type%%5B%%5D=post" to "Movie Terpopuler"
 )
 
 
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val url = request.data.format(page)
+ override suspend fun getMainPage(
+    page: Int,
+    request: MainPageRequest
+): HomePageResponse {
+
+    val safePage = if (page <= 0) 1 else page
+    val url = request.data.format(safePage)
+
     val document = app.get(url).document
     val items = document.select("div.los article.box")
         .mapNotNull { it.toSearchResult() }
-        .filter { !it.url.contains("/series/") }
-    return newHomePageResponse(HomePageList(request.name, items), hasNext = items.isNotEmpty())
+        .filterNot { it.url.contains("/series/") }
+
+    return newHomePageResponse(
+        HomePageList(request.name, items),
+        hasNext = items.isNotEmpty()
+    )
 }
 
 
