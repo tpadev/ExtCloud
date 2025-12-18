@@ -8,7 +8,7 @@ Berikut adalah daftar ekstensi yang tersedia di repositori ExtCloud:
 
 | Nama Ekstensi | Status                            |
 | ------------- | --------------------------------- |
-| AniZone       | OK                                |
+| Animasu       | OK                                |
 | Anichin       | OK                                |
 | Animesail     | OK                                |
 | DonghuaStream | OK                                |
