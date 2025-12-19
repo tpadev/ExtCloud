@@ -46,17 +46,32 @@ class Funmovieslix : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/${request.data}/page/$page").document
-        val home = document.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
-        return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
-                isHorizontalImages = false
-            ),
-            hasNext = true
-        )
+    val url = if (request.data == "latest-updates") {
+        "$mainUrl/latest-updates/${page.takeIf { it > 1 }?.let { "page/$it" } ?: ""}"
+    } else {
+        "$mainUrl/${request.data}/page/$page"
     }
+
+    val document = app.get(url).document
+
+    val home = if (request.data == "latest-updates") {
+        
+        document.select("a[href*=\"/watch/\"]")
+            .mapNotNull { it.toSearchResult() }
+    } else {
+        document.select("#gmr-main-load div.movie-card")
+            .mapNotNull { it.toSearchResult() }
+    }
+
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = home,
+            isHorizontalImages = false
+        ),
+        hasNext = document.select("a:contains(»)").isNotEmpty()
+    )
+}
 
     private fun Element.toSearchResult(): SearchResponse {
         val title = this.select("h3").text()
