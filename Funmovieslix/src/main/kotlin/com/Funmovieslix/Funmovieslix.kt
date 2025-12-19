@@ -57,10 +57,12 @@ class Funmovieslix : MainAPI() {
     }
 
     val home = if (request.data == "latest-updates") {
-        document.select("a[href*=\"/movie/\"]").mapNotNull { it.toSearchResult() }
-    } else {
-        document.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
-    }
+    document.select("ul.MovieList li a")
+        .mapNotNull { it.toSearchResult() }
+} else {
+    document.select("#gmr-main-load div.movie-card")
+        .mapNotNull { it.toSearchResult() }
+}
 
     return newHomePageResponse(
         HomePageList(request.name, home, false),
