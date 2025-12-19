@@ -35,7 +35,11 @@ class Anichin : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
+        "donghua/?status=&type=&order=latest" to "Baru ditambahkan",
         "donghua/?status=&type=&order=update" to "Update Terbaru",
+        "donghua/?status=&type=movie&order=update" to "Movie Terbaru",
+        "donghua/?status=&type=&order=popular" to "Terpopuler",
+        "donghua/?sub=&order=rating" to "Rating Terbaik",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
