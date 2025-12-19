@@ -68,30 +68,48 @@ class Funmovieslix : MainAPI() {
     )
 }
 
-    private fun Element.toSearchResult(): SearchResponse {
-        val title = this.select("h3").text()
-        val href = fixUrl(this.select("a").attr("href"))
-        val posterUrl = this.select("a img").firstOrNull()?.let { img ->
-            val srcSet = img.attr("srcset")
-            val bestUrl = if (srcSet.isNotBlank()) {
-                srcSet.split(",")
-                    .map { it.trim() }
-                    .maxByOrNull { it.substringAfterLast(" ").removeSuffix("w").toIntOrNull() ?: 0 }
-                    ?.substringBefore(" ")
-            } else {
-                img.attr("src")
-            }
+    private fun Element.toSearchResult(): SearchResponse? {
 
-            fixUrlNull(bestUrl?.replace(Regex("-\\d+x\\d+"), ""))
+    // Kalau this adalah <a> (latest-updates)
+    val anchor = if (tagName() == "a") this else selectFirst("a")
+        ?: return null
+
+    val href = fixUrl(anchor.attr("href"))
+    if (href.isBlank()) return null
+
+    // Title fallback berlapis
+    val title =
+        selectFirst("h3")?.text()
+            ?: anchor.selectFirst("h2")?.text()
+            ?: anchor.selectFirst("img")?.attr("alt")
+            ?: anchor.text()
+            ?: return null
+
+    val img = anchor.selectFirst("img")
+
+    val posterUrl = img?.let {
+        val srcSet = it.attr("srcset")
+        val bestUrl = if (srcSet.isNotBlank()) {
+            srcSet.split(",")
+                .map { s -> s.trim() }
+                .maxByOrNull {
+                    it.substringAfterLast(" ")
+                        .removeSuffix("w")
+                        .toIntOrNull() ?: 0
+                }
+                ?.substringBefore(" ")
+        } else {
+            it.attr("src")
         }
-        val searchQuality = getSearchQuality(this)
-            val score=this.select("div.rating-stars").text().substringAfter("(").substringBefore(")")
-        return newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = posterUrl
-            this.quality = searchQuality
-            // Score helper not available in this environment; omit score assignment
-        }
+
+        fixUrlNull(bestUrl?.replace(Regex("-\\d+x\\d+"), ""))
     }
+
+    return newMovieSearchResponse(title.trim(), href, TvType.Movie) {
+        this.posterUrl = posterUrl
+        this.quality = getSearchQuality(this@toSearchResult)
+    }
+}
 
     override suspend fun search(query: String): List<SearchResponse> {
             val document = app.get("${mainUrl}?s=$query").document
