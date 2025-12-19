@@ -34,6 +34,7 @@ class Funmovieslix : MainAPI() {
     override val supportedTypes = setOf(TvType.Movie, TvType.Anime, TvType.Cartoon)
 
     override val mainPage = mainPageOf(
+        "latest-updates" to "Update Terbaru",
         "category/action" to "Action Category",
         "category/science-fiction" to "Sci-Fi Category",
         "category/drama" to "Drama Category",
