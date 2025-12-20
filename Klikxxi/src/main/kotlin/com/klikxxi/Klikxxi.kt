@@ -27,7 +27,7 @@ class Klikxxi : MainAPI() {
     /** Main page: Film Terbaru & Series Terbaru */
     override val mainPage = mainPageOf(
         "?s=&search=advanced&post_type=movie&index=&orderby=&genre=&movieyear=&country=&quality=&paged=%d" to "Film Terbaru",
-        "category/tv/page/%d/" to "Series Terbaru",
+        "tv/page/%d/" to "Series Terbaru",
         "category/western-series/page/%d/" to "Western Series",
         "category/india-series/page/%d/" to "Indian Series",  
     )
