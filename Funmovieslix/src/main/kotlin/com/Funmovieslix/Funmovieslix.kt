@@ -57,7 +57,7 @@ class Funmovieslix : MainAPI() {
     }
 
     val home = if (request.data == "latest-updates") {
-    document.select("ul.MovieList li a")
+    document.select("#latest-wrap div.latest-card")
         .mapNotNull { it.toSearchResult() }
 } else {
     document.select("#gmr-main-load div.movie-card")
@@ -72,22 +72,16 @@ class Funmovieslix : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
 
-    // Kalau this adalah <a> (latest-updates)
-    val anchor = if (tagName() == "a") this else selectFirst("a")
+    val anchor = selectFirst(".overlay a") ?: selectFirst("a")
         ?: return null
 
     val href = fixUrl(anchor.attr("href"))
     if (href.isBlank()) return null
 
-    // Title fallback berlapis
-    val title =
-        selectFirst("h3")?.text()
-            ?: anchor.selectFirst("h2")?.text()
-            ?: anchor.selectFirst("img")?.attr("alt")
-            ?: anchor.text()
-            ?: return null
+    val title = anchor.selectFirst("h3")?.text()
+        ?: return null
 
-    val img = anchor.selectFirst("img")
+    val img = selectFirst("img")
 
     val posterUrl = img?.let {
         val srcSet = it.attr("srcset")
@@ -103,15 +97,15 @@ class Funmovieslix : MainAPI() {
         } else {
             it.attr("src")
         }
-
-        fixUrlNull(bestUrl?.replace(Regex("-\\d+x\\d+"), ""))
+        fixUrlNull(bestUrl)
     }
 
-    return newMovieSearchResponse(title.trim(), href, TvType.Movie) {
+    return newMovieSearchResponse(title, href, TvType.Movie) {
         this.posterUrl = posterUrl
         this.quality = getSearchQuality(this@toSearchResult)
     }
 }
+
 
     override suspend fun search(query: String): List<SearchResponse> {
             val document = app.get("${mainUrl}?s=$query").document
