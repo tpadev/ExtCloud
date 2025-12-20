@@ -35,6 +35,7 @@ class Funmovieslix : MainAPI() {
 
     override val mainPage = mainPageOf(
         "latest-updates" to "Update Terbaru",
+        "best-rating" to "Rating Terbaik",
         "category/action" to "Action Category",
         "category/science-fiction" to "Sci-Fi Category",
         "category/drama" to "Drama Category",
