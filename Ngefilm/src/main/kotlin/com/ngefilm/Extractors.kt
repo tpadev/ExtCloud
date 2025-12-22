@@ -24,6 +24,11 @@ class Movearnpre : Dingtezuni() {
     override var mainUrl = "https://movearnpre.com"
 }
 
+class Vidhidepre : Dingtezuni() {
+    override var name = "Vidhidepre"
+    override var mainUrl = "https://vidhidepre.com"
+}
+
 class Dhtpre : Dingtezuni() {
     override var name = "Earnvids"
     override var mainUrl = "https://dhtpre.com"
