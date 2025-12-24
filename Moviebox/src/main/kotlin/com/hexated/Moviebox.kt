@@ -12,8 +12,8 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class Moviebox : MainAPI() {
-    override var mainUrl = "https://moviebox.ph"
-    private val apiUrl = "https://fmoviesunblocked.net"
+    override var mainUrl = "https://netnaija.film"
+    private val apiUrl = "https://netnaija.film"
     override val instantLinkLoading = true
     override var name = "Moviebox🎀"
     override val hasMainPage = true
