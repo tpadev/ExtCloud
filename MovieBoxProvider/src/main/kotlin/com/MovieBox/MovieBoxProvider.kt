@@ -133,13 +133,13 @@ class MovieBoxProvider : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        "1|1" to "Trending Movies",
-        "1|2" to "Trending Series",
+        "1|1;sort=Hottest" to "Trending Movies",
+        "1|2;sort=Latest" to "Trending Series",
         "1|1006" to "Trending Anime",
-        "1|1;country=Indonesia" to "Indonesian (Movies)",
-        "1|2;country=Indonesia" to "Indonesian (Series)",
-        "1|1;classify=Id dub;country=United States" to "USA (Movies)",
-        "1|2;classify=Id dub;country=United States" to "USA (Series)",
+        "1|1;country=Indonesia;sort=Latest" to "Indonesian (Movies)",
+        "1|2;country=Indonesia;sort=Latest" to "Indonesian (Series)",
+        "1|1;classify=Indonesian dub;country=United States" to "USA (Movies)",
+        "1|2;classify=Indonesian dub;country=United States" to "USA (Series)",
         "1|1;country=Japan" to "Japan (Movies)",
         "1|2;country=Japan" to "Japan (Series)",
         "1|1;country=China" to "China (Movies)",
@@ -148,17 +148,6 @@ class MovieBoxProvider : MainAPI() {
         "1|2;country=Philippines" to "Philippines (Series)",
         "1|1;country=Thailand" to "Thailand(Movies)",
         "1|2;country=Thailand" to "Thailand(Series)",
-        "1|1;country=Nigeria" to "Nollywood (Movies)",
-        "1|2;country=Nigeria" to "Nollywood (Series)",
-        "1|1;country=Korea" to "South Korean (Movies)",
-        "1|2;country=Korea" to "South Korean (Series)",
-        "1|1;classify=Id dub;genre=Action" to "Action (Movies)",
-        "1|1;classify=Id dub;genre=Crime" to "Crime (Movies)",
-        "1|1;classify=Id dub;genre=Comedy" to "Comedy (Movies)",
-        "1|1;classify=Id dub;genre=Romance" to "Romance (Movies)",
-        "1|2;classify=Id dub;genre=Crime" to "Crime (Series)",
-        "1|2;classify=Id dub;genre=Comedy" to "Comedy (Series)",
-        "1|2;classify=Id dub;genre=Romance" to "Romance (Series)",
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
