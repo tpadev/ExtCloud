@@ -149,7 +149,7 @@ class MovieBoxProvider : MainAPI() {
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val perPage = 15
+        val perPage = 100
         val url = "$mainUrl/wefeed-mobile-bff/subject-api/list"
         val data1 = request.data
 
