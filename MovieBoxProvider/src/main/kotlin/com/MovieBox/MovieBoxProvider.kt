@@ -13,6 +13,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 class Moviebox : MainAPI() {
     override var mainUrl = "https://moviebox.ph"
     private val mainAPIUrl = "https://h5-api.aoneroom.com"
+    private val secondAPIUrl = "https://filmboom.top"
     override val instantLinkLoading = true
     override var name = "Moviebox"
     override val hasMainPage = true
@@ -37,18 +38,6 @@ class Moviebox : MainAPI() {
         "5848753831881965888" to "Indonesian Horror Stories",
         "1164329479448281992" to "Thai-Drama",
         "7132534597631837112" to "Animated Film",
-        "1,ForYou" to "Movie ForYou",
-        "1,Hottest" to "Movie Hottest",
-        "1,Latest" to "Movie Latest",
-        "1,Rating" to "Movie Rating",
-        "2,ForYou" to "TVShow ForYou",
-        "2,Hottest" to "TVShow Hottest",
-        "2,Latest" to "TVShow Latest",
-        "2,Rating" to "TVShow Rating",
-        "1006,ForYou" to "Animation ForYou",
-        "1006,Hottest" to "Animation Hottest",
-        "1006,Latest" to "Animation Latest",
-        "1006,Rating" to "Animation Rating",
     )
 
     override suspend fun getMainPage(
