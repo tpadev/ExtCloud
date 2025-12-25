@@ -157,7 +157,7 @@ class MovieBoxProvider : MainAPI() {
         )
     }
 
-    val perPage = 100
+    val perPage = 15
     val url = "$mainUrl/wefeed-mobile-bff/subject-api/list"
     val data1 = request.data
 
@@ -227,9 +227,9 @@ class MovieBoxProvider : MainAPI() {
 
     if (data.isEmpty()) {
         return newHomePageResponse(
-            listOf(HomePageList(request.name, emptyList())),
-            hasNextPage = false
-        )
+    listOf(HomePageList(request.name, emptyList())),
+    hasNext = false
+       )
     }
 
     return newHomePageResponse(
