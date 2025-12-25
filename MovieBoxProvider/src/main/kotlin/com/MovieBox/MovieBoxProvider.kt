@@ -286,7 +286,7 @@ class MovieBoxProvider : MainAPI() {
         @JsonProperty("detailPath") val detailPath: String? = null,
     ) {
 
-        fun toSearchResponse(provider: Moviebox): SearchResponse {
+        fun toSearchResponse(provider: MovieBox): SearchResponse {
             return provider.newMovieSearchResponse(
                 title ?: "",
                 subjectId ?: "",
