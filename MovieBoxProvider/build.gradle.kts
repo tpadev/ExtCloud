@@ -1,11 +1,5 @@
 // use an integer for version numbers
-version = 4
-
-android {
-    buildFeatures {
-        buildConfig = true
-    }
-}
+version = 5
 
 cloudstream {
     language = "id"
@@ -29,6 +23,4 @@ cloudstream {
 
     iconUrl = "https://github.com/NivinCNC/CNCVerse-Cloud-Stream-Extension/raw/refs/heads/master/MovieBoxProvider/icon.png"
 
-    requiresResources = true
-    isCrossPlatform = false
 }
