@@ -153,7 +153,7 @@ class MovieBoxProvider : MainAPI() {
     if (page > 5) {
         return newHomePageResponse(
             listOf(HomePageList(request.name, emptyList())),
-            hasNextPage = false
+            hasNext = false
         )
     }
 
@@ -227,14 +227,14 @@ class MovieBoxProvider : MainAPI() {
 
     if (data.isEmpty()) {
         return newHomePageResponse(
-    listOf(HomePageList(request.name, emptyList())),
-    hasNext = false
-       )
+            listOf(HomePageList(request.name, emptyList())),
+            hasNext = false
+        )
     }
 
     return newHomePageResponse(
         listOf(HomePageList(request.name, data)),
-        hasNextPage = true
+        hasNext = true
     )
 }
 
