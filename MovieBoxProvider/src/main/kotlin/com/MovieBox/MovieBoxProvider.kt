@@ -48,9 +48,9 @@ import kotlin.math.max
 
 class MovieBoxProvider : MainAPI() {
     override var mainUrl = "https://api.inmoviebox.com"
-    override var name = "MovieBox"
+    override var name = "MovieBox🥑"
     override val hasMainPage = true
-    override var lang = "hi"
+    override var lang = "id"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     private val secretKeyDefault = base64Decode("NzZpUmwwN3MweFNOOWpxbUVXQXQ3OUVCSlp1bElRSXNWNjRGWnIyTw==")
@@ -138,16 +138,14 @@ class MovieBoxProvider : MainAPI() {
         "1|1006" to "Trending Anime",
         "1|1;country=Indonesia;sort=Latest" to "Indonesian (Movies)",
         "1|2;country=Indonesia;sort=Latest" to "Indonesian (Series)",
-        "1|1;classify=Indonesian dub;country=United States" to "USA (Movies)",
-        "1|2;classify=Indonesian dub;country=United States" to "USA (Series)",
-        "1|1;country=Japan" to "Japan (Movies)",
-        "1|2;country=Japan" to "Japan (Series)",
-        "1|1;country=China" to "China (Movies)",
-        "1|2;country=China" to "China (Series)",
-        "1|1;country=Philippines" to "Philippines (Movies)",
-        "1|2;country=Philippines" to "Philippines (Series)",
-        "1|1;country=Thailand" to "Thailand(Movies)",
-        "1|2;country=Thailand" to "Thailand(Series)",
+        "1|1;classify=Indonesian dub;country=United States;sort=Latest" to "USA (Movies)",
+        "1|2;classify=Indonesian dub;country=United States;sort=Latest" to "USA (Series)",
+        "1|1;country=Japan;sort=Latest" to "Japan (Movies)",
+        "1|2;country=Japan;sort=Latest" to "Japan (Series)",
+        "1|1;country=China;sort=Latest" to "China (Movies)",
+        "1|2;country=China;sort=Latest" to "China (Series)",
+        "1|1;country=Thailand;sort=Latest" to "Thailand(Movies)",
+        "1|2;country=Thailand;sort=Latest" to "Thailand(Series)",
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
