@@ -148,8 +148,12 @@ class MovieBoxProvider : MainAPI() {
         "1|2;country=Thailand;sort=Latest" to "Thailand(Series)",
         )
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+    override suspend fun getMainPage(
+    page: Int,
+    request: MainPageRequest
+): HomePageResponse {
 
+    // Stop paging kalau sudah terlalu jauh
     if (page > 50) {
         return newHomePageResponse(
             listOf(HomePageList(request.name, emptyList())),
@@ -161,18 +165,25 @@ class MovieBoxProvider : MainAPI() {
     val url = "$mainUrl/wefeed-mobile-bff/subject-api/list"
     val data1 = request.data
 
+    // ================================
+    // Parsing channelId
+    // ================================
     val mainParts = data1.substringBefore(";").split("|")
-    val channelId = mainParts.getOrNull(1)
+    val channelId = mainParts.getOrNull(1) ?: return newHomePageResponse(
+        listOf(HomePageList(request.name, emptyList())),
+        hasNext = false
+    )
 
+    // ================================
+    // Parsing options
+    // ================================
     val options = mutableMapOf<String, String>()
     data1.substringAfter(";", "")
         .split(";")
         .forEach {
-            val (k, v) = it.split("=").let { p ->
-                p.getOrNull(0) to p.getOrNull(1)
-            }
-            if (!k.isNullOrBlank() && !v.isNullOrBlank()) {
-                options[k] = v
+            val parts = it.split("=")
+            if (parts.size == 2) {
+                options[parts[0]] = parts[1]
             }
         }
 
@@ -182,9 +193,25 @@ class MovieBoxProvider : MainAPI() {
     val genre    = options["genre"] ?: "All"
     val sort     = options["sort"] ?: "ForYou"
 
-    val jsonBody =
-        """{"page":$page,"perPage":$perPage,"channelId":"$channelId","classify":"$classify","country":"$country","year":"$year","genre":"$genre","sort":"$sort"}"""
+    // ================================
+    // JSON Body
+    // ================================
+    val jsonBody = """
+        {
+            "page": $page,
+            "perPage": $perPage,
+            "channelId": "$channelId",
+            "classify": "$classify",
+            "country": "$country",
+            "year": "$year",
+            "genre": "$genre",
+            "sort": "$sort"
+        }
+    """.trimIndent()
 
+    // ================================
+    // Headers
+    // ================================
     val xClientToken = generateXClientToken()
     val xTrSignature = generateXTrSignature(
         "POST",
@@ -195,46 +222,58 @@ class MovieBoxProvider : MainAPI() {
     )
 
     val headers = mapOf(
-        "user-agent" to "com.community.mbox.in/50020042 (Linux; U; Android 16; en_IN; sdk_gphone64_x86_64; Build/BP22.250325.006; Cronet/133.0.6876.3)",
+        "user-agent" to "com.community.mbox.in/50020042 (Linux; Android 16)",
         "accept" to "application/json",
         "content-type" to "application/json",
         "connection" to "keep-alive",
         "x-client-token" to xClientToken,
         "x-tr-signature" to xTrSignature,
-        "x-client-info" to """{"package_name":"com.community.mbox.in","version_name":"3.0.03.0529.03","version_code":50020042,"os":"android","os_version":"16","device_id":"da2b99c821e6ea023e4be55b54d5f7d8","install_store":"ps","gaid":"d7578036d13336cc","brand":"google","model":"sdk_gphone64_x86_64","system_language":"en","net":"NETWORK_WIFI","region":"IN","timezone":"Asia/Calcutta","sp_code":""}""",
+        "x-client-info" to """{"package_name":"com.community.mbox.in"}""",
         "x-client-status" to "0"
     )
 
+    // ================================
+    // Request API
+    // ================================
     val response = app.post(
         url,
         headers = headers,
         requestBody = jsonBody.toRequestBody("application/json".toMediaType())
     )
 
+    // ================================
+    // Parsing JSON
+    // ================================
     val root = jacksonObjectMapper().readTree(response.body.string())
-    val items = root["data"]?.get("items") ?: emptyList()
+    val items = root["data"]?.get("items") ?: return newHomePageResponse(
+        listOf(HomePageList(request.name, emptyList())),
+        hasNext = false
+    )
 
+    // ================================
+    // Mapping & Anti Duplicate
+    // ================================
     val data = items.mapNotNull { item ->
         val title = item["title"]?.asText()?.substringBefore("[") ?: return@mapNotNull null
         val id = item["subjectId"]?.asText() ?: return@mapNotNull null
         val coverImg = item["cover"]?.get("url")?.asText()
-        val type = if (item["subjectType"]?.asInt() == 2) TvType.TvSeries else TvType.Movie
+        val type =
+            if (item["subjectType"]?.asInt() == 2) TvType.TvSeries
+            else TvType.Movie
 
         newMovieSearchResponse(title, id, type) {
             posterUrl = coverImg
         }
-    }
+    }.distinctBy { it.url } // 🔥 ANTI DOBEL
 
-    if (data.isEmpty()) {
-        return newHomePageResponse(
-            listOf(HomePageList(request.name, emptyList())),
-            hasNext = false
-        )
-    }
+    // ================================
+    // Stop paging kalau data kurang
+    // ================================
+    val hasNextPage = data.size >= perPage
 
     return newHomePageResponse(
         listOf(HomePageList(request.name, data)),
-        hasNext = true
+        hasNext = hasNextPage
     )
 }
 
