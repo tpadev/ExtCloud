@@ -156,14 +156,14 @@ class MovieBoxProvider : MainAPI() {
 ): HomePageResponse {
 
     // Stop paging kalau sudah terlalu jauh
-    if (page > 50) {
+    if (page > 5) {
         return newHomePageResponse(
             listOf(HomePageList(request.name, emptyList())),
             hasNext = false
         )
     }
 
-    val perPage = 25
+    val perPage = 15
     val url = "$mainUrl/wefeed-mobile-bff/subject-api/list"
     val data1 = request.data
 
