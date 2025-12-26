@@ -155,7 +155,10 @@ class MovieBoxProvider : MainAPI() {
     request: MainPageRequest
 ): HomePageResponse {
 
-    // Stop paging kalau sudah terlalu jauh
+    if (page == 1) {
+        shownSubjectIds.clear()
+    }
+
     if (page > 5) {
         return newHomePageResponse(
             listOf(HomePageList(request.name, emptyList())),
@@ -171,10 +174,11 @@ class MovieBoxProvider : MainAPI() {
     // Parsing channelId
     // ================================
     val mainParts = data1.substringBefore(";").split("|")
-    val channelId = mainParts.getOrNull(1) ?: return newHomePageResponse(
-        listOf(HomePageList(request.name, emptyList())),
-        hasNext = false
-    )
+    val channelId = mainParts.getOrNull(1)
+        ?: return newHomePageResponse(
+            listOf(HomePageList(request.name, emptyList())),
+            hasNext = false
+        )
 
     // ================================
     // Parsing options
@@ -212,7 +216,7 @@ class MovieBoxProvider : MainAPI() {
     """.trimIndent()
 
     // ================================
-    // Headers
+    // Headers (INI WAJIB)
     // ================================
     val xClientToken = generateXClientToken()
     val xTrSignature = generateXTrSignature(
@@ -235,7 +239,7 @@ class MovieBoxProvider : MainAPI() {
     )
 
     // ================================
-    // Request API
+    // Request API (PAKAI HEADERS)
     // ================================
     val response = app.post(
         url,
@@ -247,17 +251,21 @@ class MovieBoxProvider : MainAPI() {
     // Parsing JSON
     // ================================
     val root = jacksonObjectMapper().readTree(response.body.string())
-    val items = root["data"]?.get("items") ?: return newHomePageResponse(
-        listOf(HomePageList(request.name, emptyList())),
-        hasNext = false
-    )
+    val items = root["data"]?.get("items")
+        ?: return newHomePageResponse(
+            listOf(HomePageList(request.name, emptyList())),
+            hasNext = false
+        )
 
     // ================================
-    // Mapping & Anti Duplicate
+    // Mapping & Anti Duplicate Global
     // ================================
     val data = items.mapNotNull { item ->
         val title = item["title"]?.asText()?.substringBefore("[") ?: return@mapNotNull null
         val id = item["subjectId"]?.asText() ?: return@mapNotNull null
+
+        if (!shownSubjectIds.add(id)) return@mapNotNull null
+
         val coverImg = item["cover"]?.get("url")?.asText()
         val type =
             if (item["subjectType"]?.asInt() == 2) TvType.TvSeries
@@ -266,19 +274,13 @@ class MovieBoxProvider : MainAPI() {
         newMovieSearchResponse(title, id, type) {
             posterUrl = coverImg
         }
-    }.distinctBy { it.url } // 🔥 ANTI DOBEL
-
-    // ================================
-    // Stop paging kalau data kurang
-    // ================================
-    val hasNextPage = data.size >= perPage
+    }
 
     return newHomePageResponse(
         listOf(HomePageList(request.name, data)),
-        hasNext = hasNextPage
+        hasNext = data.isNotEmpty()
     )
 }
-
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/wefeed-mobile-bff/subject-api/search/v2"
         val jsonBody = """{"page": 1, "perPage": 10, "keyword": "$query"}"""
