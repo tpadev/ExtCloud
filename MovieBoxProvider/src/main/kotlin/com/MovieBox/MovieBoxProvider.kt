@@ -133,7 +133,7 @@ class MovieBoxProvider : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        "1|1;sort=Hottest" to "Trending Movies",
+        "1|1" to "Trending Movies",
         "1|2;sort=Latest" to "Trending Series",
         "1|1006" to "Trending Anime",
         "1|1;country=Indonesia;sort=Latest" to "Indonesian (Movies)",
@@ -142,6 +142,8 @@ class MovieBoxProvider : MainAPI() {
         "1|2;classify=Indonesian dub;country=United States;sort=Latest" to "USA (Series)",
         "1|1;country=Japan;sort=Latest" to "Japan (Movies)",
         "1|2;country=Japan;sort=Latest" to "Japan (Series)",
+        "1|1;country=Korea;sort=Latest" to "Korea (Movies)",
+        "1|2;country=Korea;sort=Latest" to "Korea (Series)",
         "1|1;country=China;sort=Latest" to "China (Movies)",
         "1|2;country=China;sort=Latest" to "China (Series)",
         "1|1;country=Thailand;sort=Latest" to "Thailand(Movies)",
@@ -161,7 +163,7 @@ class MovieBoxProvider : MainAPI() {
         )
     }
 
-    val perPage = 15
+    val perPage = 25
     val url = "$mainUrl/wefeed-mobile-bff/subject-api/list"
     val data1 = request.data
 
