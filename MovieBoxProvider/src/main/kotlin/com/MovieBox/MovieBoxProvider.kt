@@ -150,7 +150,7 @@ class MovieBoxProvider : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
 
-    if (page > 5) {
+    if (page > 50) {
         return newHomePageResponse(
             listOf(HomePageList(request.name, emptyList())),
             hasNext = false
