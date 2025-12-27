@@ -142,7 +142,7 @@ class MovieBoxProvider : MainAPI() {
         "1|2;classify=Indonesian dub;country=United States;sort=Latest" to "USA (Series)",
         "1|1;country=Japan;sort=Latest" to "Japan (Movies)",
         "1|2;classify=Indonesian dub;country=Japan;sort=Latest" to "Japan (Series)",
-        "1|1;classify=Indonesian dub;country=Korea;sort=Latest" to "Korea (Movies)",
+        "1|1;country=Korea;sort=Latest" to "Korea (Movies)",
         "1|2;country=Korea;sort=Latest" to "Korea (Series)",
         "1|1;country=China;sort=Latest" to "China (Movies)",
         "1|2;country=China;sort=Latest" to "China (Series)",
@@ -159,7 +159,7 @@ class MovieBoxProvider : MainAPI() {
         shownSubjectIds.clear()
     }
 
-    if (page > 5) {
+    if (page > 15) {
         return newHomePageResponse(
             listOf(HomePageList(request.name, emptyList())),
             hasNext = false
