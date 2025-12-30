@@ -61,25 +61,32 @@ class Anoboy : MainAPI() {
     }
 
 
-    private fun Element.toSearchResult(): AnimeSearchResponse? {
-    val linkElement = this.selectFirst("a") ?: return null
-    val href = fixUrl(linkElement.attr("href"))
-    val title = linkElement.attr("title").ifBlank {
-        this.selectFirst("div.tt")?.text()
+private fun Element.toSearchResult(): AnimeSearchResponse? {
+    val a = selectFirst("a") ?: return null
+    val title = a.attr("title").ifBlank {
+        selectFirst("div.tt")?.text()
     } ?: return null
-    val poster = this.selectFirst("img")?.getImageAttr()?.let { fixUrlNull(it) }
-    val epNum = this.selectFirst("span.epx")?.text()?.filter { it.isDigit() }?.toIntOrNull()
+
+    val href = fixUrl(a.attr("href"))
+    val poster = selectFirst("img")?.getImageAttr()?.let { fixUrlNull(it) }
+    val epNum = selectFirst("span.epx")?.text()
+        ?.filter { it.isDigit() }
+        ?.toIntOrNull()
+
     return newAnimeSearchResponse(title, href, TvType.Anime) {
-            this.posterUrl = posterUrl
-            addSub(epNum)
-        }
+        posterUrl = poster
+        addSub(epNum)
+    }
 }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        return app.get("$mainUrl/?s=$query").document.select("div.listupd div.bs").map {
-            it.toSearchResult()
-        }
-    }
+
+   override suspend fun search(query: String): List<SearchResponse> {
+    return app.get("$mainUrl/?s=$query")
+        .document
+        .select("div.listupd article.bs")
+        .mapNotNull { it.toSearchResult() }
+}
+
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
