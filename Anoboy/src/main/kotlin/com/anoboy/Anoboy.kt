@@ -1,8 +1,8 @@
 package com.anoboy
 
 import com.lagradost.cloudstream3.*  
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors  
-import com.lagradost.cloudstream3.LoadResponse.Companion.addScore  
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId  
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer  
 import com.lagradost.cloudstream3.MainAPI  
 import com.lagradost.cloudstream3.SearchResponse
@@ -116,10 +116,6 @@ class Anoboy : MainAPI() {
     // Genre / tags
     val tags = document.select("div.genxed a").map { it.text() }
 
-    // Aktor
-    val actors = document.select("span:has(b:matchesOwn(Artis:)) a")
-    .map { it.text().trim() }
-
     val rating = document.selectFirst("div.rating strong")
     ?.text()
     ?.replace("Rating", "")
@@ -127,7 +123,7 @@ class Anoboy : MainAPI() {
     ?.toDoubleOrNull()
 
     val trailer = document.selectFirst("div.bixbox.trailer iframe")?.attr("src")
-
+    val tracker = APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), year, true)
     val status = getStatus(
     document.selectFirst("div.info-content div.spe span")
         ?.ownText()
@@ -165,8 +161,8 @@ val episodes = episodeElements
         this.recommendations = recommendations
         this.duration = duration ?: 0
         if (rating != null) addScore(rating.toString(), 10)
-        addActors(actors)
-        addTrailer(trailer)
+        addMalId(tracker?.malId)
+        addAniListId(tracker?.aniId?.toIntOrNull())
     }
 } else {
     // Movie
@@ -178,8 +174,7 @@ val episodes = episodeElements
         this.recommendations = recommendations
         this.duration = duration ?: 0
         if (rating != null) addScore(rating.toString(), 10)
-        addActors(actors)
-        addTrailer(trailer)
+
     }
 }
 
