@@ -7,7 +7,6 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer  
 import com.lagradost.cloudstream3.MainAPI  
-import com.lagradost.cloudstream3.SearchResponse
 import com.lagradost.cloudstream3.base64Decode 
 import com.lagradost.cloudstream3.TvType  
 import com.lagradost.cloudstream3.mainPageOf     
@@ -63,13 +62,14 @@ class Anoboy : MainAPI() {
     }
 
 
-    private fun Element.toSearchResult(): SearchResponse? {
+    private fun Element.toSearchResult(): AnimeSearchResponse {
     val linkElement = this.selectFirst("a") ?: return null
     val href = fixUrl(linkElement.attr("href"))
     val title = linkElement.attr("title").ifBlank {
         this.selectFirst("div.tt")?.text()
     } ?: return null
     val poster = this.selectFirst("img")?.getImageAttr()?.let { fixUrlNull(it) }
+    val epNum = this.selectFirst("span.epx")?.text()?.filter { it.isDigit() }?.toIntOrNull()
     return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
             addSub(epNum)
