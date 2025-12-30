@@ -1,11 +1,10 @@
 package com.anoboy
 
-import com.lagradost.cloudstream3.*  
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors  
-import com.lagradost.cloudstream3.LoadResponse.Companion.addScore  
+import com.lagradost.cloudstream3.*   
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer  
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.SearchResponse  
 import com.lagradost.cloudstream3.MainAPI  
 import com.lagradost.cloudstream3.base64Decode 
 import com.lagradost.cloudstream3.TvType  
