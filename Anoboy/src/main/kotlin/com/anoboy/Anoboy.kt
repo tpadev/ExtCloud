@@ -55,42 +55,26 @@ class Anoboy : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/pencarian/?${request.data}&halaman=$page").document
-        val home = document.select("div.listupd div.bs").map {
-            it.toSearchResult()
-        }
-        return newHomePageResponse(request.name, home)
+        val url = "$mainUrl/${request.data}".plus("&page=$page")
+        val document = app.get(url).document
+        val items = document.select("div.listupd article.bs")
+                            .mapNotNull { it.toSearchResult() }
+        return newHomePageResponse(HomePageList(request.name, items), hasNext = items.isNotEmpty())
     }
 
-    private fun getProperAnimeLink(uri: String): String {
-        return if (uri.contains("/anime/")) {
-            uri
-        } else {
-            var title = uri.substringAfter("$mainUrl/")
-            title = when {
-                (title.contains("-episode")) && !(title.contains("-movie")) -> title.substringBefore(
-                    "-episode"
-                )
 
-                (title.contains("-movie")) -> title.substringBefore("-movie")
-                else -> title
-            }
-
-            "$mainUrl/anime/$title"
-        }
-    }
-
-    private fun Element.toSearchResult(): AnimeSearchResponse {
-        val href = getProperAnimeLink(fixUrlNull(this.selectFirst("a")?.attr("href")).toString())
-        val title = this.select("div.tt").text().trim()
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.getImageAttr())
-        val epNum = this.selectFirst("span.epx")?.text()?.filter { it.isDigit() }?.toIntOrNull()
-        return newAnimeSearchResponse(title, href, TvType.Anime) {
+    private fun Element.toSearchResult(): SearchResponse? {
+    val linkElement = this.selectFirst("a") ?: return null
+    val href = fixUrl(linkElement.attr("href"))
+    val title = linkElement.attr("title").ifBlank {
+        this.selectFirst("div.tt")?.text()
+    } ?: return null
+    val poster = this.selectFirst("img")?.getImageAttr()?.let { fixUrlNull(it) }
+    return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
             addSub(epNum)
         }
-
-    }
+}
 
     override suspend fun search(query: String): List<SearchResponse> {
         return app.get("$mainUrl/?s=$query").document.select("div.listupd div.bs").map {
