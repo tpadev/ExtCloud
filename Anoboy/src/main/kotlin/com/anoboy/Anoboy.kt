@@ -3,7 +3,8 @@ package com.anoboy
 import com.lagradost.cloudstream3.*  
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId  
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer  
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.LoadResponse.Companion.addScore  
 import com.lagradost.cloudstream3.MainAPI  
 import com.lagradost.cloudstream3.SearchResponse
 import com.lagradost.cloudstream3.base64Decode 
@@ -104,7 +105,7 @@ class Anoboy : MainAPI() {
         ?.filter { it.isDigit() }?.take(4)?.toIntOrNull()
 
     
-    
+    val type = getType(table?.selectFirst("span:contains(Jenis:)")?.ownText())
     val duration = document.selectFirst("div.spe span:contains(Durasi:)")?.ownText()?.let {
     val h = Regex("(\\d+)\\s*hr").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
     val m = Regex("(\\d+)\\s*min").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
