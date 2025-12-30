@@ -115,18 +115,22 @@ private fun Element.toSearchResult(): AnimeSearchResponse? {
     val trailer = document.selectFirst("div.trailer iframe")?.attr("src")
 
     
-    val episodes = document.select("div.eplister ul li").mapNotNull {
-        val a = it.selectFirst("a") ?: return@mapNotNull null
-        val link = fixUrl(a.attr("href"))
+    val episodes = document.select("div.epister ul li").mapNotNull {
+    val a = it.selectFirst("a") ?: return@mapNotNull null
+    val link = fixUrl(a.attr("href"))
 
-        val episode = it.selectFirst(".epl-num")?.text()?.toIntOrNull()
-        val name = it.selectFirst(".epl-title")?.text()
+    val episode = it.selectFirst("div.epl-num")
+        ?.text()
+        ?.trim()
+        ?.toIntOrNull()
 
-        newEpisode(link) {
-            this.episode = episode
-            this.name = name
-        }
-    }.reversed()
+    val name = it.selectFirst("div.epl-title")?.text()
+
+    newEpisode(link) {
+        this.episode = episode
+        this.name = name
+    }
+}.reversed()
 
     val tracker = APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), year, true)
 
