@@ -96,44 +96,54 @@ private fun Element.toSearchResult(): AnimeSearchResponse? {
     override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
-    val title = document.selectFirst("h1.entry-title")
-        ?.text()
-        ?.replace("Subtitle Indonesia", "")
+    val title =
+        document.selectFirst("div.infox h1")?.text().toString()
+            .replace("Sub Indo", "")
+            .trim()
+
+    val poster = document.selectFirst("div.bigcontent img")?.getImageAttr()
+
+    val table = document.selectFirst("div.infox div.spe")
+    val type = getType(table?.selectFirst("span:contains(Jenis:)")?.ownText())
+    val year = table?.selectFirst("span:contains(Rilis:)")
+        ?.ownText()
+        ?.substringAfterLast(",")
         ?.trim()
-        ?: return null
-
-    val poster = document.selectFirst("div.bigthumb img")
-        ?.getImageAttr()
-        ?.let { fixUrlNull(it) }
-
-    val info = document.select("div.infox span")
-
-    val type = getType(info.firstOrNull { it.text().contains("Jenis") }?.text())
-    val status = info.firstOrNull { it.text().contains("Status") }?.text()
-    val year = info.firstOrNull { it.text().contains("Rilis") }
-        ?.text()
-        ?.filter { it.isDigit() }
         ?.toIntOrNull()
 
+    val status = table?.selectFirst("span:contains(Status:) font")?.text()
+    val trailer = document.selectFirst("div.trailer iframe")?.attr("src")
+
+    
     val episodes = document.select("div.eplister ul li").mapNotNull {
         val a = it.selectFirst("a") ?: return@mapNotNull null
         val link = fixUrl(a.attr("href"))
-        val ep = it.selectFirst(".epl-num")?.text()?.toIntOrNull()
+
+        val episode = it.selectFirst(".epl-num")?.text()?.toIntOrNull()
+        val name = it.selectFirst(".epl-title")?.text()
 
         newEpisode(link) {
-            episode = ep
-            name = it.selectFirst(".epl-title")?.text()
+            this.episode = episode
+            this.name = name
         }
     }.reversed()
 
+    val tracker = APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), year, true)
+
     return newAnimeLoadResponse(title, url, type) {
-        posterUrl = poster
+        posterUrl = tracker?.image ?: poster
+        backgroundPosterUrl = tracker?.cover
         this.year = year
         addEpisodes(DubStatus.Subbed, episodes)
         showStatus = getStatus(status)
-        plot = document.select("div.synp p").text()
+        plot = document.select("div.sinopsis p").text()
+        this.tags = table?.select("span:contains(Genre:) a")?.map { it.text() }
+        addTrailer(trailer)
+        addMalId(tracker?.malId)
+        addAniListId(tracker?.aniId?.toIntOrNull())
     }
 }
+
 
        
     override suspend fun loadLinks(
