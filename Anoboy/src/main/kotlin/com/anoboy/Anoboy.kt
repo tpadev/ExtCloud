@@ -52,13 +52,21 @@ class Anoboy : MainAPI() {
         "anime/?sub=&order=rating" to "Rating Tertinggi",
     )
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = "$mainUrl/${request.data}".plus("&page=$page")
-        val document = app.get(url).document
-        val items = document.select("div.listupd article.bs")
-                            .mapNotNull { it.toSearchResult() }
-        return newHomePageResponse(HomePageList(request.name, items), hasNext = items.isNotEmpty())
-    }
+    override suspend fun getMainPage(
+    page: Int,
+    request: MainPageRequest
+): HomePageResponse {
+    val document = app.get("$mainUrl/${request.data}&page=$page").document
+
+    val items = document
+        .select("div.listupd article.bs")
+        .mapNotNull { it.toSearchResult() }
+
+    return newHomePageResponse(
+        HomePageList(request.name, items),
+        hasNext = items.isNotEmpty()
+    )
+}
 
 
 private fun Element.toSearchResult(): AnimeSearchResponse? {
@@ -69,15 +77,12 @@ private fun Element.toSearchResult(): AnimeSearchResponse? {
 
     val href = fixUrl(a.attr("href"))
     val poster = selectFirst("img")?.getImageAttr()?.let { fixUrlNull(it) }
-    val epNum = selectFirst("span.epx")?.text()
-        ?.filter { it.isDigit() }
-        ?.toIntOrNull()
 
     return newAnimeSearchResponse(title, href, TvType.Anime) {
-        posterUrl = poster
-        addSub(epNum)
+        posterUrl = poster 
     }
 }
+
 
 
    override suspend fun search(query: String): List<SearchResponse> {
