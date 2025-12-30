@@ -62,7 +62,7 @@ class Anoboy : MainAPI() {
     }
 
 
-    private fun Element.toSearchResult(): AnimeSearchResponse {
+    private fun Element.toSearchResult(): AnimeSearchResponse? {
     val linkElement = this.selectFirst("a") ?: return null
     val href = fixUrl(linkElement.attr("href"))
     val title = linkElement.attr("title").ifBlank {
