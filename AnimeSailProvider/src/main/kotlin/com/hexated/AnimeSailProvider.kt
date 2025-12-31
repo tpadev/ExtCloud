@@ -61,6 +61,7 @@ class AnimeSailProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = request(request.data + page).document
         val home = document.select("article").map {
             it.toSearchResult()

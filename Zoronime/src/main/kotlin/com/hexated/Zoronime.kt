@@ -42,6 +42,7 @@ class Zoronime : MainAPI() {
     )
 
     override suspend fun getMainPage(
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
