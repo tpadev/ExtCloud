@@ -3,6 +3,7 @@ package com.Funmovieslix
 import com.lagradost.cloudstream3.plugins.BasePlugin
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.extractors.FileMoonIn
+import android.content.Context
 
 @CloudstreamPlugin
 class FunmovieslixProvider: BasePlugin() {
