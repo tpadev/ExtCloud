@@ -14,10 +14,11 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.toNewSearchResponseList
 import java.net.URI
 import org.jsoup.nodes.Element
-import android.content.Context
 
 class Fufafilm : MainAPI() {
-
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://fufafilm.com"
     private var directUrl: String? = null
     override var name = "Fufafilm🍁"
@@ -26,9 +27,6 @@ class Fufafilm : MainAPI() {
     override val supportedTypes =
             setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
     
-    companion object {
-         var cont: Context? = null
-    }
 
     override val mainPage =
             mainPageOf(

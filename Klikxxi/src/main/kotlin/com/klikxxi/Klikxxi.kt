@@ -13,7 +13,7 @@ import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 import java.net.URI
-import android.content.Context
+
 
 class Klikxxi : MainAPI() {
 
@@ -25,9 +25,6 @@ class Klikxxi : MainAPI() {
     override val supportedTypes =
         setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
     
-    companion object {
-         var cont: Context? = null
-    }
 
     /** Main page: Film Terbaru & Series Terbaru */
     override val mainPage = mainPageOf(
@@ -38,7 +35,7 @@ class Klikxxi : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
+
     val url = if (page == 1) {
         // Hapus "page/%d/" dan biarkan jadi "tv/"
         "$mainUrl/${request.data.replace("page/%d/", "")}"

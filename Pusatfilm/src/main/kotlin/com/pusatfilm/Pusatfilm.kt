@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.SubtitleFile
 import org.jsoup.nodes.Element
 import java.net.URI
-import android.content.Context
+
 
 class Pusatfilm : MainAPI() {
 
@@ -21,10 +21,8 @@ class Pusatfilm : MainAPI() {
     override val supportedTypes =
         setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
 
-    companion object {
-         var cont: Context? = null
-    }
-    
+
+
     override val mainPage =
         mainPageOf(
             "film-terbaru/page/%d/" to "Film Terbaru",
@@ -37,7 +35,7 @@ class Pusatfilm : MainAPI() {
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
+      
         val data = request.data.format(page)
         val document = app.get("$mainUrl/$data").document
         val home = document.select("article.item").mapNotNull { it.toSearchResult() }

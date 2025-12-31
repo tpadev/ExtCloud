@@ -13,10 +13,14 @@ import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.Jsoup
-import android.content.Context
 
 
 open class SeaTV : Donghuastream() {
+    
+    companion object {
+        var context: android.content.Context? = null
+    }
+
     override var mainUrl              = "https://seatv-24.xyz"
     override var name                 = "SeaTV🍰"
     override val hasMainPage          = true
@@ -24,9 +28,6 @@ open class SeaTV : Donghuastream() {
     override val hasDownloadSupport   = true
     override val supportedTypes       = setOf(TvType.Anime)
 
-    companion object {
-         var cont: Context? = null
-    }
 
     override val mainPage = mainPageOf(
         "anime/?status=&type=&order=update&page=" to "Recently Updated",

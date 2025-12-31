@@ -25,7 +25,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import kotlin.math.roundToInt
-import android.content.Context
+
 
 open class SoraStream : TmdbProvider() {
     override var name = "SoraStream🥩"
@@ -39,10 +39,7 @@ open class SoraStream : TmdbProvider() {
         TvType.Anime,
     )
 
-    companion object {
-         var cont: Context? = null
-    }
-    
+
     val wpRedisInterceptor by lazy { CloudflareKiller() }
 
     /** AUTHOR : Hexated & Sora */
@@ -122,7 +119,7 @@ open class SoraStream : TmdbProvider() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
+        
         val adultQuery =
             if (settingsForProvider.enableAdult) "" else "&without_keywords=190370|13059|226161|195669"
         val type = if (request.data.contains("/movie")) "movie" else "tv"

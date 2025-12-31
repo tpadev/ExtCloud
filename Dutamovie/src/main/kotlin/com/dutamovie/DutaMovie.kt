@@ -13,10 +13,11 @@ import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 import java.net.URI
 import org.jsoup.nodes.Element
-import android.content.Context
 
 open class DutaMovie : MainAPI() {
-
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://fuelfitnessusa.com"
     private var directUrl: String? = null
     override var name = "DutaMovie🎉"
@@ -25,9 +26,6 @@ open class DutaMovie : MainAPI() {
     override val supportedTypes =
             setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
     
-    companion object {
-         var cont: Context? = null
-    }
 
     override val mainPage =
             mainPageOf(

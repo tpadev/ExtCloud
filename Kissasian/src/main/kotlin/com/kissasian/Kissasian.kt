@@ -16,7 +16,7 @@ import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.utils.*  
 import org.jsoup.nodes.Element
 import org.jsoup.Jsoup
-import android.content.Context
+
 
 class Kissasian : MainAPI() {
     override var mainUrl = "https://kissasian.cam"
@@ -35,10 +35,8 @@ class Kissasian : MainAPI() {
         }
     }
 
-    companion object {
-         var cont: Context? = null
-    }
-    
+
+
     override val mainPage = mainPageOf(
         "series/?order=latest" to "Baru ditambahkan",
         "series/?status=&type=&order=update" to "Update Terbaru",
@@ -47,7 +45,7 @@ class Kissasian : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
+     
         val url = "$mainUrl/${request.data}".plus("&page=$page")
         val document = app.get(url).document
         val items = document.select("div.listupd article.bs")

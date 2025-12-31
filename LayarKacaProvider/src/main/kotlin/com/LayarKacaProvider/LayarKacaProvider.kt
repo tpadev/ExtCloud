@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
-import android.content.Context
+
 
 class LayarKacaProvider : MainAPI() {
 
@@ -24,10 +24,7 @@ class LayarKacaProvider : MainAPI() {
         TvType.AsianDrama
     )
 
-    companion object {
-         var cont: Context? = null
-    }
-    
+
     override val mainPage = mainPageOf(
         "$mainUrl/populer/page/" to "Film Terplopuler",
         "$mainUrl/rating/page/" to "Film Berdasarkan IMDb Rating",
@@ -38,7 +35,7 @@ class LayarKacaProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(
-        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
+       
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {

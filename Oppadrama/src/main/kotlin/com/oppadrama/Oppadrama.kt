@@ -16,7 +16,7 @@ import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.utils.*  
 import org.jsoup.nodes.Element
 import org.jsoup.Jsoup
-import android.content.Context
+
 
 class Oppadrama : MainAPI() {
     override var mainUrl = "http://45.11.57.168"
@@ -35,10 +35,6 @@ class Oppadrama : MainAPI() {
         }
     }
 
-    companion object {
-         var cont: Context? = null
-    }
-
     override val mainPage = mainPageOf(
         "series/?status=&type=&order=update" to "Update Terbaru",
         "series/?country%5B%5D=japan&type=Movie&order=update" to "Film Jepang",
@@ -51,7 +47,7 @@ class Oppadrama : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
+    
         val url = "$mainUrl/${request.data}".plus("&page=$page")
         val document = app.get(url).document
         val items = document.select("div.listupd article.bs")
