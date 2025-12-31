@@ -8,6 +8,8 @@ import com.lagradost.cloudstream3.extractors.Geodailymotion
 @CloudstreamPlugin
 class DonghuastreamProvider: BasePlugin() {
     override fun load() {
+        Donghuastream.context = context
+        SeaTV.context = context
         registerMainAPI(Donghuastream())
         registerMainAPI(SeaTV())
         registerExtractorAPI(Vtbe())

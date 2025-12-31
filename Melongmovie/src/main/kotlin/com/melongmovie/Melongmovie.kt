@@ -17,7 +17,9 @@ import org.jsoup.select.Elements
 
 
 class Melongmovie : MainAPI() {
-
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://tv11.melongmovies.com"
     private var directUrl: String? = null
     override var name = "Melongmovie🪁"
@@ -37,11 +39,10 @@ class Melongmovie : MainAPI() {
 
 
  override suspend fun getMainPage(
- 
     page: Int,
     request: MainPageRequest
 ): HomePageResponse {
-
+    context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
     val safePage = if (page <= 0) 1 else page
     val url = request.data.format(safePage)
 

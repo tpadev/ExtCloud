@@ -17,7 +17,9 @@ import org.jsoup.nodes.Element
 
 
 class Ngefilm : MainAPI() {
-
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://new31.ngefilm.site"
     private var directUrl: String? = null
     override var name = "Ngefilm😎"
@@ -52,7 +54,7 @@ class Ngefilm : MainAPI() {
             )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    
+    context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
     val data = request.data.format(page)
     val document = app.get("$mainUrl/$data").document
     val home = document.select("article.item").mapNotNull { it.toSearchResult() }

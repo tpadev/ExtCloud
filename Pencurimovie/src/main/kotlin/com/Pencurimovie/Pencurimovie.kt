@@ -10,6 +10,9 @@ import com.lagradost.cloudstream3.utils.*
 
 
 class Pencurimovie : MainAPI() {
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://ww73.pencurimovie.bond"
     override var name = "Pencurimovie🍕"
     override val hasMainPage = true
@@ -32,7 +35,7 @@ class Pencurimovie : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = app.get("$mainUrl/${request.data}/page/$page", timeout = 50L).document
         val home = document.select("div.ml-item").mapNotNull { it.toSearchResult() }
 

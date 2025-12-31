@@ -12,7 +12,9 @@ import java.net.URI
 
 
 class Pusatfilm : MainAPI() {
-
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://pusatfilm21.online"
 
     override var name = "Pusatfilm🍖"
@@ -35,7 +37,7 @@ class Pusatfilm : MainAPI() {
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-      
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val data = request.data.format(page)
         val document = app.get("$mainUrl/$data").document
         val home = document.select("article.item").mapNotNull { it.toSearchResult() }

@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.extractors.FileMoonIn
 @CloudstreamPlugin
 class FunmovieslixProvider: BasePlugin() {
     override fun load() {
+        Funmovieslix.context = context
         registerMainAPI(Funmovieslix())
     registerExtractorAPI(Ryderjet())
     // FilemoonV2 not available in this build environment; skip registration

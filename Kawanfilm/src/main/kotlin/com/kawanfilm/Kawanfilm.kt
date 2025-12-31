@@ -16,7 +16,9 @@ import org.jsoup.nodes.Element
 
 
 class Kawanfilm : MainAPI() {
-
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://tv2.kawanfilm21.co"
     private var directUrl: String? = null
     override var name = "Kawanfilm🎨"
@@ -36,7 +38,7 @@ class Kawanfilm : MainAPI() {
             )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-     
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val data = request.data.format(page)
         val document = app.get("$mainUrl/$data").document
         val home = document.select("article.item").mapNotNull { it.toSearchResult() }
