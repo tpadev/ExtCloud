@@ -28,9 +28,6 @@ import kotlin.math.roundToInt
 
 
 open class SoraStream : TmdbProvider() {
-    companion object {
-        var context: android.content.Context? = null
-    }
     override var name = "SoraStream🥩"
     override val hasMainPage = true
     override val instantLinkLoading = true
@@ -48,6 +45,8 @@ open class SoraStream : TmdbProvider() {
     /** AUTHOR : Hexated & Sora */
     companion object {
         /** TOOLS */
+        var context: android.content.Context? = null
+        
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         const val gdbot = "https://gdtot.pro"
         const val anilistAPI = "https://graphql.anilist.co"
