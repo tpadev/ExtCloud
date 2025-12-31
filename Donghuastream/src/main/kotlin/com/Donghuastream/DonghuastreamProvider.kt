@@ -1,6 +1,7 @@
 package com.Donghuastream
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
+import com.lagradost.cloudstream3.plugins.Plugin
 import com.lagradost.cloudstream3.extractors.Dailymotion
 import com.lagradost.cloudstream3.extractors.Geodailymotion
 import android.content.Context
