@@ -34,10 +34,6 @@ class Anoboy : MainAPI() {
         }
     }
 
-    companion object {
-         var cont: Context? = null
-    }
-
     override val mainPage = mainPageOf(
         "anime/?status=&type=&order=update" to "Update Terbaru",
         "anime/?sub=&order=latest" to "Baru ditambahkan",
@@ -46,7 +42,7 @@ class Anoboy : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
+        StarPopupHelper.showStarPopupIfNeeded(this.context)
         val url = "$mainUrl/${request.data}".plus("&page=$page")
         val document = app.get(url).document
         val items = document.select("div.listupd article.bs")
