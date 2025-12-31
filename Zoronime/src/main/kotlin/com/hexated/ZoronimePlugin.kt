@@ -9,6 +9,7 @@ import android.content.Context
 class ZoronimePlugin: Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
+        Zoronime.context = context
         registerMainAPI(Zoronime())
         registerExtractorAPI(Nanifile())
     }

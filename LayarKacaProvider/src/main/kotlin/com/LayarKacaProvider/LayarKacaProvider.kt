@@ -10,7 +10,9 @@ import java.net.URI
 
 
 class LayarKacaProvider : MainAPI() {
-
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://lk21.de"
     private var seriesUrl = "https://series.lk21.de"
     private var searchurl= "https://search.lk21.party"
@@ -35,10 +37,10 @@ class LayarKacaProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(
-       
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = app.get(request.data + page).document
         val home = document.select("article figure").mapNotNull {
             it.toSearchResult()

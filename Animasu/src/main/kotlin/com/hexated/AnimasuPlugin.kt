@@ -9,6 +9,7 @@ import android.content.Context
 class AnimasuPlugin: Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
+        Animasu.context = context
         registerMainAPI(Animasu())
         registerExtractorAPI(Archivd())
         registerExtractorAPI(Newuservideo())

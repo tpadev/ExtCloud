@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 class AnichinPlugin : Plugin() {
     override fun load(context: Context) {
+        Anichin.context = context
         registerMainAPI(Anichin())
     }
 }

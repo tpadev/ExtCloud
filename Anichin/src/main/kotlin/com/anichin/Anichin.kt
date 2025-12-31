@@ -26,6 +26,8 @@ class Anichin : MainAPI() {
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     companion object {
+        var context: android.content.Context? = null
+
         fun getStatus(t: String): ShowStatus {
             return when (t) {
                 "Completed" -> ShowStatus.Completed
@@ -45,7 +47,7 @@ class Anichin : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
 
         val url = "$mainUrl/${request.data}".plus("&page=$page")
         val document = app.get(url).document

@@ -25,6 +25,8 @@ class Animasu : MainAPI() {
     )
 
     companion object {
+        var context: android.content.Context? = null
+
         fun getType(t: String?): TvType {
             if (t == null) return TvType.Anime
             return when {
@@ -55,6 +57,7 @@ class Animasu : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = app.get("$mainUrl/pencarian/?${request.data}&halaman=$page").document
         val home = document.select("div.listupd div.bs").map {
             it.toSearchResult()

@@ -20,6 +20,8 @@ class Zoronime : MainAPI() {
     )
 
     companion object {
+        var context: android.content.Context? = null
+
         fun getType(t: String): TvType {
             return when {
                 t.contains("/anime/", true) -> TvType.Anime
@@ -46,7 +48,7 @@ class Zoronime : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-       
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = app.get("$mainUrl/${request.data}/page/$page").document
         val home = document.select("div.film_list-wrap div.flw-item").mapNotNull {
             it.toSearchResult()

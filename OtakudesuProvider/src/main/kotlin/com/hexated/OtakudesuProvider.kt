@@ -37,6 +37,8 @@ class OtakudesuProvider : MainAPI() {
             "Otakufiles",
         )
 
+        var context: android.content.Context? = null
+
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special")) TvType.OVA
             else if (t.contains("Movie", true)) TvType.AnimeMovie
@@ -61,6 +63,7 @@ class OtakudesuProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = app.get(request.data + page).document
         val home = document.select("div.venz > ul > li").mapNotNull {
             it.toSearchResult()

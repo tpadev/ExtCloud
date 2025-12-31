@@ -28,6 +28,9 @@ import kotlin.math.roundToInt
 
 
 open class SoraStream : TmdbProvider() {
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var name = "SoraStream🥩"
     override val hasMainPage = true
     override val instantLinkLoading = true
@@ -119,7 +122,7 @@ open class SoraStream : TmdbProvider() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val adultQuery =
             if (settingsForProvider.enableAdult) "" else "&without_keywords=190370|13059|226161|195669"
         val type = if (request.data.contains("/movie")) "movie" else "tv"

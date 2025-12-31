@@ -12,6 +12,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 
 class MovieBoxProvider : MainAPI() {
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://moviebox.ph"
     private val mainAPIUrl = "https://h5-api.aoneroom.com"
     private val secondAPIUrl = "https://filmboom.top"
@@ -47,7 +50,7 @@ class MovieBoxProvider : MainAPI() {
         page: Int,
         request: MainPageRequest,
     ): HomePageResponse {
-
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val home = mutableListOf<SearchResponse>()
 
         if(!request.data.contains(",")) {

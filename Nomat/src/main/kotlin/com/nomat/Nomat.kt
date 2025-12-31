@@ -18,7 +18,9 @@ import com.lagradost.cloudstream3.base64Decode
 
 
 class Nomat : MainAPI() {
-
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://nomat.site"
     private var directUrl: String? = null
     override var name = "Nomat🎟"
@@ -36,7 +38,7 @@ class Nomat : MainAPI() {
 )
 
    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    
+    context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
     val url = "$mainUrl/${request.data}/$page/"
     val document = app.get(url).document
 

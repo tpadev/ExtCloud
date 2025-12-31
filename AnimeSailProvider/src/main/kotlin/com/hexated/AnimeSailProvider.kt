@@ -31,6 +31,8 @@ class AnimeSailProvider : MainAPI() {
     )
 
     companion object {
+        var context: android.content.Context? = null
+
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special")) TvType.OVA
             else if (t.contains("Movie", true)) TvType.AnimeMovie
@@ -63,7 +65,7 @@ class AnimeSailProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = request(request.data + page).document
         val home = document.select("article").map {
             it.toSearchResult()

@@ -16,7 +16,9 @@ import java.net.URI
 
 
 class Klikxxi : MainAPI() {
-
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://klikxxi.me"
     override var name = "Klikxxi🎭"
     override val hasMainPage = true
@@ -35,7 +37,7 @@ class Klikxxi : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-
+    context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
     val url = if (page == 1) {
         // Hapus "page/%d/" dan biarkan jadi "tv/"
         "$mainUrl/${request.data.replace("page/%d/", "")}"

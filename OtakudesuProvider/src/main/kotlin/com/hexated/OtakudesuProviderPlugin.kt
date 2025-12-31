@@ -9,6 +9,7 @@ import android.content.Context
 class OtakudesuProviderPlugin: Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
+        OtakudesuProvider.context = context
         registerMainAPI(OtakudesuProvider())
         registerExtractorAPI(Moedesu())
         registerExtractorAPI(DesuBeta())
