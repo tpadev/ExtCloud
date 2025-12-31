@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
+import android.content.Context
 
 class Pencurimovie : MainAPI() {
     override var mainUrl = "https://ww73.pencurimovie.bond"
@@ -16,6 +17,10 @@ class Pencurimovie : MainAPI() {
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.Movie, TvType.Anime, TvType.Cartoon)
 
+    companion object {
+         var cont: Context? = null
+    }
+    
     override val mainPage = mainPageOf(
         "movies" to "Latest Movies",
         "series" to "TV Series",

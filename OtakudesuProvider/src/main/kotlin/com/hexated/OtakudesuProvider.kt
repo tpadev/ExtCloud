@@ -14,6 +14,7 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import kotlinx.coroutines.runBlocking
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import android.content.Context
 
 class OtakudesuProvider : MainAPI() {
     override var mainUrl = "https://otakudesu.best"
@@ -35,7 +36,9 @@ class OtakudesuProvider : MainAPI() {
             "MegaUp",
             "Otakufiles",
         )
-
+    companion object {
+         var cont: Context? = null
+    }
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special")) TvType.OVA
             else if (t.contains("Movie", true)) TvType.AnimeMovie

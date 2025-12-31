@@ -14,6 +14,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import java.net.URI
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
+import android.content.Context
 
 class Melongmovie : MainAPI() {
 
@@ -25,6 +26,10 @@ class Melongmovie : MainAPI() {
     override val supportedTypes =
             setOf(TvType.Movie)
 
+    companion object {
+         var cont: Context? = null
+    }
+    
     override val mainPage = mainPageOf(
     "$mainUrl/latest-movies/page/%d/" to "Movie Terbaru",
     "$mainUrl/advanced-search/page/%d/?order=latest&country%%5B%%5D=china&type%%5B%%5D=post" to "Movie China",

@@ -15,6 +15,7 @@ import com.lagradost.nicehttp.NiceResponse
 import kotlinx.coroutines.runBlocking
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import android.content.Context
 
 class AnimeSailProvider : MainAPI() {
     override var mainUrl = "https://154.26.137.28"
@@ -43,6 +44,10 @@ class AnimeSailProvider : MainAPI() {
                 else -> ShowStatus.Completed
             }
         }
+    }
+
+    companion object {
+         var cont: Context? = null
     }
 
     private suspend fun request(url: String, ref: String? = null): NiceResponse {

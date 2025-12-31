@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.runBlocking
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import android.content.Context
 
 class Animasu : MainAPI() {
     override var mainUrl = "https://v0.animasu.app"
@@ -41,6 +42,10 @@ class Animasu : MainAPI() {
                 else -> ShowStatus.Completed
             }
         }
+    }
+    
+    companion object {
+         var cont: Context? = null
     }
 
     override val mainPage = mainPageOf(

@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.nicehttp.RequestBodyTypes
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import android.content.Context
 
 class MovieBoxProvider : MainAPI() {
     override var mainUrl = "https://moviebox.ph"
@@ -26,6 +27,10 @@ class MovieBoxProvider : MainAPI() {
         TvType.AsianDrama
     )
 
+    companion object {
+         var cont: Context? = null
+    }
+    
     override val mainPage: List<MainPageData> = mainPageOf(
         "872031290915189720" to "Trending Now",
         "997144265920760504" to "Popular Movie",

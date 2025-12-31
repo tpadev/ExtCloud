@@ -14,6 +14,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.toNewSearchResponseList
 import java.net.URI
 import org.jsoup.nodes.Element
+import android.content.Context
 
 class Ngefilm : MainAPI() {
 
@@ -25,6 +26,10 @@ class Ngefilm : MainAPI() {
     override val supportedTypes =
             setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
 
+    companion object {
+         var cont: Context? = null
+    }
+    
     override val mainPage =
             mainPageOf(
                 "/page/%d/?s&search=advanced&post_type=movie&index&orderby&genre&movieyear&country&quality=" to

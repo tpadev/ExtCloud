@@ -15,6 +15,7 @@ import java.net.URI
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.base64Decode
+import android.content.Context
 
 class Nomat : MainAPI() {
 
@@ -26,6 +27,10 @@ class Nomat : MainAPI() {
     override val supportedTypes =
             setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
 
+    companion object {
+         var cont: Context? = null
+    }
+    
     override val mainPage =
             mainPageOf(
      "slug/film-terbaru" to "Film Terbaru",

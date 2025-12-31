@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.SubtitleFile
 import org.jsoup.nodes.Element
 import java.net.URI
+import android.content.Context
 
 class Pusatfilm : MainAPI() {
 
@@ -20,6 +21,10 @@ class Pusatfilm : MainAPI() {
     override val supportedTypes =
         setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
 
+    companion object {
+         var cont: Context? = null
+    }
+    
     override val mainPage =
         mainPageOf(
             "film-terbaru/page/%d/" to "Film Terbaru",

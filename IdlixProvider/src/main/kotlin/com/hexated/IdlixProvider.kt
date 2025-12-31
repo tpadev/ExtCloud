@@ -13,6 +13,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.toNewSearchResponseList
 import org.jsoup.nodes.Element
 import java.net.URI
+import android.content.Context
 
 class IdlixProvider : MainAPI() {
     override var mainUrl = "https://tv11.idlixku.com"
@@ -28,6 +29,10 @@ class IdlixProvider : MainAPI() {
         TvType.AsianDrama
     )
 
+    companion object {
+         var cont: Context? = null
+    }
+    
     override val mainPage = mainPageOf(
         "$mainUrl/" to "Featured",
         "$mainUrl/trending/page/?get=movies" to "Trending Movies",

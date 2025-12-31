@@ -25,6 +25,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import kotlin.math.roundToInt
+import android.content.Context
 
 open class SoraStream : TmdbProvider() {
     override var name = "SoraStream🥩"
@@ -38,6 +39,10 @@ open class SoraStream : TmdbProvider() {
         TvType.Anime,
     )
 
+    companion object {
+         var cont: Context? = null
+    }
+    
     val wpRedisInterceptor by lazy { CloudflareKiller() }
 
     /** AUTHOR : Hexated & Sora */

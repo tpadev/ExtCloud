@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.runBlocking
 import org.jsoup.nodes.Element
+import android.content.Context
 
 class Zoronime : MainAPI() {
     override var mainUrl = "https://zoronime.com"
@@ -18,6 +19,10 @@ class Zoronime : MainAPI() {
         TvType.OVA
     )
 
+    companion object {
+         var cont: Context? = null
+    }
+    
     companion object {
         fun getType(t: String): TvType {
             return when {
@@ -42,10 +47,10 @@ class Zoronime : MainAPI() {
     )
 
     override suspend fun getMainPage(
-        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = app.get("$mainUrl/${request.data}/page/$page").document
         val home = document.select("div.film_list-wrap div.flw-item").mapNotNull {
             it.toSearchResult()

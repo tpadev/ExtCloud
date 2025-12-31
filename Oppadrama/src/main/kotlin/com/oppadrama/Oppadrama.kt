@@ -16,6 +16,7 @@ import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.utils.*  
 import org.jsoup.nodes.Element
 import org.jsoup.Jsoup
+import android.content.Context
 
 class Oppadrama : MainAPI() {
     override var mainUrl = "http://45.11.57.168"
@@ -32,6 +33,10 @@ class Oppadrama : MainAPI() {
                 else -> ShowStatus.Completed
             }
         }
+    }
+
+    companion object {
+         var cont: Context? = null
     }
 
     override val mainPage = mainPageOf(

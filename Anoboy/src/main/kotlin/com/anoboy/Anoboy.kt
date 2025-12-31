@@ -15,6 +15,7 @@ import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.utils.*  
 import org.jsoup.nodes.Element
 import org.jsoup.Jsoup
+import android.content.Context
 
 class Anoboy : MainAPI() {
     override var mainUrl = "https://anoboy.be"
@@ -31,6 +32,10 @@ class Anoboy : MainAPI() {
                 else -> ShowStatus.Completed
             }
         }
+    }
+
+    companion object {
+         var cont: Context? = null
     }
 
     override val mainPage = mainPageOf(

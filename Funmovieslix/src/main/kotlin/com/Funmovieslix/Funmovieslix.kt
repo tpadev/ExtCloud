@@ -24,6 +24,7 @@ import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
+import android.content.Context
 
 class Funmovieslix : MainAPI() {
     override var mainUrl = "https://funmovieslix.com"
@@ -32,6 +33,10 @@ class Funmovieslix : MainAPI() {
     override var lang = "id"
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.Movie, TvType.Anime, TvType.Cartoon)
+
+    companion object {
+         var cont: Context? = null
+    }
 
     override val mainPage = mainPageOf(
         "latest-updates" to "Update Terbaru",
