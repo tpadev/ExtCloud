@@ -35,9 +35,6 @@ class Anichin : MainAPI() {
         }
     }
 
-        companion object {
-         var cont: Context? = null
-    }
 
     override val mainPage = mainPageOf(
         "donghua/?status=&type=&order=latest" to "Baru ditambahkan",
@@ -48,7 +45,7 @@ class Anichin : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
+    
 
         val url = "$mainUrl/${request.data}".plus("&page=$page")
         val document = app.get(url).document

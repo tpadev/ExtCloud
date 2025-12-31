@@ -46,9 +46,6 @@ class AnimeSailProvider : MainAPI() {
         }
     }
 
-    companion object {
-         var cont: Context? = null
-    }
 
     private suspend fun request(url: String, ref: String? = null): NiceResponse {
         return app.get(
@@ -66,7 +63,7 @@ class AnimeSailProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
+
         val document = request(request.data + page).document
         val home = document.select("article").map {
             it.toSearchResult()

@@ -43,10 +43,7 @@ class Animasu : MainAPI() {
             }
         }
     }
-    
-    companion object {
-         var cont: Context? = null
-    }
+
 
     override val mainPage = mainPageOf(
         "urutan=update" to "Baru diupdate",
@@ -58,7 +55,6 @@ class Animasu : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = app.get("$mainUrl/pencarian/?${request.data}&halaman=$page").document
         val home = document.select("div.listupd div.bs").map {
             it.toSearchResult()
