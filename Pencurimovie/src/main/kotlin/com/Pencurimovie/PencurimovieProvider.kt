@@ -1,11 +1,12 @@
 package com.Pencurimovie
 
-import com.lagradost.cloudstream3.plugins.BasePlugin
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
+import com.lagradost.cloudstream3.plugins.Plugin
+
 
 @CloudstreamPlugin
-class PencurimovieProvider: BasePlugin() {
-    override fun load() {
+class PencurimovieProvider: Plugin() {
+    override fun load(context: Context) {
         Pencurimovie.context = context
         registerMainAPI(Pencurimovie())
         registerExtractorAPI(Dsvplay())

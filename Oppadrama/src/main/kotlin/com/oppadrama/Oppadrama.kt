@@ -19,9 +19,6 @@ import org.jsoup.Jsoup
 
 
 class Oppadrama : MainAPI() {
-    companion object {
-        var context: android.content.Context? = null
-    }
     override var mainUrl = "http://45.11.57.168"
     override var name = "Oppadrama🧦"
     override val hasMainPage = true
@@ -29,6 +26,8 @@ class Oppadrama : MainAPI() {
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     companion object {
+        var context: android.content.Context? = null
+        
         fun getStatus(t: String): ShowStatus {
             return when (t) {
                 "Completed" -> ShowStatus.Completed
@@ -36,6 +35,7 @@ class Oppadrama : MainAPI() {
                 else -> ShowStatus.Completed
             }
         }
+        
     }
 
     override val mainPage = mainPageOf(
