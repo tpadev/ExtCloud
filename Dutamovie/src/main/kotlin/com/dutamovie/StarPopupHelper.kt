@@ -1,11 +1,12 @@
 package com.dutamovie
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -14,6 +15,7 @@ import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.app.AlertDialog
 
 object StarPopupHelper {
 
