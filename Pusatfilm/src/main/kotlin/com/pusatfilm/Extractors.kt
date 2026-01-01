@@ -36,6 +36,6 @@ open class Kotakajaib : ExtractorApi() {
 
 class Emturbovid : EmturbovidExtractor() {
     override var name = "Emturbovid"
-    override var mainUrl = "https://turbovidhls.com"
+    override var mainUrl = "https://turboviplay.com"
 }
 
