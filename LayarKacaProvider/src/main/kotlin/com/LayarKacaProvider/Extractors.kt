@@ -81,7 +81,7 @@ class Emturbovid : EmturbovidExtractor() {
     override var mainUrl = "https://turbovidhls.com"
 }
 
-class F16px : ByseSX() {
+class F16px : Filesim() {
     override var mainUrl = "https://f16px.com"
     override var name = "F16px"
 }
