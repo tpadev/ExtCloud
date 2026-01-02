@@ -100,6 +100,7 @@ class Emturbovid : EmturbovidExtractor() {
 class F16px : Filesim() {
     override var mainUrl = "https://f16px.com"
     override var name = "F16px"
+    override val requiresReferer = true
 }
 
 open class ByseSX : ExtractorApi() {
