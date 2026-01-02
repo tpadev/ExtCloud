@@ -32,7 +32,6 @@ class Co4nxtrl : Filesim() {
 
 
 open class Hownetwork : ExtractorApi() {
-
     override val name = "Hownetwork"
     override val mainUrl = "https://cloud.hownetwork.xyz"
     override val requiresReferer = true
@@ -43,8 +42,11 @@ open class Hownetwork : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val id = url.substringAfterLast("/")
-
+        val page = app.get(
+            url,
+            referer = referer ?: mainUrl
+        )
+        val id = url.substringAfter("id=").substringBefore("&")
         val response = app.post(
             "$mainUrl/api2.php?id=$id",
             data = mapOf(
@@ -58,31 +60,24 @@ open class Hownetwork : ExtractorApi() {
         ).text
 
         val json = JSONObject(response)
-        val file = json.optString("file")
-        if (file.isBlank()) return
+        var file = json.optString("file")
 
-        Log.d("Hownetwork", "API stream: $file")
+        if (file.isNullOrEmpty()) return
 
-        // === MIRROR PATH HANDLER ===
-        val mirrors = if (file.contains("/zzz/")) {
-            listOf(file, file.replace("/zzz/", "/xxx/"))
-        } else if (file.contains("/xxx/")) {
-            listOf(file, file.replace("/xxx/", "/zzz/"))
-        } else {
-            listOf(file)
+        // 4️⃣ FIX PATH (xxx / zzz)
+        if (file.contains("/xxx/")) {
+            file = file.replace("/xxx/", "/zzz/")
         }
 
-        mirrors.distinct().forEach { streamUrl ->
-            Log.d("Hownetwork", "Mirror: $streamUrl")
-
-            M3u8Helper.generateM3u8(
-                name,
-                streamUrl,
-                mainUrl
-            ).forEach(callback)
-        }
+        // 5️⃣ Emit link
+        M3u8Helper.generateM3u8(
+            name,
+            file,
+            referer ?: mainUrl
+        ).forEach(callback)
     }
 }
+
 
 
 
