@@ -43,17 +43,19 @@ open class Hownetwork : ExtractorApi() {
             callback: (ExtractorLink) -> Unit
     ) {
         val id = url.substringAfter("id=")
-        val response = app.post(
-                "$mainUrl/api2.php?id=$id",
-                data = mapOf(
-                        "r" to "",
-                        "d" to mainUrl,
-                ),
-                referer = url,
-                headers = mapOf(
-                        "X-Requested-With" to "XMLHttpRequest"
-                )
-        ).text
+        val response = try {
+        app.get("$mainUrl/api2.php?id=$id", referer = referer).text
+            } catch (e: Exception) {
+        app.post(
+        "$mainUrl/api2.php?id=$id",
+        data = mapOf(
+            "r" to "https://playeriframe.sbs",
+            "d" to "cloud.hownetwork.xyz"
+        ),
+        referer = "https://playeriframe.sbs",
+        headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+            ).text
+        }
         val json = JSONObject(response)
         val file = json.optString("file")
         Log.d("Phisher", file)
