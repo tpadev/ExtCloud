@@ -43,7 +43,6 @@ open class Hownetwork : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-    
         val id = url.substringAfterLast("/")
 
         val response = app.post(
@@ -60,18 +59,31 @@ open class Hownetwork : ExtractorApi() {
 
         val json = JSONObject(response)
         val file = json.optString("file")
-
         if (file.isBlank()) return
 
-        Log.d("Hownetwork", "FOUND STREAM: $file")
+        Log.d("Hownetwork", "API stream: $file")
 
-        M3u8Helper.generateM3u8(
-            name,
-            file,
-            mainUrl
-        ).forEach(callback)
+        // === MIRROR PATH HANDLER ===
+        val mirrors = if (file.contains("/zzz/")) {
+            listOf(file, file.replace("/zzz/", "/xxx/"))
+        } else if (file.contains("/xxx/")) {
+            listOf(file, file.replace("/xxx/", "/zzz/"))
+        } else {
+            listOf(file)
+        }
+
+        mirrors.distinct().forEach { streamUrl ->
+            Log.d("Hownetwork", "Mirror: $streamUrl")
+
+            M3u8Helper.generateM3u8(
+                name,
+                streamUrl,
+                mainUrl
+            ).forEach(callback)
+        }
     }
 }
+
 
 
 class Furher : Filesim() {
