@@ -33,7 +33,7 @@ class Co4nxtrl : Filesim() {
 
 open class Hownetwork : ExtractorApi() {
     override val name = "Hownetwork"
-    override val mainUrl = "https://stream.hownetwork.xyz"
+    override val mainUrl = "https://cloud.hownetwork.xyz"
     override val requiresReferer = true
 
     override suspend fun getUrl(
@@ -44,7 +44,7 @@ open class Hownetwork : ExtractorApi() {
     ) {
         val id = url.substringAfter("id=")
         val response = app.post(
-                "$mainUrl/api.php?id=$id",
+                "$mainUrl/api2.php?id=$id",
                 data = mapOf(
                         "r" to "",
                         "d" to mainUrl,
