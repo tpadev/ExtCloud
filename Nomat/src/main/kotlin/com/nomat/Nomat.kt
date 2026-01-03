@@ -89,7 +89,7 @@ class Nomat : MainAPI() {
 override suspend fun search(
     query: String,
     page: Int
-): List<SearchResponse> {
+): SearchResponseList? {
 
     val url = if (page == 1)
         "$mainUrl/search/$query/"
@@ -97,11 +97,11 @@ override suspend fun search(
         "$mainUrl/search/$query/page/$page/"
 
     val document = app.get(url, timeout = 50L).document
-
     val results = document.select("div.body a")
-    if (results.isEmpty()) return emptyList()
 
-    return results.mapNotNull { el ->
+    if (results.isEmpty()) return null
+
+    val items = results.mapNotNull { el ->
         try {
             val href = fixUrl(el.attr("href"))
 
@@ -121,11 +121,11 @@ override suspend fun search(
 
             if (isSeries) {
                 newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                    this.posterUrl = poster
+                    posterUrl = poster
                 }
             } else {
                 newMovieSearchResponse(title, href, TvType.Movie) {
-                    this.posterUrl = poster
+                    posterUrl = poster
                 }
             }
         } catch (e: Exception) {
@@ -133,6 +133,8 @@ override suspend fun search(
             null
         }
     }
+
+    return newSearchResponseList(items)
 }
     
 
