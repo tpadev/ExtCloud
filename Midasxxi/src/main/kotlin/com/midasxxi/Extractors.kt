@@ -16,7 +16,6 @@ class Playcinematic : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val document = app.get(url, referer = referer).document
         val hash = url.substringAfter("data=")
 
         val response = app.post(
@@ -39,45 +38,10 @@ class Playcinematic : ExtractorApi() {
                 )
             )
         }
-
-        document.select("script").forEach { script ->
-            if (script.data().contains("eval(function(p,a,c,k,e,d)")) {
-                val unpacked = getAndUnpack(script.data())
-                val tracksJson = unpacked
-                    .substringAfter("\"tracks\":[")
-                    .substringBefore("]")
-
-                tryParseJson<List<SubtitleTrack>>("[$tracksJson]")?.forEach { sub ->
-                    subtitleCallback.invoke(
-                        SubtitleFile(
-                            lang = getLanguage(sub.label),
-                            url = sub.file
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    private fun getLanguage(label: String?): String {
-        if (label == null) return "Unknown"
-        return when {
-            label.contains("indo", true) ||
-            label.contains("indonesia", true) ||
-            label.contains("bahasa", true) -> "Indonesian"
-            else -> label
-        }
     }
 }
 
 data class VideoResponse(
     @JsonProperty("videoSource")
     val videoSource: String?
-)
-
-data class SubtitleTrack(
-    @JsonProperty("label")
-    val label: String?,
-    @JsonProperty("file")
-    val file: String
 )
