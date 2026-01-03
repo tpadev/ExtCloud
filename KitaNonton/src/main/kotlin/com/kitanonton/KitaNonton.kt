@@ -2,8 +2,6 @@ package com.kitanonton
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import java.net.URI
@@ -15,7 +13,7 @@ class KitaNonton : MainAPI() {
     override var lang = "id"
     override val hasMainPage = true
 
-    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.AsianDrama)
+    override val supportedTypes = setOf(TvType.Movie)
 
     override val mainPage = mainPageOf(
         "/" to "Terbaru",
@@ -28,14 +26,16 @@ class KitaNonton : MainAPI() {
         "/country/thailand/" to "Thailand",
         "/country/korea/" to "Korea",
         "/country/philippines/" to "Philipines",
-        "/country/japan/" to "Jepan",
+        "/country/japan/" to "Jepan"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (request.data == "/") mainUrl else "${mainUrl}${request.data}page/$page/"
         val document = app.get(url).document
+
         val items = document.select("div.slider-item, article.post")
             .mapNotNull { it.toSearchResult() }
+
         return newHomePageResponse(request.name, items)
     }
 
@@ -43,10 +43,12 @@ class KitaNonton : MainAPI() {
         val title = selectFirst("h2.caption, h2 > a")?.text()?.trim() ?: return null
         val href = selectFirst("a")?.attr("href") ?: return null
         val poster = selectFirst("img")?.getImageAttr()
-        val rating = selectFirst("div.rating")?.ownText()?.trim()
+
+        val ratingText = selectFirst("div.rating")?.ownText()?.trim()
+
         return newMovieSearchResponse(title, fixUrl(href), TvType.Movie) {
             posterUrl = fixUrlNull(poster)
-            if (!rating.isNullOrEmpty()) addScore(rating)
+            if (!ratingText.isNullOrEmpty()) addScore(ratingText)
         }
     }
 
@@ -58,12 +60,13 @@ class KitaNonton : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
+
         val title = document.selectFirst("h1, h2[itemprop=name]")?.text()?.trim() ?: "Unknown"
         val poster = document.selectFirst("div.content-poster img")?.getImageAttr()
         val description = document.selectFirst("div[itemprop=description] p")?.text()
         val year = document.select("a[href*='/year/']").firstOrNull()?.text()?.toIntOrNull()
         val tags = document.select("a[href*='/genre/']").eachText()
-        val rating = document.selectFirst("span[itemprop=ratingValue]")?.text()?.trim()
+        val ratingText = document.selectFirst("span[itemprop=ratingValue]")?.text()?.trim()
         val trailer = document.selectFirst("a.fancybox[href*='youtube']")?.attr("href")
         val actors = document.select("span[itemprop=actors] a").map { it.text() }
 
@@ -72,7 +75,7 @@ class KitaNonton : MainAPI() {
             plot = description
             this.year = year
             this.tags = tags
-            if (!rating.isNullOrEmpty()) addScore(rating)
+            if (!ratingText.isNullOrEmpty()) addScore(ratingText)
             addActors(actors)
             addTrailer(trailer)
         }
@@ -100,6 +103,7 @@ class KitaNonton : MainAPI() {
 
             loadExtractor(server, baseUrl, subtitleCallback, callback)
         }
+
         return true
     }
 
@@ -114,5 +118,6 @@ class KitaNonton : MainAPI() {
     private fun Element?.getIframeAttr(): String? =
         this?.attr("data-litespeed-src")?.takeIf { it.isNotEmpty() } ?: this?.attr("src")
 
-    private fun getBaseUrl(url: String): String = URI(url).let { "${it.scheme}://${it.host}" }
+    private fun getBaseUrl(url: String): String =
+        URI(url).let { "${it.scheme}://${it.host}" }
 }
