@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
 class Playcinematic : ExtractorApi() {
+
     override var name = "Playcinematic"
     override var mainUrl = "https://playcinematic.com"
     override val requiresReferer = true
@@ -21,47 +22,23 @@ class Playcinematic : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val document = app.get(url, referer = referer).document
-        val hash = url.split("/").last().substringAfter("data=")
-
-        val m3uLink = app.post(
-            url = "$mainUrl/player/index.php?data=$hash&do=getVideo",
-            data = mapOf("hash" to hash, "r" to "$referer"),
+       
+        val res = app.get(
+            url = url,
             referer = referer,
-            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-        ).parsed<ResponseSource>().videoSource
+            allowRedirects = false
+        )
+
+        
+        val videoUrl = res.headers["location"] ?: return
 
         callback.invoke(
             newExtractorLink(
                 name,
                 name,
-                url = m3uLink,
-                ExtractorLinkType.M3U8
+                videoUrl,
+                ExtractorLinkType.VIDEO
             )
         )
-
-        document.select("script").map { script ->
-            if (script.data().contains("eval(function(p,a,c,k,e,d)")) {
-                val subData =
-                    getAndUnpack(script.data()).substringAfter("\"tracks\":[").substringBefore("],")
-                AppUtils.tryParseJson<List<Tracks>>("[$subData]")?.map { subtitle ->
-                    subtitleCallback.invoke(
-                        SubtitleFile(
-                            getLanguage(subtitle.label ?: ""),
-                            subtitle.file
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-
-    private fun getLanguage(str: String): String {
-        return when {
-            str.contains("indonesia", true) || str
-                .contains("bahasa", true) -> "Indonesian"
-            else -> str
-        }
     }
 }
