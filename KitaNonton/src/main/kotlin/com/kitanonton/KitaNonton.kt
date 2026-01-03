@@ -15,14 +15,12 @@ class KitaNonton : MainAPI() {
     override var lang = "id"
     override val hasMainPage = true
 
-    override val supportedTypes = setOf(
-        TvType.Movie
-    )
+    override val supportedTypes = setOf(TvType.Movie)
 
     override val mainPage = mainPageOf(
         "/" to "Terbaru",
         "/best-rating/" to "Best Rating",
-        "/series/" to "Tv Series",
+        "/tv-series/" to "Tv Series",
         "/genre/action/" to "Action",
         "/genre/crime/" to "Crime",
         "/genre/adventure/" to "Adventure",
@@ -30,20 +28,15 @@ class KitaNonton : MainAPI() {
         "/country/thailand/" to "Thailand",
         "/country/korea/" to "Korea",
         "/country/philippines/" to "Philipines",
-        "/country/japan/" to "Jepan",
+        "/country/japan/" to "Jepan"
     )
 
-    override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
-    ): HomePageResponse {
-
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url =
             if (request.data == "/") mainUrl
             else "${mainUrl}${request.data}page/$page/"
 
         val document = app.get(url).document
-
         val items = document.select("div.slider-item, article.post")
             .mapNotNull { it.toSearchResult() }
 
@@ -56,13 +49,9 @@ class KitaNonton : MainAPI() {
         val poster = selectFirst("img")?.getImageAttr()
         val rating = selectFirst("div.rating")?.ownText()?.trim()
 
-        return newMovieSearchResponse(
-            title,
-            fixUrl(href),
-            TvType.Movie
-        ) {
+        return newMovieSearchResponse(title, fixUrl(href), TvType.Movie) {
             posterUrl = fixUrlNull(poster)
-            addScore(rating)
+            addScore(rating?.toFloatOrNull(), 10)
         }
     }
 
@@ -75,40 +64,21 @@ class KitaNonton : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
 
-        val title = document.selectFirst("h1, h2[itemprop=name]")
-            ?.text()?.trim() ?: "Unknown"
-
-        val poster = document.selectFirst("div.content-poster img")
-            ?.getImageAttr()
-
-        val description = document.selectFirst("div[itemprop=description] p")
-            ?.text()
-
-        val year = document.select("a[href*='/year/']")
-            .firstOrNull()?.text()?.toIntOrNull()
-
+        val title = document.selectFirst("h1, h2[itemprop=name]")?.text()?.trim() ?: "Unknown"
+        val poster = document.selectFirst("div.content-poster img")?.getImageAttr()
+        val description = document.selectFirst("div[itemprop=description] p")?.text()
+        val year = document.select("a[href*='/year/']").firstOrNull()?.text()?.toIntOrNull()
         val tags = document.select("a[href*='/genre/']").eachText()
+        val rating = document.selectFirst("span[itemprop=ratingValue]")?.text()?.toFloatOrNull()
+        val trailer = document.selectFirst("a.fancybox[href*='youtube']")?.attr("href")
+        val actors = document.select("span[itemprop=actors] a").map { it.text() }
 
-        val rating = document.selectFirst("span[itemprop=ratingValue]")
-            ?.text()
-
-        val trailer = document.selectFirst("a.fancybox[href*='youtube']")
-            ?.attr("href")
-
-        val actors = document.select("span[itemprop=actors] a")
-            .map { it.text() }
-
-        return newMovieLoadResponse(
-            title,
-            url,
-            TvType.Movie,
-            url
-        ) {
+        return newMovieLoadResponse(title, url, TvType.Movie, url) {
             posterUrl = fixUrlNull(poster)
             plot = description
             this.year = year
             this.tags = tags
-            addScore(rating)
+            addScore(rating, 10)
             addActors(actors)
             addTrailer(trailer)
         }
@@ -120,13 +90,8 @@ class KitaNonton : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-
         val document = app.get(data).document
-        val postId =
-            document.selectFirst("div#muvipro_player_content_id")
-                ?.attr("data-id")
-                ?: return false
-
+        val postId = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id") ?: return false
         val baseUrl = getBaseUrl(data)
 
         document.select("div.tab-content-ajax").forEach { tab ->
@@ -137,10 +102,7 @@ class KitaNonton : MainAPI() {
                     "tab" to tab.attr("id"),
                     "post_id" to postId
                 )
-            ).document.selectFirst("iframe")
-                ?.getIframeAttr()
-                ?.let { httpsify(it) }
-                ?: return@forEach
+            ).document.selectFirst("iframe")?.getIframeAttr()?.let { httpsify(it) } ?: return@forEach
 
             loadExtractor(server, baseUrl, subtitleCallback, callback)
         }
@@ -157,10 +119,7 @@ class KitaNonton : MainAPI() {
         }
 
     private fun Element?.getIframeAttr(): String? =
-        this?.attr("data-litespeed-src")
-            ?.takeIf { it.isNotEmpty() }
-            ?: this?.attr("src")
+        this?.attr("data-litespeed-src")?.takeIf { it.isNotEmpty() } ?: this?.attr("src")
 
-    private fun getBaseUrl(url: String): String =
-        URI(url).let { "${it.scheme}://${it.host}" }
+    private fun getBaseUrl(url: String): String = URI(url).let { "${it.scheme}://${it.host}" }
 }
