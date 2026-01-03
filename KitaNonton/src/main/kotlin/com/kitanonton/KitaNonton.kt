@@ -19,17 +19,24 @@ class KitaNonton : MainAPI() {
 
     override var mainUrl = "https://nontonfilm.gratis"
     private var directUrl: String? = null
-    override var name = "KitaNonton🍁"
+    override var name = "KitaNonton👀"
     override val hasMainPage = true
     override var lang = "id"
     override val supportedTypes =
         setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
 
     override val mainPage = mainPageOf(
-        "category/movie/page/%d/" to "Semua Film",
-        "category/moviebox/page/%d/" to "Trending Minggu Ini",
-        "country/indonesia/page/%d/" to "Film Indonesia",
-        "tv/page/%d/" to "Series Unggulan"
+        "/" to "Terbaru",
+        "/best-rating/" to "Best Rating",
+        "/tv-series/" to "Tv Series",
+        "/genre/action/" to "Action",
+        "/genre/crime/" to "Crime",
+        "/genre/adventure/" to "Adventure",
+        "/genre/horror/" to "Horror",
+        "/country/thailand/" to "Thailand",
+        "/country/korea/" to "Korea",
+        "/country/philippines/" to "Philippines",
+        "/country/japan/" to "Japan"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
