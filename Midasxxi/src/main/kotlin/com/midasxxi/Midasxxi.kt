@@ -49,11 +49,7 @@ class Midasxxi : MainAPI() {
     request: MainPageRequest
 ): HomePageResponse {
     context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
-    val req = if (page == 1) {
-        app.get(request.data)
-    } else {
-        app.get("${request.data}$page/")
-    }
+    val req = app.get("${request.data}$page/")
 
     mainUrl = getBaseUrl(req.url)
     val document = req.document
@@ -64,6 +60,7 @@ class Midasxxi : MainAPI() {
 
     return newHomePageResponse(request.name, home)
 }
+
 
 
     private fun getProperLink(uri: String): String {
@@ -86,14 +83,15 @@ class Midasxxi : MainAPI() {
         }
     }
 
-    private fun Element.toSearchResult(): SearchResponse {
-    val poster = this.selectFirst("div.poster img") ?: return null!!
+    private fun Element.toSearchResult(): SearchResponse? {
+    val poster = selectFirst("div.poster img") ?: return null
     val title = poster.attr("alt").trim()
-    val href = this.selectFirst("div.poster a")?.attr("href") ?: return null!!
+    val href = selectFirst("div.poster a")?.attr("href") ?: return null
     val posterUrl = poster.attr("src")
 
-    val qualityText = this.selectFirst("span.quality")?.text()
-    val quality = getQualityFromString(qualityText)
+    val quality = getQualityFromString(
+        selectFirst("span.quality")?.text()
+    )
 
     return newMovieSearchResponse(
         title,
@@ -104,6 +102,7 @@ class Midasxxi : MainAPI() {
         this.quality = quality
     }
 }
+
 
     override suspend fun search(query: String, page: Int): SearchResponseList? {
         val req = app.get("$mainUrl/search/$query/page/$page")
