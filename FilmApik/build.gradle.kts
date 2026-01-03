@@ -3,8 +3,7 @@ version = 1
 cloudstream {
     description = "Filmapik"
     language = "id"
-    authors = listOf("Duro92" "CodeSanzz")
-
+    authors = listOf("Duro92", "CodeSanzz")
     /**
      * Status int as the following:
      * 0: Down
