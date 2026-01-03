@@ -33,7 +33,7 @@ class Co4nxtrl : Filesim() {
 
 open class Hownetwork : ExtractorApi() {
     override val name = "Hownetwork"
-    override val mainUrl = "https://stream.hownetwork.xyz"
+    override var mainUrl = "https://stream.hownetwork.xyz"
     override val requiresReferer = true
 
     override suspend fun getUrl(
