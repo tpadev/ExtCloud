@@ -48,7 +48,7 @@ class Midasxxi : MainAPI() {
     page: Int,
     request: MainPageRequest
 ): HomePageResponse {
-
+    context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
     val req = if (page == 1) {
         app.get(request.data)
     } else {
