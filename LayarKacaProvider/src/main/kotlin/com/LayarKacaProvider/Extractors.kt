@@ -33,53 +33,41 @@ class Co4nxtrl : Filesim() {
 
 open class Hownetwork : ExtractorApi() {
     override val name = "Hownetwork"
-    override val mainUrl = "https://cloud.hownetwork.xyz"
+    override val mainUrl = "https://stream.hownetwork.xyz"
     override val requiresReferer = true
 
     override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
+            url: String,
+            referer: String?,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
     ) {
-        val page = app.get(
-            url,
-            referer = referer ?: mainUrl
-        )
-        val id = url.substringAfter("id=").substringBefore("&")
+        val id = url.substringAfter("id=")
         val response = app.post(
-            "$mainUrl/api2.php?id=$id",
-            data = mapOf(
-                "r" to "https://playeriframe.sbs/",
-                "d" to "cloud.hownetwork.xyz"
-            ),
-            referer = "https://playeriframe.sbs/",
-            headers = mapOf(
-                "X-Requested-With" to "XMLHttpRequest"
-            )
+                "$mainUrl/api2.php?id=$id",
+                data = mapOf(
+                        "r" to "",
+                        "d" to mainUrl,
+                ),
+                referer = url,
+                headers = mapOf(
+                        "X-Requested-With" to "XMLHttpRequest"
+                )
         ).text
-
         val json = JSONObject(response)
-        var file = json.optString("file")
-
-        if (file.isNullOrEmpty()) return
-
-        // 4️⃣ FIX PATH (xxx / zzz)
-        if (file.contains("/xxx/")) {
-            file = file.replace("/xxx/", "/zzz/")
-        }
-
-        // 5️⃣ Emit link
-        M3u8Helper.generateM3u8(
-            name,
-            file,
-            referer ?: mainUrl
-        ).forEach(callback)
+        val file = json.optString("file")
+        Log.d("Phisher", file)
+            M3u8Helper.generateM3u8(
+                this.name,
+                file,
+                file
+            ).forEach(callback)
     }
 }
 
-
-
+class Cloudhownetwork : Hownetwork() {
+    override var mainUrl = "https://cloud.hownetwork.xyz"
+}
 
 class Furher : Filesim() {
     override val name = "Furher"
