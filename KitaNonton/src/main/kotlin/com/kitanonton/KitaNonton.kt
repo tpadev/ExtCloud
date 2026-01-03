@@ -30,7 +30,6 @@ class KitaNonton : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // Ambil slider untuk home
         val slider = fetchSlider()
         return newHomePageResponse(request.name, slider)
     }
@@ -80,7 +79,7 @@ class KitaNonton : MainAPI() {
         val duration = document.selectFirst("div.gmr-moviedata span[property=duration]")?.text()?.replace(Regex("\\D"), "")?.toIntOrNull()
         val recommendations = document.select("div.item, div.featured-item").mapNotNull { it.toSearchResultFlexible() }
 
-        return if (tvType == TvType.Movie) {
+        val response = if (tvType == TvType.Movie) {
             newMovieLoadResponse(title, url, TvType.Movie, url) {
                 this.posterUrl = poster
                 this.year = year
@@ -90,7 +89,6 @@ class KitaNonton : MainAPI() {
                 addActors(actors ?: emptyList())
                 this.recommendations = recommendations
                 this.duration = duration ?: 0
-                addTrailer(trailer)
             }
         } else {
             // TV Series
@@ -126,9 +124,15 @@ class KitaNonton : MainAPI() {
                 addActors(actors ?: emptyList())
                 this.recommendations = recommendations
                 this.duration = duration ?: 0
-                addTrailer(trailer)
             }
         }
+
+        // Panggil addTrailer setelah LoadResponse dibuat
+        if (!trailer.isNullOrEmpty()) {
+            response.addTrailer(trailer)
+        }
+
+        return response
     }
 
     override suspend fun loadLinks(
@@ -177,7 +181,6 @@ class KitaNonton : MainAPI() {
         return if (url.startsWith("http")) url else "$mainUrl/$url".replace("//", "/").replace("https:/", "https://")
     }
 
-    // Ambil slider home otomatis
     private suspend fun fetchSlider(): List<SearchResponse> {
         val doc = app.get(mainUrl).document
         return doc.select("section.slider .slider-item").mapNotNull { slide ->
@@ -189,12 +192,17 @@ class KitaNonton : MainAPI() {
             val rating = figure.selectFirst(".rating")?.ownText()?.toFloatOrNull()
             val trailer = figure.selectFirst("a.fancybox")?.attr("href")
 
-            newMovieSearchResponse(title, url, TvType.Movie) {
+            val search = newMovieSearchResponse(title, url, TvType.Movie) {
                 this.posterUrl = poster
                 addQuality(quality ?: "HD")
                 this.score = rating?.let { Score.from10(it) }
-                if (!trailer.isNullOrEmpty()) addTrailer(trailer)
             }
+
+            if (!trailer.isNullOrEmpty()) {
+                search.addTrailer(trailer)
+            }
+
+            search
         }
     }
 }
