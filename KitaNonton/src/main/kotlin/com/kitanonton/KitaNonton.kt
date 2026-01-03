@@ -2,6 +2,7 @@ package com.kitanonton
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.SearchResponse
 import com.lagradost.cloudstream3.Score
@@ -72,7 +73,6 @@ class KitaNonton : MainAPI() {
         )
 
         val document = app.get(url, headers = desktopHeaders).document
-
         val title = document.selectFirst("h1.entry-title")?.text()?.substringBefore("Season")?.substringBefore("Episode")?.trim().orEmpty()
         val poster = document.selectFirst("figure.pull-left > img")?.attr("abs:src")?.fixImageQuality()
         val tags = document.select("strong:contains(Genre) ~ a").eachText()
@@ -95,10 +95,9 @@ class KitaNonton : MainAPI() {
                 addActors(actors ?: emptyList())
                 this.recommendations = recommendations
                 this.duration = duration ?: 0
-                if (!trailer.isNullOrEmpty()) addTrailer(trailer, referer = url)
+                trailer?.let { addTrailer(it, referer = url) }
             }
         } else {
-            // TV Series
             val seriesUrl = document.selectFirst("a.button.button-shadow.active")?.attr("href") ?: url.substringBefore("/eps/")
             val seriesDoc = app.get(seriesUrl, headers = desktopHeaders).document
             val episodeElements = seriesDoc.select("div.gmr-listseries a.button.button-shadow")
@@ -131,7 +130,7 @@ class KitaNonton : MainAPI() {
                 addActors(actors ?: emptyList())
                 this.recommendations = recommendations
                 this.duration = duration ?: 0
-                if (!trailer.isNullOrEmpty()) addTrailer(trailer, referer = url)
+                trailer?.let { addTrailer(it, referer = url) }
             }
         }
     }
@@ -197,7 +196,7 @@ class KitaNonton : MainAPI() {
                 this.posterUrl = poster
                 addQuality(quality ?: "HD")
                 this.score = rating?.let { Score.from10(it) }
-                if (!trailer.isNullOrEmpty()) addTrailer(trailer, referer = mainUrl)
+                trailer?.let { addTrailer(it, referer = mainUrl) }
             }
         }
     }
