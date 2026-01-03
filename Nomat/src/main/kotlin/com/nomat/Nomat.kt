@@ -86,20 +86,57 @@ class Nomat : MainAPI() {
 }
 
 
-override suspend fun search(query: String): List<SearchResponse> {
-    val document = app.get("$mainUrl/search/$query", timeout = 50L).document
+override suspend fun search(
+    query: String,
+    page: Int
+): List<SearchResponse> {
 
-    return document.select("div.item").mapNotNull { el ->
-        val a = el.selectFirst("a") ?: return@mapNotNull null
-        val href = fixUrl(a.attr("href"))
-        val title = el.selectFirst("div.title")?.text()?.trim() ?: return@mapNotNull null
-        val poster = fixUrlNull(
-            el.selectFirst("div.poster")?.attr("style")
-                ?.substringAfter("url('")?.substringBefore("')")
-        )
+    val url = if (page == 1)
+        "$mainUrl/search/$query/"
+    else
+        "$mainUrl/search/$query/page/$page/"
 
-        newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = poster
+    val document = app.get(url, timeout = 50L).document
+    val items = document.select("div.item")
+    if (items.isEmpty()) return emptyList()
+
+    return items.mapNotNull { el ->
+        try {
+            val a = el.selectFirst("a") ?: return@mapNotNull null
+            val href = fixUrl(a.attr("href"))
+
+            val title = el.selectFirst("div.title")?.text()?.trim()
+                ?: return@mapNotNull null
+
+            val poster = Regex("url\\(['\"]?(.*?)['\"]?\\)")
+                .find(el.selectFirst("div.poster")?.attr("style") ?: "")
+                ?.groupValues?.get(1)
+
+            val quality = el.selectFirst("div.qual")?.text()?.trim()
+            val rating = el.selectFirst("div.rtg")?.ownText()?.toDoubleOrNull()
+
+            val isSeries =
+                href.contains("/serial-tv/") ||
+                title.contains("season", true) ||
+                title.contains("episode", true) ||
+                quality?.contains("eps", true) == true
+
+            if (isSeries) {
+                newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+                    posterUrl = poster
+                    addQuality(quality ?: "")
+                    score = Score.from10(rating)
+                }
+            } else {
+                newMovieSearchResponse(title, href, TvType.Movie) {
+                    posterUrl = poster
+                    addQuality(quality ?: "")
+                    score = Score.from10(rating)
+                }
+            }
+        } catch (e: Exception) {
+            logError(e)
+            null
         }
     }
 }
