@@ -46,7 +46,7 @@ open class Hownetwork : ExtractorApi() {
         val response = app.post(
                 "$mainUrl/api2.php?id=$id",
                 data = mapOf(
-                        "r" to "",
+                        "r" to "https://playeriframe.sbs/",
                         "d" to mainUrl,
                 ),
                 referer = url,
