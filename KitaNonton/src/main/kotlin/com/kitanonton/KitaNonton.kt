@@ -2,18 +2,29 @@ package com.kitanonton
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.utils.*
-import org.jsoup.nodes.Element
+import com.lagradost.cloudstream3.MainAPI
+import com.lagradost.cloudstream3.SearchResponse
+import com.lagradost.cloudstream3.TvType
+import com.lagradost.cloudstream3.mainPageOf
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.httpsify
+import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.toNewSearchResponseList
 import java.net.URI
+import org.jsoup.nodes.Element
 
 class KitaNonton : MainAPI() {
 
-    override var mainUrl = "http://nontonfilm.gratis"
-    override var name = "KitaNonton"
-    override var lang = "id"
-    override val hasMainPage = true
+    companion object {
+        var context: android.content.Context? = null
+    }
 
-    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
+    override var mainUrl = "https://nontonfilm.gratis"
+    private var directUrl: String? = null
+    override var name = "KitaNonton👀"
+    override val hasMainPage = true
+    override var lang = "id"
+    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
 
     override val mainPage = mainPageOf(
         "/" to "Terbaru",
@@ -25,17 +36,16 @@ class KitaNonton : MainAPI() {
         "/genre/horror/" to "Horror",
         "/country/thailand/" to "Thailand",
         "/country/korea/" to "Korea",
-        "/country/philippines/" to "Philipines",
-        "/country/japan/" to "Jepan"
+        "/country/philippines/" to "Philippines",
+        "/country/japan/" to "Japan"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val url = if (request.data == "/") mainUrl else "${mainUrl}${request.data}page/$page/"
         val document = app.get(url).document
-
         val items = document.select("div.slider-item, article.post")
             .mapNotNull { it.toSearchResult() }
-
         return newHomePageResponse(request.name, items)
     }
 
@@ -43,7 +53,6 @@ class KitaNonton : MainAPI() {
         val title = selectFirst("h2.caption, h2 > a")?.text()?.trim() ?: return null
         val href = selectFirst("a")?.attr("href") ?: return null
         val poster = selectFirst("img")?.getImageAttr()
-
         return newMovieSearchResponse(title, fixUrl(href), TvType.Movie) {
             posterUrl = fixUrlNull(poster)
         }
@@ -57,7 +66,6 @@ class KitaNonton : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-
         val title = document.selectFirst("h1, h2[itemprop=name]")?.text()?.trim() ?: "Unknown"
         val poster = document.selectFirst("div.content-poster img")?.getImageAttr()
         val description = document.selectFirst("div[itemprop=description] p")?.text()
@@ -72,9 +80,9 @@ class KitaNonton : MainAPI() {
             plot = description
             this.year = year
             this.tags = tags
+            this.score = rating?.toFloatOrNull()
+            trailerUrl = trailer
             addActors(actors)
-            addTrailer(trailer)
-            addScore(rating)
         }
     }
 
@@ -84,7 +92,6 @@ class KitaNonton : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-
         val document = app.get(data).document
         val postId = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id") ?: return false
         val baseUrl = getBaseUrl(data)
