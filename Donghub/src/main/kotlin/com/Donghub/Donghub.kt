@@ -8,7 +8,7 @@ import org.jsoup.Jsoup
 class Donghub : MainAPI() {
 
     override var mainUrl = "https://donghub.vip"
-    override var name = "Donghub"
+    override var name = "Donghub🐉"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
