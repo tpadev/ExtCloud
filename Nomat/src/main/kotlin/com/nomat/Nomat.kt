@@ -86,22 +86,55 @@ class Nomat : MainAPI() {
 }
 
 
-override suspend fun search(query: String): List<SearchResponse> {
-    val document = app.get("$mainUrl/search/$query", timeout = 50L).document
+override suspend fun search(
+    query: String,
+    page: Int
+): SearchResponseList? {
 
-    return document.select("div.item").mapNotNull { el ->
-        val a = el.selectFirst("a") ?: return@mapNotNull null
-        val href = fixUrl(a.attr("href"))
-        val title = el.selectFirst("div.title")?.text()?.trim() ?: return@mapNotNull null
-        val poster = fixUrlNull(
-            el.selectFirst("div.poster")?.attr("style")
-                ?.substringAfter("url('")?.substringBefore("')")
-        )
+    val url = if (page == 1)
+        "$mainUrl/search/$query/"
+    else
+        "$mainUrl/search/$query/page/$page/"
 
-        newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = poster
+    val document = app.get(url, timeout = 50L).document
+    val results = document.select("div.body a")
+
+    if (results.isEmpty()) return null
+
+    val items = results.mapNotNull { el ->
+        try {
+            val href = fixUrl(el.attr("href"))
+
+            val title = el.selectFirst("div.title")
+                ?.text()
+                ?.trim()
+                ?: el.text().trim()
+
+            val poster = Regex("url\\(['\"]?(.*?)['\"]?\\)")
+                .find(el.selectFirst("div.poster")?.attr("style") ?: "")
+                ?.groupValues?.get(1)
+
+            val isSeries =
+                href.contains("/serial-tv/") ||
+                title.contains("season", true) ||
+                title.contains("episode", true)
+
+            if (isSeries) {
+                newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+                    posterUrl = poster
+                }
+            } else {
+                newMovieSearchResponse(title, href, TvType.Movie) {
+                    posterUrl = poster
+                }
+            }
+        } catch (e: Exception) {
+            logError(e)
+            null
         }
     }
+
+    return newSearchResponseList(items)
 }
     
 
