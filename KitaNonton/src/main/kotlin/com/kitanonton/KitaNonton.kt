@@ -13,7 +13,11 @@ class KitaNonton : MainAPI() {
     override var lang = "id"
     override val hasMainPage = true
 
-    override val supportedTypes = setOf(TvType.Movie)
+    override val supportedTypes = setOf(
+        TvType.Movie,
+        TvType.TvSeries,
+        TvType.Anime
+    )
 
     override val mainPage = mainPageOf(
         "/" to "Terbaru",
@@ -25,12 +29,12 @@ class KitaNonton : MainAPI() {
         "/genre/horror/" to "Horror",
         "/country/thailand/" to "Thailand",
         "/country/korea/" to "Korea",
-        "/country/philippines/" to "Philipines",
+        "/country/philippines/" to "Philippines",
         "/country/japan/" to "Jepan"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (request.data == "/") mainUrl else "${mainUrl}${request.data}page/$page/"
+        val url = if (request.data == "/") mainUrl else "$mainUrl${request.data}page/$page/"
         val document = app.get(url).document
 
         val items = document.select("div.slider-item, article.post")
@@ -43,12 +47,11 @@ class KitaNonton : MainAPI() {
         val title = selectFirst("h2.caption, h2 > a")?.text()?.trim() ?: return null
         val href = selectFirst("a")?.attr("href") ?: return null
         val poster = selectFirst("img")?.getImageAttr()
-
-        val ratingText = selectFirst("div.rating")?.ownText()?.trim()
+        val rating = selectFirst("div.rating")?.ownText()?.toFloatOrNull()
 
         return newMovieSearchResponse(title, fixUrl(href), TvType.Movie) {
             posterUrl = fixUrlNull(poster)
-            if (!ratingText.isNullOrEmpty()) addScore(ratingText)
+            rating?.let { addScore(Score(it)) }
         }
     }
 
@@ -66,7 +69,7 @@ class KitaNonton : MainAPI() {
         val description = document.selectFirst("div[itemprop=description] p")?.text()
         val year = document.select("a[href*='/year/']").firstOrNull()?.text()?.toIntOrNull()
         val tags = document.select("a[href*='/genre/']").eachText()
-        val ratingText = document.selectFirst("span[itemprop=ratingValue]")?.text()?.trim()
+        val rating = document.selectFirst("span[itemprop=ratingValue]")?.text()?.toFloatOrNull()
         val trailer = document.selectFirst("a.fancybox[href*='youtube']")?.attr("href")
         val actors = document.select("span[itemprop=actors] a").map { it.text() }
 
@@ -75,9 +78,9 @@ class KitaNonton : MainAPI() {
             plot = description
             this.year = year
             this.tags = tags
-            if (!ratingText.isNullOrEmpty()) addScore(ratingText)
+            rating?.let { addScore(Score(it)) }
             addActors(actors)
-            addTrailer(trailer)
+            trailer?.let { addExtraLink(it, "Trailer") }
         }
     }
 
