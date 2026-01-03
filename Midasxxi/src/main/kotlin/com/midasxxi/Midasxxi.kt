@@ -1,4 +1,4 @@
-package com.hexated
+package com.midasxxi
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
@@ -15,13 +15,13 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 
-class IdlixProvider : MainAPI() {
+class Midasxxi : MainAPI() {
     companion object {
         var context: android.content.Context? = null
     }
-    override var mainUrl = "https://tv11.idlixku.com"
+    override var mainUrl = "https://ssstik.tv"
     private var directUrl = mainUrl
-    override var name = "Idlix🎄"
+    override var name = "Midasxxi🍡"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
@@ -34,16 +34,8 @@ class IdlixProvider : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        "$mainUrl/" to "Featured",
-        "$mainUrl/trending/page/?get=movies" to "Trending Movies",
-        "$mainUrl/trending/page/?get=tv" to "Trending TV Series",
-        "$mainUrl/movie/page/" to "Movie Terbaru",
-        "$mainUrl/tvseries/page/" to "TV Series Terbaru",
-        "$mainUrl/network/amazon/page/" to "Amazon Prime",
-        "$mainUrl/network/apple-tv/page/" to "Apple TV+ Series",
-        "$mainUrl/network/disney/page/" to "Disney+ Series",
-        "$mainUrl/network/HBO/page/" to "HBO Series",
-        "$mainUrl/network/netflix/page/" to "Netflix Series",
+        "$mainUrl/movies/page/" to "Movie Terbaru",
+        "$mainUrl/tvshows/page/" to "TV Series Terbaru",
     )
 
     private fun getBaseUrl(url: String): String {
@@ -53,28 +45,26 @@ class IdlixProvider : MainAPI() {
     }
 
     override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
-    ): HomePageResponse {
-        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
-        val url = request.data.split("?")
-        val nonPaged = request.name == "Featured" && page <= 1
-        val req = if (nonPaged) {
-            app.get(request.data)
-        } else {
-            app.get("${url.first()}$page/?${url.lastOrNull()}")
-        }
-        mainUrl = getBaseUrl(req.url)
-        val document = req.document
-        val home = (if (nonPaged) {
-            document.select("div.items.featured article")
-        } else {
-            document.select("div.items.full article, div#archive-content article")
-        }).mapNotNull {
-            it.toSearchResult()
-        }
-        return newHomePageResponse(request.name, home)
+    page: Int,
+    request: MainPageRequest
+): HomePageResponse {
+
+    val req = if (page == 1) {
+        app.get(request.data)
+    } else {
+        app.get("${request.data}$page/")
     }
+
+    mainUrl = getBaseUrl(req.url)
+    val document = req.document
+
+    val home = document
+        .select("div#archive-content article.item")
+        .mapNotNull { it.toSearchResult() }
+
+    return newHomePageResponse(request.name, home)
+}
+
 
     private fun getProperLink(uri: String): String {
         return when {
@@ -97,16 +87,23 @@ class IdlixProvider : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse {
-        val title = this.selectFirst("h3 > a")!!.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
-        val href = getProperLink(this.selectFirst("h3 > a")!!.attr("href"))
-        val posterUrl = this.select("div.poster > img").attr("src")
-        val quality = getQualityFromString(this.select("span.quality").text())
-        return newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = posterUrl
-            this.quality = quality
-        }
+    val poster = this.selectFirst("div.poster img") ?: return null!!
+    val title = poster.attr("alt").trim()
+    val href = this.selectFirst("div.poster a")?.attr("href") ?: return null!!
+    val posterUrl = poster.attr("src")
 
+    val qualityText = this.selectFirst("span.quality")?.text()
+    val quality = getQualityFromString(qualityText)
+
+    return newMovieSearchResponse(
+        title,
+        getProperLink(href),
+        TvType.Movie
+    ) {
+        this.posterUrl = posterUrl
+        this.quality = quality
     }
+}
 
     override suspend fun search(query: String, page: Int): SearchResponseList? {
         val req = app.get("$mainUrl/search/$query/page/$page")

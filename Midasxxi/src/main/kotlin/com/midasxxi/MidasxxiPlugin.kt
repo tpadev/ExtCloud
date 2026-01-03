@@ -1,16 +1,15 @@
-
-package com.hexated
+package com.midasxxi
 
 import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 
 
-
 @CloudstreamPlugin
-class IdlixProviderPlugin: Plugin() {
+class MidasxxiPlugin: Plugin() {
     override fun load(context: Context) {
-        IdlixProvider.context = context
-        registerMainAPI(IdlixProvider())  
+        Midasxxi.context = context
+        registerMainAPI(Midasxxi()) 
+        registerExtractorAPI(Playcinematic()) 
     }
 }
