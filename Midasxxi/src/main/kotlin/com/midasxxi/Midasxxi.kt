@@ -209,44 +209,58 @@ class Midasxxi : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
 
-        val document = app.get(data).document
-        document.select("ul#playeroptionsul > li").map {
-                Triple(
-                    it.attr("data-post"),
-                    it.attr("data-nume"),
-                    it.attr("data-type")
-                )
-            }.amap { (id, nume, type) ->
+    val document = app.get(data).document
+
+    document.select("ul#playeroptionsul > li.dooplay_player_option")
+        .filter {
+            it.attr("data-nume") != "trailer"
+        }
+        .amap { it ->
+            val post = it.attr("data-post")
+            val nume = it.attr("data-nume")
+            val type = it.attr("data-type")
+
             val json = app.post(
-                url = "$directUrl/wp-admin/admin-ajax.php",
+                "$directUrl/wp-admin/admin-ajax.php",
                 data = mapOf(
-                    "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
+                    "action" to "doo_player_ajax",
+                    "post" to post,
+                    "nume" to nume,
+                    "type" to type
                 ),
                 referer = data,
-                headers = mapOf("Accept" to "*/*", "X-Requested-With" to "XMLHttpRequest")
+                headers = mapOf(
+                    "X-Requested-With" to "XMLHttpRequest"
+                )
             ).parsedSafe<ResponseHash>() ?: return@amap
-            val metrix = AppUtils.parseJson<AesData>(json.embed_url).m
-            val password = generateKey(json.key, metrix)
-            val decrypted =
-                AesHelper.cryptoAESHandler(json.embed_url, password.toByteArray(), false)
-                    ?.fixBloat() ?: return@amap
 
-          when {
-                !decrypted.contains("youtube") ->
-                    loadExtractor(decrypted,directUrl,subtitleCallback,callback)
-                else -> return@amap
-            }
+            val aesData = AppUtils.parseJson<AesData>(json.embed_url)
+            val password = generateKey(json.key, aesData.m)
+
+            val decrypted = AesHelper.cryptoAESHandler(
+                json.embed_url,
+                password.toByteArray(),
+                false
+            )?.fixBloat() ?: return@amap
+
+            loadExtractor(
+                decrypted,
+                data,
+                subtitleCallback,
+                callback
+            )
         }
 
-        return true
-    }
+    return true
+}
+
 
     private fun generateKey(r: String, m: String): String {
         val rList = r.split("\\x").toTypedArray()
