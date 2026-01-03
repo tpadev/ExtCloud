@@ -2,7 +2,6 @@ package com.kitanonton
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.SearchResponse
 import com.lagradost.cloudstream3.Score
@@ -13,7 +12,6 @@ import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.toNewSearchResponseList
 import org.jsoup.nodes.Element
-import java.net.URI
 
 class KitaNonton : MainAPI() {
 
@@ -79,8 +77,8 @@ class KitaNonton : MainAPI() {
         val duration = document.selectFirst("div.gmr-moviedata span[property=duration]")?.text()?.replace(Regex("\\D"), "")?.toIntOrNull()
         val recommendations = document.select("div.item, div.featured-item").mapNotNull { it.toSearchResultFlexible() }
 
-        val response = if (tvType == TvType.Movie) {
-            newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return if (tvType == TvType.Movie) {
+            val response = newMovieLoadResponse(title, url, TvType.Movie, url) {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = description
@@ -90,8 +88,10 @@ class KitaNonton : MainAPI() {
                 this.recommendations = recommendations
                 this.duration = duration ?: 0
             }
+
+            if (!trailer.isNullOrEmpty()) response.addTrailer(trailer)
+            response
         } else {
-            // TV Series
             val seriesUrl = document.selectFirst("a.button.button-shadow.active")?.attr("href") ?: url.substringBefore("/eps/")
             val seriesDoc = app.get(seriesUrl, headers = desktopHeaders).document
             val episodeElements = seriesDoc.select("div.gmr-listseries a.button.button-shadow")
@@ -115,7 +115,7 @@ class KitaNonton : MainAPI() {
                 }
             }
 
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+            val response = newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = description
@@ -125,14 +125,10 @@ class KitaNonton : MainAPI() {
                 this.recommendations = recommendations
                 this.duration = duration ?: 0
             }
-        }
 
-        // Panggil addTrailer setelah LoadResponse dibuat
-        if (!trailer.isNullOrEmpty()) {
-            response.addTrailer(trailer)
+            if (!trailer.isNullOrEmpty()) response.addTrailer(trailer)
+            response
         }
-
-        return response
     }
 
     override suspend fun loadLinks(
@@ -192,17 +188,14 @@ class KitaNonton : MainAPI() {
             val rating = figure.selectFirst(".rating")?.ownText()?.toFloatOrNull()
             val trailer = figure.selectFirst("a.fancybox")?.attr("href")
 
-            val search = newMovieSearchResponse(title, url, TvType.Movie) {
+            val response = newMovieSearchResponse(title, url, TvType.Movie) {
                 this.posterUrl = poster
                 addQuality(quality ?: "HD")
                 this.score = rating?.let { Score.from10(it) }
             }
 
-            if (!trailer.isNullOrEmpty()) {
-                search.addTrailer(trailer)
-            }
-
-            search
+            if (!trailer.isNullOrEmpty()) response.addTrailer(trailer)
+            response
         }
     }
 }
