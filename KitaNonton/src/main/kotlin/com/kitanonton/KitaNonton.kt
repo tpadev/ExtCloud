@@ -42,14 +42,14 @@ class KitaNonton : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val data = request.data.format(page)
         val document = app.get("$mainUrl/$data").document
-        val home = document.select("article.item").mapNotNull { it.toSearchResult() }
+        val home = document.select("article.item, div.featured-item").mapNotNull { it.toSearchResult() }
         return newHomePageResponse(request.name, home)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
+        val title = this.selectFirst("h2.entry-title > a, h2.caption > a")?.text()?.trim() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr()).fixImageQuality()
+        val posterUrl = this.selectFirst("img.lazyload, picture img, a > img")?.getImageAttr()?.fixImageQuality()
         val quality = this.select("div.gmr-qual, div.gmr-quality-item > a").text().trim().replace("-", "")
         val ratingText = this.selectFirst("div.gmr-rating-item")?.ownText()?.trim()
 
@@ -74,92 +74,83 @@ class KitaNonton : MainAPI() {
     override suspend fun search(query: String, page: Int): SearchResponseList? {
         val document =
             app.get("$mainUrl/page/$page/?s=$query&post_type[]=post&post_type[]=tv", timeout = 50L).document
-        return document.select("article.has-post-thumbnail").mapNotNull { it.toSearchResult() }
+        return document.select("article.has-post-thumbnail, div.featured-item").mapNotNull { it.toSearchResult() }
             .toNewSearchResponseList()
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
+        val posterUrl = this.selectFirst("img.lazyload, picture img, a > img")?.getImageAttr()?.fixImageQuality()
         return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
 
     override suspend fun load(url: String): LoadResponse {
+        directUrl = getBaseUrl(url) // penting untuk loadLinks
         val desktopHeaders = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language" to "en-US,en;q=0.9"
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         )
 
-        val fetch = app.get(url, headers = desktopHeaders)
-        val document = fetch.document
-
-        val title =
-            document.selectFirst("h1.entry-title")?.text()?.substringBefore("Season")?.substringBefore("Episode")?.trim()
-                .orEmpty()
-        val poster = fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())?.fixImageQuality()
+        val document = app.get(url, headers = desktopHeaders).document
+        val title = document.selectFirst("h1.entry-title")?.text()?.substringBefore("Season")?.substringBefore("Episode")?.trim().orEmpty()
+        val poster = document.selectFirst("img.lazyload, figure.pull-left > img, picture img")?.getImageAttr()?.fixImageQuality()
         val tags = document.select("strong:contains(Genre) ~ a").eachText()
-        val year = document.select("div.gmr-moviedata strong:contains(Year:) > a")?.text()?.trim()?.toIntOrNull()
-        val tvType = if (url.contains("/tv/")) TvType.TvSeries else TvType.Movie
+        val year = document.selectFirst("div.gmr-moviedata strong:contains(Year:) > a")?.text()?.trim()?.toIntOrNull()
         val description = document.selectFirst("div[itemprop=description] > p")?.text()?.trim()
         val trailer = document.selectFirst("ul.gmr-player-nav li a.gmr-trailer-popup")?.attr("href")
         val rating = document.selectFirst("div.gmr-meta-rating > span[itemprop=ratingValue]")?.text()?.trim()
-        val actors = document.select("div.gmr-moviedata").last()?.select("span[itemprop=actors]")?.map { it.select("a").text() }
-        val duration =
-            document.selectFirst("div.gmr-moviedata span[property=duration]")?.text()?.replace(Regex("\\D"), "")
-                ?.toIntOrNull()
-        val recommendations = document.select("article.item.col-md-20").mapNotNull { it.toRecommendResult() }
+        val actors = document.select("div.gmr-moviedata span[itemprop=actors] a").map { it.text() }
+        val duration = document.selectFirst("div.gmr-moviedata span[property=duration]")?.text()?.replace(Regex("\\D"), "")?.toIntOrNull()
+        val recommendations = document.select("article.item.col-md-20, div.featured-item").mapNotNull { it.toRecommendResult() }
 
-        if (tvType == TvType.Movie) {
-            return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return if (!url.contains("/tv/")) {
+            newMovieLoadResponse(title, url, TvType.Movie, url) {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = description
                 this.tags = tags
                 this.score = rating?.toFloatOrNull()?.let { Score.from10(it) }
-                addActors(actors ?: emptyList())
+                addActors(actors)
                 this.recommendations = recommendations
                 this.duration = duration ?: 0
                 addTrailer(trailer)
             }
-        }
+        } else {
+            val seriesUrl = document.selectFirst("a.button.button-shadow.active")?.attr("href") ?: url.substringBefore("/eps/")
+            val seriesDoc = app.get(seriesUrl, headers = desktopHeaders).document
+            val episodeElements = seriesDoc.select("div.gmr-listseries a.button.button-shadow")
+            var episodeCounter = 1
 
-        // TV Series
-        val seriesUrl = document.selectFirst("a.button.button-shadow.active")?.attr("href") ?: url.substringBefore("/eps/")
-        val seriesDoc = app.get(seriesUrl, headers = desktopHeaders).document
-        val episodeElements = seriesDoc.select("div.gmr-listseries a.button.button-shadow")
-        var episodeCounter = 1
+            val episodes = episodeElements.mapNotNull { eps ->
+                val href = fixUrl(eps.attr("href")).trim()
+                val name = eps.text().trim()
+                if (name.contains("View All Episodes", ignoreCase = true)) return@mapNotNull null
+                if (href == seriesUrl) return@mapNotNull null
+                if (!name.contains("Eps", ignoreCase = true)) return@mapNotNull null
 
-        val episodes = episodeElements.mapNotNull { eps ->
-            val href = fixUrl(eps.attr("href")).trim()
-            val name = eps.text().trim()
-            if (name.contains("View All Episodes", ignoreCase = true)) return@mapNotNull null
-            if (href == seriesUrl) return@mapNotNull null
-            if (!name.contains("Eps", ignoreCase = true)) return@mapNotNull null
+                val regex = Regex("""S(\d+)\s*Eps""", RegexOption.IGNORE_CASE)
+                val match = regex.find(name)
+                val season = match?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
+                val epNum = episodeCounter++
 
-            val regex = Regex("""S(\d+)\s*Eps""", RegexOption.IGNORE_CASE)
-            val match = regex.find(name)
-            val season = match?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
-            val epNum = episodeCounter++
-
-            newEpisode(href) {
-                this.name = name
-                this.season = season
-                this.episode = epNum
+                newEpisode(href) {
+                    this.name = name
+                    this.season = season
+                    this.episode = epNum
+                }
             }
-        }
 
-        return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-            this.posterUrl = poster
-            this.year = year
-            this.plot = description
-            this.tags = tags
-            this.score = rating?.toFloatOrNull()?.let { Score.from10(it) }
-            addActors(actors ?: emptyList())
-            this.recommendations = recommendations
-            this.duration = duration ?: 0
-            addTrailer(trailer)
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+                this.posterUrl = poster
+                this.year = year
+                this.plot = description
+                this.tags = tags
+                this.score = rating?.toFloatOrNull()?.let { Score.from10(it) }
+                addActors(actors)
+                this.recommendations = recommendations
+                this.duration = duration ?: 0
+                addTrailer(trailer)
+            }
         }
     }
 
