@@ -22,7 +22,7 @@ class MovieBoxProvider : MainAPI() {
     override var mainUrl = "https://api6.aoneroom.com"
     override var name = "MovieBoxIN🗃"
     override val hasMainPage = true
-    override var lang = "ta"
+    override var lang = "id"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     private val secretKeyDefault = "Xqn2nnO41/L92o1iuXhSLHTbXvY4Z5ZZ62m8mSLA"
