@@ -15,15 +15,11 @@ class KitaNonton : MainAPI() {
     override var lang = "id"
     override val hasMainPage = true
 
-    override val supportedTypes = setOf(
-        TvType.Movie,
-        TvType.TvSeries,
-        TvType.Anime
-    )
+    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.AsianDrama)
 
     override val mainPage = mainPageOf(
         "/" to "Terbaru",
-        "/rating/" to "Best Rating",
+        "/best-rating/" to "Best Rating",
         "/tv-series/" to "Tv Series",
         "/genre/action/" to "Action",
         "/genre/crime/" to "Crime",
@@ -32,23 +28,14 @@ class KitaNonton : MainAPI() {
         "/country/thailand/" to "Thailand",
         "/country/korea/" to "Korea",
         "/country/philippines/" to "Philipines",
-        "/country/japan/" to "Jepan"
+        "/country/japan/" to "Jepan",
     )
 
-    override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
-    ): HomePageResponse {
-
-        val url =
-            if (request.data == "/") mainUrl
-            else "$mainUrl${request.data}page/$page/"
-
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val url = if (request.data == "/") mainUrl else "${mainUrl}${request.data}page/$page/"
         val document = app.get(url).document
-
         val items = document.select("div.slider-item, article.post")
             .mapNotNull { it.toSearchResult() }
-
         return newHomePageResponse(request.name, items)
     }
 
@@ -57,12 +44,7 @@ class KitaNonton : MainAPI() {
         val href = selectFirst("a")?.attr("href") ?: return null
         val poster = selectFirst("img")?.getImageAttr()
         val rating = selectFirst("div.rating")?.ownText()?.trim()
-
-        return newMovieSearchResponse(
-            title,
-            fixUrl(href),
-            TvType.Movie
-        ) {
+        return newMovieSearchResponse(title, fixUrl(href), TvType.Movie) {
             posterUrl = fixUrlNull(poster)
             if (!rating.isNullOrEmpty()) addScore(rating)
         }
@@ -76,7 +58,6 @@ class KitaNonton : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-
         val title = document.selectFirst("h1, h2[itemprop=name]")?.text()?.trim() ?: "Unknown"
         val poster = document.selectFirst("div.content-poster img")?.getImageAttr()
         val description = document.selectFirst("div[itemprop=description] p")?.text()
@@ -86,12 +67,7 @@ class KitaNonton : MainAPI() {
         val trailer = document.selectFirst("a.fancybox[href*='youtube']")?.attr("href")
         val actors = document.select("span[itemprop=actors] a").map { it.text() }
 
-        return newMovieLoadResponse(
-            title,
-            url,
-            TvType.Movie,
-            url
-        ) {
+        return newMovieLoadResponse(title, url, TvType.Movie, url) {
             posterUrl = fixUrlNull(poster)
             plot = description
             this.year = year
@@ -108,7 +84,6 @@ class KitaNonton : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-
         val document = app.get(data).document
         val postId = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id") ?: return false
         val baseUrl = getBaseUrl(data)
@@ -125,7 +100,6 @@ class KitaNonton : MainAPI() {
 
             loadExtractor(server, baseUrl, subtitleCallback, callback)
         }
-
         return true
     }
 
@@ -138,9 +112,7 @@ class KitaNonton : MainAPI() {
         }
 
     private fun Element?.getIframeAttr(): String? =
-        this?.attr("data-litespeed-src")?.takeIf { it.isNotEmpty() }
-            ?: this?.attr("src")
+        this?.attr("data-litespeed-src")?.takeIf { it.isNotEmpty() } ?: this?.attr("src")
 
-    private fun getBaseUrl(url: String): String =
-        URI(url).let { "${it.scheme}://${it.host}" }
+    private fun getBaseUrl(url: String): String = URI(url).let { "${it.scheme}://${it.host}" }
 }
