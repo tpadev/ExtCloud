@@ -11,14 +11,9 @@ import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
 class Playcinematic : ExtractorApi() {
-
-    override val name = "Playcinematic"
-    override val mainUrl = "https://playcinematic.com"
+    override var name = "Playcinematic"
+    override var mainUrl = "https://playcinematic.com"
     override val requiresReferer = true
-
-    private val UA =
-        "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
     override suspend fun getUrl(
         url: String,
@@ -26,82 +21,34 @@ class Playcinematic : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-       
-        val pageRef = "$mainUrl/"
+        val document = app.get(url, referer = referer).document
+        val hash = url.split("/").last().substringAfter("data=")
 
-       
-        val document = app.get(
-            url = url,
-            referer = pageRef,
-            headers = mapOf(
-                "User-Agent" to UA,
-                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language" to "en-US,en;q=0.9",
-                "Connection" to "keep-alive"
-            )
-        ).document
-
-       
-        val videoId = when {
-            url.contains("/video/") -> url.substringAfterLast("/")
-            url.contains("data=") -> url.substringAfter("data=").substringBefore("&")
-            else -> url.substringAfterLast("/")
-        }.trim()
-
-        if (videoId.isBlank()) return
-
-        
-        val response = app.post(
-            url = "$mainUrl/player/index.php?do=getVideo&data=$videoId",
-            data = mapOf(
-                "hash" to videoId,
-                "r" to pageRef
-            ),
-            referer = pageRef,
-            headers = mapOf(
-                "X-Requested-With" to "XMLHttpRequest",
-                "Origin" to mainUrl,
-                "User-Agent" to UA,
-                "Accept" to "*/*",
-                "Connection" to "keep-alive"
-            )
-        ).parsed<ResponseSource>()
-
-        
-        val m3u8Url = response.securedLink?.takeIf { it.isNotBlank() } ?: return
+        val m3uLink = app.post(
+            url = "$mainUrl/player/index.php?data=$hash&do=getVideo",
+            data = mapOf("hash" to hash, "r" to "$referer"),
+            referer = referer,
+            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        ).parsed<ResponseSource>().videoSource
 
         callback.invoke(
             newExtractorLink(
-                name = "Jenius AUTO",
-                source = name,
-                url = m3u8Url,
-                type = ExtractorLinkType.M3U8
-            ) {
-                this.referer = pageRef
-                this.headers = mapOf(
-                    "Origin" to mainUrl,
-                    "Referer" to pageRef,
-                    "User-Agent" to UA,
-                    "Accept" to "*/*",
-                    "Accept-Language" to "en-US,en;q=0.9",
-                    "Connection" to "keep-alive"
-                )
-            }
+                name,
+                name,
+                url = m3uLink,
+                ExtractorLinkType.M3U8
+            )
         )
 
-        document.select("script").forEach { script ->
-            val data = script.data()
-            if (data.contains("eval(function")) {
-                val unpacked = getAndUnpack(data)
-                val subData = unpacked
-                    .substringAfter("\"tracks\":[")
-                    .substringBefore("],")
-
-                tryParseJson<List<Tracks>>("[$subData]")?.forEach { sub ->
+        document.select("script").map { script ->
+            if (script.data().contains("eval(function(p,a,c,k,e,d)")) {
+                val subData =
+                    getAndUnpack(script.data()).substringAfter("\"tracks\":[").substringBefore("],")
+                AppUtils.tryParseJson<List<Tracks>>("[$subData]")?.map { subtitle ->
                     subtitleCallback.invoke(
                         SubtitleFile(
-                            getLanguage(sub.label ?: ""),
-                            sub.file
+                            getLanguage(subtitle.label ?: ""),
+                            subtitle.file
                         )
                     )
                 }
@@ -109,22 +56,12 @@ class Playcinematic : ExtractorApi() {
         }
     }
 
+
     private fun getLanguage(str: String): String {
         return when {
-            str.contains("indonesia", true) || str.contains("bahasa", true) -> "Indonesian"
+            str.contains("indonesia", true) || str
+                .contains("bahasa", true) -> "Indonesian"
             else -> str
         }
     }
-
-    data class ResponseSource(
-        @JsonProperty("hls") val hls: Boolean?,
-        @JsonProperty("videoSource") val videoSource: String?,
-        @JsonProperty("securedLink") val securedLink: String?
-    )
-
-    data class Tracks(
-        @JsonProperty("kind") val kind: String?,
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String?
-    )
 }
