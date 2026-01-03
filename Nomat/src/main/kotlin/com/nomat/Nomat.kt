@@ -97,41 +97,35 @@ override suspend fun search(
         "$mainUrl/search/$query/page/$page/"
 
     val document = app.get(url, timeout = 50L).document
-    val items = document.select("div.item")
-    if (items.isEmpty()) return emptyList()
 
-    return items.mapNotNull { el ->
+    val results = document.select("div.body a")
+    if (results.isEmpty()) return emptyList()
+
+    return results.mapNotNull { el ->
         try {
-            val a = el.selectFirst("a") ?: return@mapNotNull null
-            val href = fixUrl(a.attr("href"))
+            val href = fixUrl(el.attr("href"))
 
-            val title = el.selectFirst("div.title")?.text()?.trim()
-                ?: return@mapNotNull null
+            val title = el.selectFirst("div.title")
+                ?.text()
+                ?.trim()
+                ?: el.text().trim()
 
             val poster = Regex("url\\(['\"]?(.*?)['\"]?\\)")
                 .find(el.selectFirst("div.poster")?.attr("style") ?: "")
                 ?.groupValues?.get(1)
 
-            val quality = el.selectFirst("div.qual")?.text()?.trim()
-            val rating = el.selectFirst("div.rtg")?.ownText()?.toDoubleOrNull()
-
             val isSeries =
                 href.contains("/serial-tv/") ||
                 title.contains("season", true) ||
-                title.contains("episode", true) ||
-                quality?.contains("eps", true) == true
+                title.contains("episode", true)
 
             if (isSeries) {
                 newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                    posterUrl = poster
-                    addQuality(quality ?: "")
-                    score = Score.from10(rating)
+                    this.posterUrl = poster
                 }
             } else {
                 newMovieSearchResponse(title, href, TvType.Movie) {
-                    posterUrl = poster
-                    addQuality(quality ?: "")
-                    score = Score.from10(rating)
+                    this.posterUrl = poster
                 }
             }
         } catch (e: Exception) {
