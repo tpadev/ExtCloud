@@ -5,11 +5,9 @@ import android.content.Context
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 
-
 @CloudstreamPlugin
 class KitaNontonPlugin : Plugin() {
     override fun load(context: Context) {
-        Anichin.context = context
         registerMainAPI(KitaNonton())
     }
 }
