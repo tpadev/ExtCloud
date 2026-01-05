@@ -201,7 +201,64 @@ class Filmapik : MainAPI() {
         }
     }
 
+doc.select("div#download a.myButton[href]").forEach { a ->
+
+        a.attr("href").trim().let { if (it.isNotEmpty()) links.add(it) }
+
+    }
+
+    for (raw in links) {
+
+        val resolved = resolveIframe(raw)
+
+        loadExtractor(resolved, data, subtitleCallback, callback)
+
+    }
+
     return true
+
+}
+
+
+
+private suspend fun resolveIframe(url: String): String {
+
+    val res = app.get(url, allowRedirects = true)
+
+    val doc = res.document
+
+    doc.selectFirst("iframe[src]")?.attr("src")?.trim()?.let {
+
+        if (it.startsWith("http")) return it
+
+    }
+
+    doc.select("meta[http-equiv=refresh]").forEach { meta ->
+
+        meta.attr("content")?.substringAfter("URL=")?.trim()?.let { refreshUrl ->
+
+            if (refreshUrl.startsWith("http")) return resolveIframe(refreshUrl)
+
+        }
+
+    }
+
+    val scripts = doc.select("script").html()
+
+    val regexJs = Regex("""location\.href\s*=\s*["'](.*?)["']""")
+
+    val match = regexJs.find(scripts)
+
+    if (match != null) {
+
+        val jsUrl = match.groupValues[1]
+
+        if (jsUrl.startsWith("http")) return resolveIframe(jsUrl)
+
+    }
+
+    return res.url
+
 }
 
 
