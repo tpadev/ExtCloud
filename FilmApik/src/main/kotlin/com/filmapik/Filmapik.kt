@@ -88,7 +88,9 @@ class Filmapik : MainAPI() {
     val year = document.selectFirst("#info .info-more .country a")
         ?.text()
         ?.toIntOrNull()
-
+    val rating = selectFirst("#repimdb strong")
+        ?.text()
+        ?.toFloatOrNull()
     val recommendations = document
         .select("#single_relacionados article")
         .mapNotNull { it.toRecommendResult() }
@@ -136,6 +138,7 @@ class Filmapik : MainAPI() {
             addActors(actors)
             this.plot = description
             this.recommendations = recommendations
+            this.score = Score.from10(rating)
         }
     }
 
@@ -156,6 +159,7 @@ class Filmapik : MainAPI() {
     addActors(actors)
     this.plot = description
     this.recommendations = recommendations
+    this.score = Score.from10(rating)
 }
 }
 
