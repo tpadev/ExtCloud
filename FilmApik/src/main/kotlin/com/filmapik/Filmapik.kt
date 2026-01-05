@@ -63,10 +63,16 @@ class Filmapik : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
     val title = document.selectFirst(
-        "h1[itemprop=name], .sheader h1, .sheader h2"
-    )?.text()?.trim()
-        ?: document.selectFirst("#info h2")?.text()?.trim()
-        ?: ""
+    "h1[itemprop=name], .sheader h1, .sheader h2"
+)?.text()
+    ?.replace(Regex("(?i)^nonton\\s+film\\s+"), "")
+    ?.replace(Regex("(?i)subtitle\\s+indonesia.*$"), "")
+    ?.trim()
+    ?: document.selectFirst("#info h2")?.text()
+        ?.replace(Regex("(?i)^nonton\\s+film\\s+"), "")
+        ?.replace(Regex("(?i)subtitle\\s+indonesia.*$"), "")
+        ?.trim()
+    ?: ""
     val poster = document.selectFirst(".sheader .poster img")
         ?.attr("src")
         ?.let { fixUrl(it) }
