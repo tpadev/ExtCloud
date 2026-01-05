@@ -78,9 +78,14 @@ class Filmapik : MainAPI() {
         ?.let { fixUrl(it) }
     val genres = document.select("#info .info-more span.sgeneros a")
         .map { it.text() }
-    val actors = document.select(
-    "#info .info-more span.tagline:contains(Actors) a"
-).map { it.text() }
+    val actors = document.select(".info-more span.tagline")
+    .firstOrNull {
+        it.text().contains("Actors", true) ||
+        it.text().contains("Stars", true)
+    }
+    ?.select("a")
+    ?.map { it.text() }
+    ?: emptyList()
     val description = document.selectFirst(
         "div[itemprop=description], .wp-content, .entry-content, .desc, .entry"
     )?.text()?.trim()
