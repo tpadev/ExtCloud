@@ -55,11 +55,14 @@ class Filmapik : MainAPI() {
         val a = selectFirst("a[href]") ?: return null
         val img = a.selectFirst("img[src][alt]") ?: return null
         val href = fixUrl(a.attr("href"))
-        val rawTitle = img.attr("alt").trim()
+        val rawTitle = img.attr("alt")
+        .replace("\u00A0", " ") 
+        .trim()
         val title = rawTitle
         .replace(Regex("(?i)nonton\\s*film"), "")
         .replace(Regex("\\(\\d{4}\\)"), "")
         .replace(Regex("(?i)subtitle\\s*indonesia"), "")
+        .replace(Regex("(?i)filmapik"), "")
         .trim()
         val poster = fixUrlNull(img.attr("src")).fixImageQuality()
         return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = poster }
