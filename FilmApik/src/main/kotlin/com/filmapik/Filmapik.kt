@@ -19,10 +19,10 @@ class Filmapik : MainAPI() {
 
     override val mainPage = mainPageOf(
         "category/box-office/page/%d/" to "Box Office",
+        "trending-2/page/%d/" to "Trending",
+        "ratings-2/page/%d/" to "Rating Terbaik",
         "tvshows/page/%d/" to "Serial Terbaru",
         "latest/page/%d/" to "Film Terbaru",
-        "category/action/page/%d/" to "Action",
-        "category/romance/page/%d/" to "Romance"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -146,7 +146,6 @@ class Filmapik : MainAPI() {
         ) {
             this.posterUrl = poster
             this.year = year
-            this.tags = genres
             addActors(actors)
             this.plot = description
             this.tags = tags
@@ -169,7 +168,6 @@ class Filmapik : MainAPI() {
 ) {
     this.posterUrl = poster
     this.year = year
-    this.tags = genres
     addActors(actors)
     this.plot = description
     this.tags = tags
