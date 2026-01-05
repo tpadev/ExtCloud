@@ -187,13 +187,13 @@ class Filmapik : MainAPI() {
 
     val doc = app.get(data).document
 
+    val links = mutableListOf<String>()
+
   
     doc.select("div.pframe iframe[src]").forEach { iframe ->
         val iframeUrl = fixUrl(iframe.attr("src"))
         loadExtractor(iframeUrl, data, subtitleCallback, callback)
     }
-
-    
     doc.select("li.dooplay_player_option[data-url]").forEach { el ->
         val serverUrl = el.attr("data-url").trim()
         if (serverUrl.isNotEmpty()) {
@@ -201,22 +201,20 @@ class Filmapik : MainAPI() {
         }
     }
 
-doc.select("div#download a.myButton[href]").forEach { a ->
-
-        a.attr("href").trim().let { if (it.isNotEmpty()) links.add(it) }
-
+    doc.select("div#download a.myButton[href]").forEach { a ->
+        val href = a.attr("href").trim()
+        if (href.isNotEmpty()) {
+            links.add(fixUrl(href))
+        }
     }
 
+   
     for (raw in links) {
-
         val resolved = resolveIframe(raw)
-
         loadExtractor(resolved, data, subtitleCallback, callback)
-
     }
 
     return true
-
 }
 
 
