@@ -163,15 +163,23 @@ class Filmapik : MainAPI() {
 
     val doc = app.get(data).document
 
+  
+    doc.select("div.pframe iframe[src]").forEach { iframe ->
+        val iframeUrl = fixUrl(iframe.attr("src"))
+        loadExtractor(iframeUrl, data, subtitleCallback, callback)
+    }
+
+    
     doc.select("li.dooplay_player_option[data-url]").forEach { el ->
-        val iframeUrl = el.attr("data-url").trim()
-        if (iframeUrl.isNotEmpty()) {
-            loadExtractor(iframeUrl, data, subtitleCallback, callback)
+        val serverUrl = el.attr("data-url").trim()
+        if (serverUrl.isNotEmpty()) {
+            loadExtractor(serverUrl, data, subtitleCallback, callback)
         }
     }
 
     return true
 }
+
 
     private fun String?.fixImageQuality(): String? {
         if (this == null) return null
