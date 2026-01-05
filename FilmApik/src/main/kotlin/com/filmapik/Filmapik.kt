@@ -79,8 +79,8 @@ class Filmapik : MainAPI() {
     val poster = document.selectFirst(".sheader .poster img")
         ?.attr("src")
         ?.let { fixUrl(it) }
-    val genres = document.select("#info .info-more span.sgeneros a")
-        .map { it.text() }
+    val tags = document.select("span.sgeneros a")
+    .map { it.text().trim() }
     val actors = document.select(".info-more span.tagline")
     .firstOrNull {
         it.text().contains("Actors", true) ||
@@ -102,6 +102,10 @@ class Filmapik : MainAPI() {
     val recommendations = document
         .select("#single_relacionados article")
         .mapNotNull { it.toRecommendResult() }
+    val duration = document.selectFirst("span.runtime")
+    ?.text()
+    ?.let { Regex("(\\d+)").find(it)?.value }
+    ?.toIntOrNull()
 
     val seasonBlocks = document.select("#seasons .se-c")
 
@@ -145,6 +149,8 @@ class Filmapik : MainAPI() {
             this.tags = genres
             addActors(actors)
             this.plot = description
+            this.tags = tags
+            this.duration = duration ?: 0
             this.recommendations = recommendations
             this.score = Score.from10(rating)
         }
@@ -166,6 +172,8 @@ class Filmapik : MainAPI() {
     this.tags = genres
     addActors(actors)
     this.plot = description
+    this.tags = tags
+    this.duration = duration ?: 0
     this.recommendations = recommendations
     this.score = Score.from10(rating)
 }
