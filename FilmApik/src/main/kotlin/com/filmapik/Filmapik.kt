@@ -33,18 +33,21 @@ class Filmapik : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val a = selectFirst("a[title][href]") ?: return null
-        val title = selectFirst("div.data.dfeatur h3 a")?.text()?.trim() ?: ""
-        val href = fixUrl(a.attr("href"))
-        val poster = fixUrlNull(selectFirst("img[src]")?.attr("src")).fixImageQuality()
-        val rating = selectFirst("div.rating")?.ownText()?.trim()?.toDoubleOrNull()
-        val quality = selectFirst("span.quality")?.text()?.trim()
-        return newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = poster
-            if (!quality.isNullOrBlank()) addQuality(quality)
-            this.score = Score.from10(rating)
-        }
+    val a = selectFirst("div.data h3 a") ?: return null
+    val title = a.ownText().trim()
+    val href = fixUrl(a.attr("href"))
+    val poster = fixUrlNull(selectFirst("img[src]")?.attr("src"))
+        ?.fixImageQuality()
+    val rating = selectFirst("div.rating")
+        ?.ownText()?.trim()?.toDoubleOrNull()
+    val quality = selectFirst("span.quality")?.text()?.trim()
+    return newMovieSearchResponse(title, href, TvType.Movie) {
+        this.posterUrl = poster
+        if (!quality.isNullOrBlank()) addQuality(quality)
+        rating?.let { this.score = Score.from10(it) }
     }
+}
+
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl?s=$query&post_type[]=post&post_type[]=tv").document
