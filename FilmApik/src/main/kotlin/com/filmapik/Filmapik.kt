@@ -34,7 +34,7 @@ class Filmapik : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val a = selectFirst("a[title][href]") ?: return null
-        val title = a.attr("title").trim()
+        val title = a.text().trim()
         val href = fixUrl(a.attr("href"))
         val poster = fixUrlNull(selectFirst("img[src]")?.attr("src")).fixImageQuality()
         val rating = selectFirst("div.rating")?.ownText()?.trim()?.toDoubleOrNull()
@@ -55,15 +55,7 @@ class Filmapik : MainAPI() {
         val a = selectFirst("a[href]") ?: return null
         val img = a.selectFirst("img[src][alt]") ?: return null
         val href = fixUrl(a.attr("href"))
-        val rawTitle = img.attr("alt")
-        .replace("\u00A0", " ") 
-        .trim()
-        val title = rawTitle
-        .replace(Regex("(?i)nonton\\s*film"), "")
-        .replace(Regex("\\(\\d{4}\\)"), "")
-        .replace(Regex("(?i)subtitle\\s*indonesia"), "")
-        .replace(Regex("(?i)filmapik"), "")
-        .trim()
+        val title = img.attr("alt").trim()
         val poster = fixUrlNull(img.attr("src")).fixImageQuality()
         return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = poster }
     }
