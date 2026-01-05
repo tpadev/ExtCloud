@@ -61,46 +61,69 @@ class Filmapik : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
-        val title = document.selectFirst("h1[itemprop=name], .sheader h1, .sheader h2")?.text()?.trim()
-            ?: document.selectFirst("#info h2")?.text()?.trim() ?: ""
-        val poster = document.selectFirst(".sheader .poster img")?.attr("src")?.let { fixUrl(it) }
-        val genres = document.select("#info .info-more span.sgeneros a").map { it.text() }
-        val actors = document.select("#info .info-more span.tagline:contains(Stars) a").map { it.text() }
-        val description = document.selectFirst("div[itemprop=description], .wp-content, .entry-content, .desc, .entry")?.text()?.trim()
-            ?: document.selectFirst("#info .info-more:nth-of-type(1)")?.text()?.trim() ?: "Tidak ada deskripsi."
-        val year = document.selectFirst("#info .info-more .country a")?.text()?.toIntOrNull()
-        val recommendations = document.select("#single_relacionados article").mapNotNull { it.toRecommendResult() }
-        val seasonBlocks = document.select("#seasons .se-c")
+    val document = app.get(url).document
+    val title = document.selectFirst(
+        "h1[itemprop=name], .sheader h1, .sheader h2"
+    )?.text()?.trim()
+        ?: document.selectFirst("#info h2")?.text()?.trim()
+        ?: ""
+    val poster = document.selectFirst(".sheader .poster img")
+        ?.attr("src")
+        ?.let { fixUrl(it) }
+    val genres = document.select("#info .info-more span.sgeneros a")
+        .map { it.text() }
+    val actors = document.select(
+        "#info .info-more span.tagline:contains(Stars) a"
+    ).map { it.text() }
+    val description = document.selectFirst(
+        "div[itemprop=description], .wp-content, .entry-content, .desc, .entry"
+    )?.text()?.trim()
+        ?: "Tidak ada deskripsi."
+    val year = document.selectFirst("#info .info-more .country a")
+        ?.text()
+        ?.toIntOrNull()
 
-        if (seasonBlocks.isNotEmpty()) {
-            val episodes = mutableListOf<Episode>()
-            seasonBlocks.forEach { block ->
-                val seasonNum = block.selectFirst(".se-q .se-t")?.text()?.toIntOrNull() ?: 1
-                val epList = block.select(".se-a ul.episodios li a")
-                epList.forEachIndexed { index, ep ->
-                    val href = fixUrl(ep.attr("href"))
-                    val epName = ep.text().ifBlank { "Episode ${index + 1}" }
+    val recommendations = document
+        .select("#single_relacionados article")
+        .mapNotNull { it.toRecommendResult() }
+
+    val seasonBlocks = document.select("#seasons .se-c")
+
+    if (seasonBlocks.isNotEmpty()) {
+        val episodes = mutableListOf<Episode>()
+
+        seasonBlocks.forEach { block ->
+            val seasonNum = block
+                .selectFirst(".se-q .se-t")
+                ?.text()
+                ?.filter { it.isDigit() }
+                ?.toIntOrNull()
+                ?: 1
+
+            block.select(".se-a ul.episodios li a")
+                .forEachIndexed { index, ep ->
+
+                    val epUrl = fixUrl(ep.attr("href"))
+                    val epName = ep.text().ifBlank {
+                        "Episode ${index + 1}"
+                    }
+
                     episodes.add(
-                        newEpisode(href) {
+                        newEpisode(epUrl) {
                             this.name = epName
                             this.season = seasonNum
                             this.episode = index + 1
                         }
                     )
                 }
-            }
-            return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                this.posterUrl = poster
-                this.year = year
-                this.tags = genres
-                addActors(actors)
-                this.plot = description
-                this.recommendations = recommendations
-            }
         }
 
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return newTvSeriesLoadResponse(
+            title,
+            url,
+            TvType.TvSeries,
+            episodes
+        ) {
             this.posterUrl = poster
             this.year = year
             this.tags = genres
@@ -109,6 +132,27 @@ class Filmapik : MainAPI() {
             this.recommendations = recommendations
         }
     }
+
+    val playUrl = document
+        .selectFirst("#clickfakeplayer, .fakeplayer a")
+        ?.attr("href")
+        ?.let { fixUrl(it) }
+
+    return newMovieLoadResponse(
+        title,
+        playUrl ?: url,   
+        TvType.Movie,
+        url
+    ) {
+        this.posterUrl = poster
+        this.year = year
+        this.tags = genres
+        addActors(actors)
+        this.plot = description
+        this.recommendations = recommendations
+    }
+}
+
 
     override suspend fun loadLinks(
     data: String,
