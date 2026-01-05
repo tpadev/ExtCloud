@@ -139,18 +139,18 @@ class Filmapik : MainAPI() {
         ?.let { fixUrl(it) }
 
     return newMovieLoadResponse(
-        title,
-        playUrl ?: url,   
-        TvType.Movie,
-        url
-    ) {
-        this.posterUrl = poster
-        this.year = year
-        this.tags = genres
-        addActors(actors)
-        this.plot = description
-        this.recommendations = recommendations
-    }
+    title,
+    playUrl ?: url,
+    TvType.Movie,
+    playUrl ?: url   
+) {
+    this.posterUrl = poster
+    this.year = year
+    this.tags = genres
+    addActors(actors)
+    this.plot = description
+    this.recommendations = recommendations
+}
 }
 
 
