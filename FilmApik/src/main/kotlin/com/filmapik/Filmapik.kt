@@ -34,7 +34,7 @@ class Filmapik : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val a = selectFirst("a[title][href]") ?: return null
-        val title = a.text().trim()
+        val title = selectFirst("div.data.dfeatur h3 a")?.text()?.trim() ?: ""
         val href = fixUrl(a.attr("href"))
         val poster = fixUrlNull(selectFirst("img[src]")?.attr("src")).fixImageQuality()
         val rating = selectFirst("div.rating")?.ownText()?.trim()?.toDoubleOrNull()
