@@ -79,8 +79,8 @@ class Filmapik : MainAPI() {
     val genres = document.select("#info .info-more span.sgeneros a")
         .map { it.text() }
     val actors = document.select(
-        "#info .info-more span.tagline:contains(Stars) a"
-    ).map { it.text() }
+    "#info .info-more span.tagline:contains(Actors) a"
+).map { it.text() }
     val description = document.selectFirst(
         "div[itemprop=description], .wp-content, .entry-content, .desc, .entry"
     )?.text()?.trim()
@@ -88,7 +88,7 @@ class Filmapik : MainAPI() {
     val year = document.selectFirst("#info .info-more .country a")
         ?.text()
         ?.toIntOrNull()
-    val rating = selectFirst("#repimdb strong")
+    val rating = document.selectFirst("#repimdb strong")
         ?.text()
         ?.toFloatOrNull()
     val recommendations = document
