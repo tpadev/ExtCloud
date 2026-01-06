@@ -39,12 +39,7 @@ object SoraExtractor : SoraStream() {
             base64Decode("X3NtUWFtQlFzRVRi"),
             base64Decode("X3NCV2NxYlRCTWFU"),
         )
-    }
-     
-    data class RiveStreamSource(
-    @JsonProperty("data")
-    val data: List<String>?
-)
+    )
 
     private suspend fun invokeGpress(
         title: String? = null,
@@ -1083,3 +1078,7 @@ object SoraExtractor : SoraStream() {
     }
 
 }
+    data class RiveStreamSource(
+    @JsonProperty("data")
+    val data: List<String>?
+)
