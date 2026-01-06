@@ -43,23 +43,24 @@ class Samehadaku : MainAPI() {
 
                 val rawTitle = a.attr("title").ifBlank { a.text() }
 
-                val ep = Regex("(?:Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
-                    .find(rawTitle)
-                    ?.groupValues
-                    ?.getOrNull(1)
-                    ?.toIntOrNull()
-
                 val title = rawTitle
-                    .replace(Regex("(?:Episode|Ep)\\s*\\d+", RegexOption.IGNORE_CASE), "")
+                    .replace(Regex("(Episode|Ep)\\s*\\d+", RegexOption.IGNORE_CASE), "")
                     .removeBloat()
                     .trim()
 
                 val href = fixUrl(a.attr("href"))
                 val poster = fixUrlNull(li.selectFirst("img")?.attr("src"))
 
+                val ep = Regex("(Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                    .find(rawTitle)
+                    ?.groupValues
+                    ?.getOrNull(2)
+                    ?.toIntOrNull()
+
                 newAnimeSearchResponse(title, href, TvType.Anime) {
                     posterUrl = poster
-                    addDubStatus(DubStatus.Subbed, ep)
+                    addDubStatus(DubStatus.Subbed)
+                    addEpisodeNumber(ep)
                 }
             }
 
@@ -142,10 +143,11 @@ class Samehadaku : MainAPI() {
         val episodes = document.select("div.lstepsiode ul li")
             .mapNotNull {
                 val a = it.selectFirst("a") ?: return@mapNotNull null
-                val ep = Regex("(?:Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
+
+                val ep = Regex("(Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
                     .find(a.text())
                     ?.groupValues
-                    ?.getOrNull(1)
+                    ?.getOrNull(2)
                     ?.toIntOrNull()
 
                 newEpisode(fixUrl(a.attr("href"))) {
