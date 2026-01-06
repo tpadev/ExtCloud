@@ -165,10 +165,10 @@ class Nunadrama : MainAPI() {
             val content = script.data()
             if ("Base64" in content && "decode" in content) {
                 Regex("Base64\\.decode\\(['\"](.*?)['\"]\\)").findAll(content).forEach { match ->
-                    try {
+                    runCatching {
                         val decoded = String(android.util.Base64.decode(match.groupValues[1], android.util.Base64.DEFAULT))
                         Regex("https?://[^\"]+").findAll(decoded).forEach { foundLinks.add(httpsify(it.value)) }
-                    } catch (_: Exception) {}
+                    }
                 }
             }
         }
@@ -179,7 +179,7 @@ class Nunadrama : MainAPI() {
             val idx = priorityHosts.indexOfFirst { link.contains(it, true) }
             if (idx == -1) priorityHosts.size else idx
         }.map { link -> async {
-            try { loadExtractor(link, data, subtitleCallback) { callback(it); extracted.add(it) } } catch (_: Exception) {}
+            runCatching { loadExtractor(link, data, subtitleCallback) { callback(it); extracted.add(it) } }
         } }.awaitAll()
 
         linkCache[data] = now to extracted
