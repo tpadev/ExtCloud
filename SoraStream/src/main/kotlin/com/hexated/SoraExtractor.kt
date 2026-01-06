@@ -11,12 +11,20 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.RequestBodyTypes
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
+import org.json.JSONObject
+import java.net.URLDecoder
+import com.fasterxml.jackson.annotation.JsonProperty
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.Jsoup
 
 object SoraExtractor : SoraStream() {
+
+    data class RiveStreamSource(
+    @JsonProperty("data")
+    val data: List<String>?
+)
 
     suspend fun invokeGomovies(
         title: String? = null,
