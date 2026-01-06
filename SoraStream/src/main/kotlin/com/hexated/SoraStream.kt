@@ -2,6 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invokeGomovies
+import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeMapple
 import com.hexated.SoraExtractor.invokeSuperembed
@@ -15,6 +16,7 @@ import com.hexated.SoraExtractor.invokeVixsrc
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeWyzie
 import com.hexated.SoraExtractor.invokeXprime
+import com.hexated.SoraExtractor.invokeRiveStream
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
