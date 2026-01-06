@@ -72,6 +72,7 @@ open class SoraStream : TmdbProvider() {
         const val vidsrccxAPI = "https://vidsrc.cx"
         const val superembedAPI = "https://multiembed.mov"
         const val vidrockAPI = "https://vidrock.net"
+        const val RiveStreamAPI = "https://rivestream.org"
 
         fun getType(t: String?): TvType {
             return when (t) {
