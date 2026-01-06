@@ -40,6 +40,7 @@ class Samehadaku : MainAPI() {
             val home = document.select("div.post-show ul li").mapNotNull {
                 it.toEpisodeSearch()
             }
+
             return newHomePageResponse(
                 HomePageList(request.name, home, true),
                 hasNext = home.isNotEmpty()
@@ -183,8 +184,11 @@ class Samehadaku : MainAPI() {
 
         return newAnimeSearchResponse(title, fixUrl(a.attr("href")), TvType.Anime) {
             posterUrl = fixUrlNull(selectFirst("img")?.attr("src"))
-            addDubStatus(DubStatus.Subbed)
-            if (ep != null) addEpisodeNumber(ep)
+            if (ep != null && ep > 0) {
+                addDubStatus(DubStatus.Subbed, ep)
+            } else {
+                addDubStatus(DubStatus.Subbed)
+            }
         }
     }
 
