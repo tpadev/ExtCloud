@@ -42,6 +42,12 @@ class Samehadaku : MainAPI() {
                 val a = li.selectFirst("a") ?: return@mapNotNull null
                 val rawTitle = a.attr("title").ifBlank { a.text() }
 
+                val episode = Regex("(?:Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                    .find(rawTitle)
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.toIntOrNull()
+
                 val title = rawTitle
                     .replace(Regex("(?:Episode|Ep)\\s*\\d+", RegexOption.IGNORE_CASE), "")
                     .removeBloat()
@@ -50,15 +56,11 @@ class Samehadaku : MainAPI() {
                 val href = fixUrl(a.attr("href"))
                 val poster = fixUrlNull(li.selectFirst("img")?.attr("src"))
 
-                val ep = Regex("(?:Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
-                    .find(rawTitle)
-                    ?.groupValues
-                    ?.getOrNull(1)
-                    ?.toIntOrNull()
-
                 newAnimeSearchResponse(title, href, TvType.Anime) {
                     posterUrl = poster
-                    addDubStatus(DubStatus.Subbed, ep)
+                    if (episode != null) {
+                        addDubStatus(DubStatus.Subbed, episode)
+                    }
                 }
             }
 
@@ -97,10 +99,12 @@ class Samehadaku : MainAPI() {
         }
     }
 
-    override suspend fun search(query: String): List<SearchResponse> =
-        app.get("$mainUrl/?s=$query").document
+    override suspend fun search(query: String): List<SearchResponse> {
+        return app.get("$mainUrl/?s=$query")
+            .document
             .select("div.animposx")
             .mapNotNull { it.toSearchResult() }
+    }
 
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
@@ -144,7 +148,9 @@ class Samehadaku : MainAPI() {
                     ?.getOrNull(1)
                     ?.toIntOrNull()
 
-                newEpisode(fixUrl(a.attr("href"))) { episode = ep }
+                newEpisode(fixUrl(a.attr("href"))) {
+                    episode = ep
+                }
             }
             .reversed()
 
