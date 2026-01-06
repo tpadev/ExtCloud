@@ -185,13 +185,13 @@ class Filmapik : MainAPI() {
 
     val doc = app.get(data).document
 
+    val links = mutableListOf<String>()
+
   
     doc.select("div.pframe iframe[src]").forEach { iframe ->
         val iframeUrl = fixUrl(iframe.attr("src"))
         loadExtractor(iframeUrl, data, subtitleCallback, callback)
     }
-
-    
     doc.select("li.dooplay_player_option[data-url]").forEach { el ->
         val serverUrl = el.attr("data-url").trim()
         if (serverUrl.isNotEmpty()) {
@@ -199,7 +199,62 @@ class Filmapik : MainAPI() {
         }
     }
 
+    doc.select("div#download a.myButton[href]").forEach { a ->
+        val href = a.attr("href").trim()
+        if (href.isNotEmpty()) {
+            links.add(fixUrl(href))
+        }
+    }
+
+   
+    for (raw in links) {
+        val resolved = resolveIframe(raw)
+        loadExtractor(resolved, data, subtitleCallback, callback)
+    }
+
     return true
+}
+
+
+
+private suspend fun resolveIframe(url: String): String {
+
+    val res = app.get(url, allowRedirects = true)
+
+    val doc = res.document
+
+    doc.selectFirst("iframe[src]")?.attr("src")?.trim()?.let {
+
+        if (it.startsWith("http")) return it
+
+    }
+
+    doc.select("meta[http-equiv=refresh]").forEach { meta ->
+
+        meta.attr("content")?.substringAfter("URL=")?.trim()?.let { refreshUrl ->
+
+            if (refreshUrl.startsWith("http")) return resolveIframe(refreshUrl)
+
+        }
+
+    }
+
+    val scripts = doc.select("script").html()
+
+    val regexJs = Regex("""location\.href\s*=\s*["'](.*?)["']""")
+
+    val match = regexJs.find(scripts)
+
+    if (match != null) {
+
+        val jsUrl = match.groupValues[1]
+
+        if (jsUrl.startsWith("http")) return resolveIframe(jsUrl)
+
+    }
+
+    return res.url
+
 }
 
 
