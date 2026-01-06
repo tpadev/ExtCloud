@@ -40,15 +40,15 @@ class Samehadaku : MainAPI() {
 
             val home = document.select("div.post-show ul li").mapNotNull { li ->
                 val a = li.selectFirst("a") ?: return@mapNotNull null
-                val rawTitle = a.attr("title").ifBlank { a.text() }
+                val text = a.text()
 
-                val episode = Regex("(?:Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
-                    .find(rawTitle)
+                val ep = Regex("(?:Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                    .find(text)
                     ?.groupValues
                     ?.getOrNull(1)
                     ?.toIntOrNull()
 
-                val title = rawTitle
+                val title = text
                     .replace(Regex("(?:Episode|Ep)\\s*\\d+", RegexOption.IGNORE_CASE), "")
                     .removeBloat()
                     .trim()
@@ -58,8 +58,10 @@ class Samehadaku : MainAPI() {
 
                 newAnimeSearchResponse(title, href, TvType.Anime) {
                     posterUrl = poster
-                    if (episode != null) {
-                        addDubStatus(DubStatus.Subbed, episode)
+                    if (ep != null) {
+                        addDubStatus(DubStatus.Subbed, ep)
+                    } else {
+                        addDubStatus(DubStatus.Subbed)
                     }
                 }
             }
@@ -99,12 +101,11 @@ class Samehadaku : MainAPI() {
         }
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        return app.get("$mainUrl/?s=$query")
+    override suspend fun search(query: String): List<SearchResponse> =
+        app.get("$mainUrl/?s=$query")
             .document
             .select("div.animposx")
             .mapNotNull { it.toSearchResult() }
-    }
 
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
@@ -142,7 +143,7 @@ class Samehadaku : MainAPI() {
         val episodes = document.select("div.lstepsiode ul li")
             .mapNotNull {
                 val a = it.selectFirst("a") ?: return@mapNotNull null
-                val ep = Regex("(?:Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                val ep = Regex("Episode\\s*(\\d+)", RegexOption.IGNORE_CASE)
                     .find(a.text())
                     ?.groupValues
                     ?.getOrNull(1)
