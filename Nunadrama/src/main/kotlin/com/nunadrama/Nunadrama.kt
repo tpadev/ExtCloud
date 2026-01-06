@@ -90,33 +90,16 @@ class Nunadrama : MainAPI() {
     }
 
     private fun parseEpisodes(doc: Document): List<Episode> {
-        val selectors = listOf(
-            "div.gmr-listseries a",
-            "div.vid-episodes a",
-            "ul.episodios li a",
-            "div.episodios a",
-            "div.dzdesu ul li a",
-            "div.box a",
-            "div.box p:containsOwn(Episode) + a"
-        )
         val eps = mutableListOf<Episode>()
-        for (sel in selectors) {
-            val els = doc.select(sel)
-            if (els.isNotEmpty()) {
-                for (a in els) {
-                    val name = a.text().trim()
-                    if (name.isBlank() || name.contains("Segera|Coming Soon|TBA|Lihat Semua Episode|All Episodes|View All".toRegex(RegexOption.IGNORE_CASE))) continue
-                    val href = a.attr("href").takeIf { it.isNotBlank() } ?: continue
-                    val epNum = Regex("S\\d+\\s*Eps(\\d+)|Episode\\s*(\\d+)|Eps\\s*(\\d+)", RegexOption.IGNORE_CASE)
-                        .find(name)?.groups?.firstNotNullOfOrNull { it?.value?.toIntOrNull() }
-
-                    eps.add(newEpisode(fixUrl(href)).apply {
-                        this.name = name
-                        this.episode = epNum
-                    })
-                }
-                if (eps.isNotEmpty()) return eps
-            }
+        doc.select("div.gmr-listseries a.button").forEach { a ->
+            val name = a.text().trim()
+            if (name.isBlank() || name.contains("Segera", true) || name.contains("Coming Soon", true) || name.contains("TBA", true) || name.contains("Lihat Semua Episode", true)) return@forEach
+            val href = a.attr("href").takeIf { it.isNotBlank() } ?: return@forEach
+            val epNum = Regex("(\\d+)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            eps.add(newEpisode(fixUrl(href)).apply {
+                this.name = name
+                this.episode = epNum
+            })
         }
         return eps
     }
@@ -138,56 +121,35 @@ class Nunadrama : MainAPI() {
         val doc = app.get(data).document
         directUrl = directUrl ?: getBaseUrl(doc.location())
         val foundLinks = linkedSetOf<String>()
-        val id = doc.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
 
-        if (id.isNullOrEmpty()) {
-            doc.select("ul.muvipro-player-tabs li a").forEach { ele ->
-                val iframeUrl = app.get(fixUrl(ele.attr("href"))).document
-                    .selectFirst("div.gmr-embed-responsive iframe")
-                    ?.getIframeAttr()
-                    ?.let { httpsify(it) } ?: return@forEach
-                if (iframeUrl.isNotBlank()) foundLinks.add(iframeUrl)
-            }
-        } else {
-            doc.select("div.tab-content-ajax").forEach { ele ->
-                val serverUrl = app.post(
-                    "$directUrl/wp-admin/admin-ajax.php",
-                    data = mapOf("action" to "muvipro_player_content", "tab" to ele.attr("id"), "post_id" to id)
-                ).document.select("iframe").attr("src").let { httpsify(it) }
-                if (serverUrl.isNotBlank()) foundLinks.add(serverUrl)
+        doc.select("ul.muvipro-player-tabs li a").forEach { tab ->
+            val tabUrl = fixUrl(tab.attr("href"))
+            val tabDoc = app.get(tabUrl).document
+            tabDoc.select("iframe").forEach { iframe ->
+                iframe.getIframeAttr()?.let { foundLinks.add(httpsify(it)) }
             }
         }
 
-        doc.select("ul.gmr-download-list li a").forEach { linkEl ->
-            val dl = linkEl.attr("href")
-            if (dl.isNotBlank()) foundLinks.add(dl)
+        doc.select("div.entry-content a").forEach { a ->
+            val href = a.attr("href")
+            if (href.startsWith("http")) foundLinks.add(httpsify(href))
         }
 
-        doc.select("script").forEach { script ->
-            val content = script.data()
-            if ("Base64" in content && "decode" in content) {
-                Regex("Base64\\.decode\\(['\"](.*?)['\"]\\)").findAll(content).forEach { match ->
-                    runCatching {
-                        val decoded = String(android.util.Base64.decode(match.groupValues[1], android.util.Base64.DEFAULT))
-                        Regex("https?://[^\"]+").findAll(decoded).forEach { foundLinks.add(httpsify(it.value)) }
-                    }
-                }
-            }
-        }
-
-        val priorityHosts = listOf("streamwish","filemoon","dood","mixdrop","terabox","sbembed","vidhide","mirror","okru","uqload")
         val extracted = mutableListOf<ExtractorLink>()
-        foundLinks.sortedBy { link ->
-            val idx = priorityHosts.indexOfFirst { link.contains(it, true) }
-            if (idx == -1) priorityHosts.size else idx
-        }.map { link -> async {
-            runCatching { loadExtractor(link, data, subtitleCallback) { callback(it); extracted.add(it) } }
+        foundLinks.map { link -> async {
+            runCatching { 
+                loadExtractor(link, data, subtitleCallback) { 
+                    callback(it)
+                    extracted.add(it)
+                } 
+            }
         } }.awaitAll()
 
         linkCache[data] = now to extracted
         return@coroutineScope extracted.isNotEmpty()
     }
 
+    // --- Helper Functions ---
     private fun Element.getImageAttr(): String = when {
         hasAttr("data-src") -> attr("abs:data-src")
         hasAttr("data-lazy-src") -> attr("abs:data-lazy-src")
