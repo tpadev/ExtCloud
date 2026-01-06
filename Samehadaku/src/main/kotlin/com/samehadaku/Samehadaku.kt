@@ -182,8 +182,11 @@ class Samehadaku : MainAPI() {
             .removeBloat()
             .trim()
 
-        return newAnimeSearchResponse(title, fixUrl(a.attr("href")), TvType.Anime) {
-            posterUrl = fixUrlNull(selectFirst("img")?.attr("src"))
+        val href = fixUrl(a.attr("href"))
+        val poster = fixUrlNull(selectFirst("img")?.attr("src"))
+
+        return newAnimeSearchResponse(title, href, TvType.Anime) {
+            posterUrl = poster
             if (ep != null && ep > 0) {
                 addDubStatus(DubStatus.Subbed, ep)
             } else {
