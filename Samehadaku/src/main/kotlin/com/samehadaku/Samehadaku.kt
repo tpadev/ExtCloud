@@ -59,8 +59,7 @@ class Samehadaku : MainAPI() {
 
                 newAnimeSearchResponse(title, href, TvType.Anime) {
                     posterUrl = poster
-                    addDubStatus(DubStatus.Subbed)
-                    addEpisodeNumber(ep)
+                    addDubStatus(DubStatus.Subbed, ep)
                 }
             }
 
