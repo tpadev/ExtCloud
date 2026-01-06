@@ -27,7 +27,7 @@ class Samehadaku : MainAPI() {
         "$mainUrl/page/" to "Episode Terbaru",
         "daftar-anime-2/?title=&status=&type=TV&order=popular&page=" to "TV Populer",
         "daftar-anime-2/?title=&status=&type=OVA&order=title&page=" to "OVA",
-        "daftar-anime-2/?title=&status=&type=Movie&order=title&page=" to "Movie",
+        "daftar-anime-2/?title=&status=&type=Movie&order=title&page=" to "Movie"
     )
 
     override suspend fun getMainPage(
@@ -40,21 +40,27 @@ class Samehadaku : MainAPI() {
 
             val home = document.select("div.post-show ul li").mapNotNull { li ->
                 val a = li.selectFirst("a") ?: return@mapNotNull null
-                val title = a.attr("title").ifBlank { a.text() }.trim()
+
+                val rawTitle = a.attr("title").ifBlank { a.text() }
+
+                val title = rawTitle
+                    .replace(Regex("Episode\\s*\\d+", RegexOption.IGNORE_CASE), "")
+                    .removeBloat()
+                    .trim()
+
                 val href = fixUrl(a.attr("href"))
                 val poster = fixUrlNull(li.selectFirst("img")?.attr("src"))
 
-                val ep = Regex("Episode\\s?(\\d+)", RegexOption.IGNORE_CASE)
-                    .find(title)
+                val ep = Regex("Episode\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                    .find(rawTitle)
                     ?.groupValues
                     ?.getOrNull(1)
                     ?.toIntOrNull()
 
-                newAnimeSearchResponse(title, href, TvType.Anime) {
+                newEpisodeSearchResponse(title, href, TvType.Anime) {
                     posterUrl = poster
-                    if (ep != null) {
-                        addEpisodeNumber(DubStatus.Subbed, ep)
-                    }
+                    addDubStatus(DubStatus.Subbed)
+                    episode = ep
                 }
             }
 
@@ -133,17 +139,20 @@ class Samehadaku : MainAPI() {
             .selectFirst("iframe[src*=\"youtube\"]")
             ?.attr("src")
 
-        val episodes = document.select("div.lstepsiode ul li").mapNotNull {
-            val a = it.selectFirst("a") ?: return@mapNotNull null
-            val ep = Regex("Episode\\s?(\\d+)").find(a.text())
-                ?.groupValues
-                ?.getOrNull(1)
-                ?.toIntOrNull()
+        val episodes = document.select("div.lstepsiode ul li")
+            .mapNotNull {
+                val a = it.selectFirst("a") ?: return@mapNotNull null
+                val ep = Regex("Episode\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                    .find(a.text())
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.toIntOrNull()
 
-            newEpisode(fixUrl(a.attr("href"))) {
-                episode = ep
+                newEpisode(fixUrl(a.attr("href"))) {
+                    episode = ep
+                }
             }
-        }.reversed()
+            .reversed()
 
         val tracker = APIHolder.getTracker(
             listOf(title),
@@ -223,7 +232,7 @@ class Samehadaku : MainAPI() {
 
     private fun String.removeBloat(): String =
         replace(
-            Regex("(Nonton|Anime|Subtitle\\sIndonesia)", RegexOption.IGNORE_CASE),
+            Regex("(Nonton|Anime|Subtitle\\s*Indonesia)", RegexOption.IGNORE_CASE),
             ""
         ).trim()
 }
