@@ -330,6 +330,16 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
+            invokeKisskh(
+                    res.title ?: return@runAllAsync,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
                 invokeVidsrccc(
                     res.id,
                     res.imdbId,
@@ -347,6 +357,9 @@ open class SoraStream : TmdbProvider() {
                     subtitleCallback,
                     callback
                 )
+            },
+            {
+                if (!res.isAnime) invokeRiveStream(res.id, res.season, res.episode, callback)
             },
             {
                 invokeWatchsomuch(
