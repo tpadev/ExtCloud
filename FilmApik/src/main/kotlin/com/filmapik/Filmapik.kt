@@ -19,8 +19,6 @@ class Filmapik : MainAPI() {
 
     override val mainPage = mainPageOf(
         "category/box-office/page/%d/" to "Box Office",
-        "trending-2/page/%d/" to "Trending",
-        "ratings-2/page/%d/" to "Rating Terbaik",
         "tvshows/page/%d/" to "Serial Terbaru",
         "latest/page/%d/" to "Film Terbaru",
     )
