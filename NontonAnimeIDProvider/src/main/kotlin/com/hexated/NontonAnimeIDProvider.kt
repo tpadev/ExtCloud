@@ -46,13 +46,13 @@ class NontonAnimeIDProvider : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        "" to "Terbaru",
-        "ongoing-list/" to "Ongoing",
-        "popular-series/" to "Populer"
-        "genres/super-power/" to "Super Power"
-        "genres/detective/" to "Detective"
-        "genres/sci-fi/" to "Sci-Fi"
-    )
+    "" to "Terbaru",
+    "ongoing-list/" to "Ongoing",
+    "popular-series/" to "Populer",
+    "genres/super-power/" to "Super Power",
+    "genres/detective/" to "Detective",
+    "genres/sci-fi/" to "Sci-Fi",
+)
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
 
