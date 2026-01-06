@@ -40,29 +40,26 @@ class Samehadaku : MainAPI() {
 
             val home = document.select("div.post-show ul li").mapNotNull { li ->
                 val a = li.selectFirst("a") ?: return@mapNotNull null
-                val text = a.text()
+                val rawTitle = a.attr("title").ifBlank { a.text() }
 
-                val ep = Regex("(?:Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
-                    .find(text)
-                    ?.groupValues
-                    ?.getOrNull(1)
-                    ?.toIntOrNull()
-
-                val title = text
-                    .replace(Regex("(?:Episode|Ep)\\s*\\d+", RegexOption.IGNORE_CASE), "")
+                val title = rawTitle
+                    .replace(Regex("(Episode|Ep)\\s*\\d+", RegexOption.IGNORE_CASE), "")
                     .removeBloat()
                     .trim()
 
                 val href = fixUrl(a.attr("href"))
                 val poster = fixUrlNull(li.selectFirst("img")?.attr("src"))
 
+                val ep = Regex("(?:Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                    .find(rawTitle)
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.toIntOrNull()
+
                 newAnimeSearchResponse(title, href, TvType.Anime) {
                     posterUrl = poster
-                    if (ep != null) {
-                        addDubStatus(DubStatus.Subbed, ep)
-                    } else {
-                        addDubStatus(DubStatus.Subbed)
-                    }
+                    episode = ep
+                    addDubStatus(DubStatus.Subbed)
                 }
             }
 
@@ -96,16 +93,17 @@ class Samehadaku : MainAPI() {
             else -> TvType.Anime
         }
 
-        return newAnimeSearchResponse(title.trim(), href, type) {
+        return newAnimeSearchResponse(title.removeBloat().trim(), href, type) {
             posterUrl = poster
         }
     }
 
-    override suspend fun search(query: String): List<SearchResponse> =
-        app.get("$mainUrl/?s=$query")
+    override suspend fun search(query: String): List<SearchResponse> {
+        return app.get("$mainUrl/?s=$query")
             .document
             .select("div.animposx")
             .mapNotNull { it.toSearchResult() }
+    }
 
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
@@ -143,7 +141,7 @@ class Samehadaku : MainAPI() {
         val episodes = document.select("div.lstepsiode ul li")
             .mapNotNull {
                 val a = it.selectFirst("a") ?: return@mapNotNull null
-                val ep = Regex("Episode\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                val ep = Regex("(?:Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
                     .find(a.text())
                     ?.groupValues
                     ?.getOrNull(1)
