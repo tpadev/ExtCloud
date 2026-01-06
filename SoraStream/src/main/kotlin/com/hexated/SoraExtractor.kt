@@ -39,7 +39,7 @@ object SoraExtractor : SoraStream() {
             base64Decode("X3NtUWFtQlFzRVRi"),
             base64Decode("X3NCV2NxYlRCTWFU"),
         )
-    )
+    }
 
     private suspend fun invokeGpress(
         title: String? = null,
