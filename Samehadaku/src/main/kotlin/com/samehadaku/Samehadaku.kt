@@ -40,15 +40,8 @@ class Samehadaku : MainAPI() {
 
             val home = document.select("div.post-show ul li").mapNotNull { li ->
                 val a = li.selectFirst("a") ?: return@mapNotNull null
+
                 val rawTitle = a.attr("title").ifBlank { a.text() }
-
-                val title = rawTitle
-                    .replace(Regex("(Episode|Ep)\\s*\\d+", RegexOption.IGNORE_CASE), "")
-                    .removeBloat()
-                    .trim()
-
-                val href = fixUrl(a.attr("href"))
-                val poster = fixUrlNull(li.selectFirst("img")?.attr("src"))
 
                 val ep = Regex("(?:Episode|Ep)\\s*(\\d+)", RegexOption.IGNORE_CASE)
                     .find(rawTitle)
@@ -56,10 +49,17 @@ class Samehadaku : MainAPI() {
                     ?.getOrNull(1)
                     ?.toIntOrNull()
 
+                val title = rawTitle
+                    .replace(Regex("(?:Episode|Ep)\\s*\\d+", RegexOption.IGNORE_CASE), "")
+                    .removeBloat()
+                    .trim()
+
+                val href = fixUrl(a.attr("href"))
+                val poster = fixUrlNull(li.selectFirst("img")?.attr("src"))
+
                 newAnimeSearchResponse(title, href, TvType.Anime) {
                     posterUrl = poster
-                    episode = ep
-                    addDubStatus(DubStatus.Subbed)
+                    addDubStatus(DubStatus.Subbed, ep)
                 }
             }
 
@@ -80,6 +80,7 @@ class Samehadaku : MainAPI() {
 
     private fun Element.toSearchResult(): AnimeSearchResponse? {
         val a = selectFirst("a") ?: return null
+
         val title = a.attr("title").ifBlank {
             selectFirst("div.title, h2.entry-title a, div.lftinfo h2")?.text()
         } ?: return null
@@ -93,7 +94,7 @@ class Samehadaku : MainAPI() {
             else -> TvType.Anime
         }
 
-        return newAnimeSearchResponse(title.removeBloat().trim(), href, type) {
+        return newAnimeSearchResponse(title.trim(), href, type) {
             posterUrl = poster
         }
     }
