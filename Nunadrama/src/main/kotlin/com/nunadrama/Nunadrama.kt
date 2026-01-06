@@ -50,7 +50,7 @@ class Nunadrama : MainAPI() {
         val doc = res.document
 
         val title = doc.selectFirst("h1.entry-title, h1.title")?.text()?.trim()
-            ?.replace(Regex("(Season|Episode|Eps).*"), "")
+            ?.substringBefore("Season")?.substringBefore("Episode")?.substringBefore("Eps")
             ?.let { removeBloatx(it) }.orEmpty()
 
         val poster = fixUrlNull(doc.selectFirst("figure.pull-left img, .wp-post-image, .poster img, .thumb img")?.getImageAttr())?.fixImageQuality()
@@ -105,9 +105,11 @@ class Nunadrama : MainAPI() {
             if (els.isNotEmpty()) {
                 for (a in els) {
                     val name = a.text().trim()
-                    if (name.isBlank() || name.contains("Segera", true) || name.contains("Coming Soon", true) || name.contains("TBA", true)) continue
+                    if (name.isBlank() || name.contains("Segera|Coming Soon|TBA|Lihat Semua Episode|All Episodes|View All".toRegex(RegexOption.IGNORE_CASE))) continue
                     val href = a.attr("href").takeIf { it.isNotBlank() } ?: continue
-                    val epNum = Regex("Episode\\s*(\\d+)|Eps\\s*(\\d+)").find(name)?.groups?.firstNotNullOfOrNull { it?.value?.toIntOrNull() }
+                    val epNum = Regex("S\\d+\\s*Eps(\\d+)|Episode\\s*(\\d+)|Eps\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                        .find(name)?.groups?.firstNotNullOfOrNull { it?.value?.toIntOrNull() }
+
                     eps.add(newEpisode(fixUrl(href)).apply {
                         this.name = name
                         this.episode = epNum
@@ -175,11 +177,10 @@ class Nunadrama : MainAPI() {
 
         val priorityHosts = listOf("streamwish","filemoon","dood","mixdrop","terabox","sbembed","vidhide","mirror","okru","uqload")
         val extracted = mutableListOf<ExtractorLink>()
-        val sortedLinks = foundLinks.sortedWith(compareBy { link ->
-            priorityHosts.indexOfFirst { host -> link.contains(host, ignoreCase = true) }.let { if (it == -1) priorityHosts.size else it }
-        })
-
-        sortedLinks.map { link -> async {
+        foundLinks.sortedBy { link ->
+            val idx = priorityHosts.indexOfFirst { link.contains(it, true) }
+            if (idx == -1) priorityHosts.size else idx
+        }.map { link -> async {
             runCatching { loadExtractor(link, data, subtitleCallback) { callback(it); extracted.add(it) } }
         } }.awaitAll()
 
@@ -187,28 +188,27 @@ class Nunadrama : MainAPI() {
         return@coroutineScope extracted.isNotEmpty()
     }
 
-    // --- Helper Functions ---
-    private fun Element?.getImageAttr(): String? = this?.let {
-        it.attr("data-src").takeIf { it.isNotEmpty() }
-            ?: it.attr("data-lazy-src").takeIf { it.isNotEmpty() }
-            ?: it.attr("srcset").takeIf { it.isNotEmpty() }?.substringBefore(" ")
-            ?: it.attr("src").takeIf { it.isNotEmpty() }
+    private fun Element.getImageAttr(): String = when {
+        hasAttr("data-src") -> attr("abs:data-src")
+        hasAttr("data-lazy-src") -> attr("abs:data-lazy-src")
+        hasAttr("srcset") -> attr("abs:srcset").substringBefore(" ")
+        else -> attr("abs:src")
     }
 
     private fun Element?.getIframeAttr(): String? =
         this?.attr("data-litespeed-src").takeIf { it?.isNotEmpty() == true } ?: this?.attr("src")
 
     private fun String?.fixImageQuality(): String? =
-        this?.replace(Regex("(-\\d*x\\d*)").find(this)?.groupValues?.get(0) ?: this, "")
+        this?.let { replace(Regex("(-\\d*x\\d*)").find(it)?.groupValues?.get(0) ?: it, "") }
 
     private fun getBaseUrl(url: String): String = URI(url).let { "${it.scheme}://${it.host}" }
 
     private fun removeBloatx(title: String): String =
-        title.replace("\uFEFF", "").trim()
+        title.replace(Regex("\uFEFF.*?\uFEFF|\uFEFF.*?\uFEFF"), "").trim()
 
     private fun Element.toSearchResult(): SearchResponse? {
         val titleRaw = selectFirst("h2.entry-title a, h2 a, h3 a, .title a")?.text()?.trim() ?: return null
-        val title = titleRaw.replace(Regex("(Season|Episode|Eps).*"), "").let { removeBloatx(it) }
+        val title = titleRaw.substringBefore("Season").substringBefore("Episode").substringBefore("Eps").let { removeBloatx(it) }
         val a = selectFirst("a") ?: return null
         val href = fixUrl(a.attr("href"))
         val poster = fixUrlNull(selectFirst("a img, a > img, img")?.getImageAttr())?.fixImageQuality()
@@ -227,7 +227,7 @@ class Nunadrama : MainAPI() {
 
     private fun Element.toRecommendResult(): SearchResponse? {
         val t = selectFirst("a > span.idmuvi-rp-title, .idmuvi-rp-title")?.text()?.trim() ?: return null
-        val title = t.replace(Regex("(Season|Episode|Eps).*"), "").let { removeBloatx(it) }
+        val title = t.substringBefore("Season").substringBefore("Episode").substringBefore("Eps").let { removeBloatx(it) }
         val href = selectFirst("a")?.attr("href") ?: return null
         val poster = fixUrlNull(selectFirst("a > img, img")?.getImageAttr())?.fixImageQuality()
         return newMovieSearchResponse(title, href, TvType.Movie) { posterUrl = poster }
