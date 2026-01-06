@@ -21,11 +21,6 @@ import org.jsoup.Jsoup
 
 object SoraExtractor : SoraStream() {
 
-    data class RiveStreamSource(
-    @JsonProperty("data")
-    val data: List<String>?
-)
-
     suspend fun invokeGomovies(
         title: String? = null,
         year: Int? = null,
@@ -45,6 +40,11 @@ object SoraExtractor : SoraStream() {
             base64Decode("X3NCV2NxYlRCTWFU"),
         )
     }
+     
+    data class RiveStreamSource(
+    @JsonProperty("data")
+    val data: List<String>?
+)
 
     private suspend fun invokeGpress(
         title: String? = null,
