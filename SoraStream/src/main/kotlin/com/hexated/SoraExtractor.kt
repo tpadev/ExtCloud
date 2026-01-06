@@ -11,6 +11,9 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.RequestBodyTypes
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
+import org.json.JSONObject
+import java.net.URLDecoder
+import com.fasterxml.jackson.annotation.JsonProperty
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -798,6 +801,86 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeKisskh(
+        title: String,
+        year: Int?,
+        season: Int?,
+        episode: Int?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val mainUrl = "https://kisskh.ovh"
+        val KISSKH_API = "https://script.google.com/macros/s/AKfycbzn8B31PuDxzaMa9_CQ0VGEDasFqfzI5bXvjaIZH4DM8DNq9q6xj1ALvZNz_JT3jF0suA/exec?id="
+        val KISSKH_SUB_API = "https://script.google.com/macros/s/AKfycbyq6hTj0ZhlinYC6xbggtgo166tp6XaDKBCGtnYk8uOfYBUFwwxBui0sGXiu_zIFmA/exec?id="
+
+        try {
+            val searchRes = app.get("$mainUrl/api/DramaList/Search?q=$title&type=0").text
+            val searchList = tryParseJson<ArrayList<KisskhMedia>>(searchRes) ?: return
+            val matched = searchList.find { 
+                it.title.equals(title, true) 
+            } ?: searchList.firstOrNull { it.title?.contains(title, true) == true } ?: return
+            val dramaId = matched.id ?: return
+            val detailRes = app.get("$mainUrl/api/DramaList/Drama/$dramaId?isq=false").parsedSafe<KisskhDetail>() ?: return
+            val episodes = detailRes.episodes ?: return
+            val targetEp = if (season == null) {
+                episodes.lastOrNull()
+            } else {
+                episodes.find { it.number?.toInt() == episode }
+            } ?: return
+            val epsId = targetEp.id ?: return
+            val kkeyVideo = app.get("$KISSKH_API$epsId&version=2.8.10").parsedSafe<KisskhKey>()?.key ?: ""
+            val videoUrl = "$mainUrl/api/DramaList/Episode/$epsId.png?err=false&ts=&time=&kkey=$kkeyVideo"
+            val sources = app.get(videoUrl).parsedSafe<KisskhSources>()
+
+            val videoLink = sources?.video
+            val thirdParty = sources?.thirdParty
+
+            listOfNotNull(videoLink, thirdParty).forEach { link ->
+                if (link.contains(".m3u8")) {
+                    M3u8Helper.generateM3u8(
+                        "Kisskh",
+                        link,
+                        referer = "$mainUrl/",
+                        headers = mapOf("Origin" to mainUrl)
+                    ).forEach(callback)
+                } else if (link.contains(".mp4")) {
+                    callback.invoke(
+                        newExtractorLink(
+                            "Kisskh",
+                            "Kisskh",
+                            link,
+                            ExtractorLinkType.VIDEO
+                        ) {
+                            this.referer = mainUrl
+                        }
+                    )
+                }
+            }
+
+            val kkeySub = app.get("$KISSKH_SUB_API$epsId&version=2.8.10").parsedSafe<KisskhKey>()?.key ?: ""
+            val subJson = app.get("$mainUrl/api/Sub/$epsId?kkey=$kkeySub").text
+            tryParseJson<List<KisskhSubtitle>>(subJson)?.forEach { sub ->
+                subtitleCallback.invoke(
+                    newSubtitleFile(
+                        sub.label ?: "Unknown",
+                        sub.src ?: return@forEach
+                    )
+                )
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private data class KisskhMedia(@JsonProperty("id") val id: Int?, @JsonProperty("title") val title: String?)
+    private data class KisskhDetail(@JsonProperty("episodes") val episodes: ArrayList<KisskhEpisode>?)
+    private data class KisskhEpisode(@JsonProperty("id") val id: Int?, @JsonProperty("number") val number: Double?)
+    private data class KisskhKey(@JsonProperty("key") val key: String?)
+    private data class KisskhSources(@JsonProperty("Video") val video: String?, @JsonProperty("ThirdParty") val thirdParty: String?)
+    private data class KisskhSubtitle(@JsonProperty("src") val src: String?, @JsonProperty("label") val label: String?)
+
+
     suspend fun invokeVidrock(
         tmdbId: Int?,
         season: Int?,
@@ -860,5 +943,142 @@ object SoraExtractor : SoraStream() {
         }
 
     }
+    
+    suspend fun invokeRiveStream(
+        id: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val headers = mapOf("User-Agent" to USER_AGENT)
+
+        suspend fun <T> retry(times: Int = 3, block: suspend () -> T): T? {
+            repeat(times - 1) {
+                try {
+                    return block()
+                } catch (_: Exception) {
+                }
+            }
+            return try {
+                block()
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        val sourceApiUrl =
+            "$RiveStreamAPI/api/backendfetch?requestID=VideoProviderServices&secretKey=rive"
+        val sourceList = retry { app.get(sourceApiUrl, headers).parsedSafe<RiveStreamSource>() }
+
+        val document = retry { app.get(RiveStreamAPI, headers, timeout = 20).document } ?: return
+        val appScript = document.select("script")
+            .firstOrNull { it.attr("src").contains("_app") }?.attr("src") ?: return
+
+        val js = retry { app.get("$RiveStreamAPI$appScript").text } ?: return
+        val keyList = Regex("""let\s+c\s*=\s*(\[[^]]*])""")
+            .findAll(js).firstOrNull { it.groupValues[1].length > 2 }?.groupValues?.get(1)
+            ?.let { array ->
+                Regex("\"([^\"]+)\"").findAll(array).map { it.groupValues[1] }.toList()
+            } ?: emptyList()
+
+        val secretKey = retry {
+            app.get(
+                "https://rivestream.supe2372.workers.dev/?input=$id&cList=${keyList.joinToString(",")}"
+            ).text
+        } ?: return
+
+        sourceList?.data?.forEach { source ->
+            try {
+                val streamUrl = if (season == null) {
+                    "$RiveStreamAPI/api/backendfetch?requestID=movieVideoProvider&id=$id&service=$source&secretKey=$secretKey"
+                } else {
+                    "$RiveStreamAPI/api/backendfetch?requestID=tvVideoProvider&id=$id&season=$season&episode=$episode&service=$source&secretKey=$secretKey"
+                }
+
+                val responseString = retry {
+                    app.get(streamUrl, headers, timeout = 10).text
+                } ?: return@forEach
+
+                try {
+                    val json = JSONObject(responseString)
+                    val sourcesArray =
+                        json.optJSONObject("data")?.optJSONArray("sources") ?: return@forEach
+
+                    for (i in 0 until sourcesArray.length()) {
+                        val src = sourcesArray.getJSONObject(i)
+                        val label = if(src.optString("source").contains("AsiaCloud",ignoreCase = true)) "RiveStream ${src.optString("source")}[${src.optString("quality")}]" else "RiveStream ${src.optString("source")}"
+                        val quality = Qualities.P1080.value
+                        val url = src.optString("url")
+
+                        try {
+                            if (url.contains("proxy?url=")) {
+                                try {
+                                    val fullyDecoded = URLDecoder.decode(url, "UTF-8")
+
+                                    val encodedUrl = fullyDecoded.substringAfter("proxy?url=")
+                                        .substringBefore("&headers=")
+                                    val decodedUrl = URLDecoder.decode(
+                                        encodedUrl,
+                                        "UTF-8"
+                                    ) 
+
+                                    val encodedHeaders = fullyDecoded.substringAfter("&headers=")
+                                    val headersMap = try {
+                                        val jsonStr = URLDecoder.decode(encodedHeaders, "UTF-8")
+                                        JSONObject(jsonStr).let { json ->
+                                            json.keys().asSequence()
+                                                .associateWith { json.getString(it) }
+                                        }
+                                    } catch (e: Exception) {
+                                        emptyMap()
+                                    }
+
+                                    val referer = headersMap["Referer"] ?: ""
+                                    val origin = headersMap["Origin"] ?: ""
+                                    val videoHeaders =
+                                        mapOf("Referer" to referer, "Origin" to origin)
+
+                                    val type = if (decodedUrl.contains(".m3u8", ignoreCase = true))
+                                        ExtractorLinkType.M3U8 else INFER_TYPE
+
+                                    callback.invoke(newExtractorLink(label, label, decodedUrl, type) {
+                                        this.quality = quality
+                                        this.referer = referer
+                                        this.headers = videoHeaders
+                                    })
+                                } catch (e: Exception) {
+                                    // Log error decoding proxy
+                                }
+                            } else {
+                                val type = if (url.contains(".m3u8", ignoreCase = true))
+                                    ExtractorLinkType.M3U8 else INFER_TYPE
+
+                                callback.invoke(
+                                    newExtractorLink(
+                                        "$label (VLC)",
+                                        "$label (VLC)",
+                                        url,
+                                        type
+                                    ) {
+                                        this.referer = ""
+                                        this.quality = quality
+                                    })
+                            }
+                        } catch (e: Exception) {
+                            // Log error processing source
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Log error parsing JSON
+                }
+            } catch (e: Exception) {
+                // Log error general
+            }
+        }
+    }
 
 }
+    data class RiveStreamSource(
+    @JsonProperty("data")
+    val data: List<String>?
+)

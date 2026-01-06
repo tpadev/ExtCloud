@@ -2,6 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invokeGomovies
+import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeMapple
 import com.hexated.SoraExtractor.invokeSuperembed
@@ -15,6 +16,7 @@ import com.hexated.SoraExtractor.invokeVixsrc
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeWyzie
 import com.hexated.SoraExtractor.invokeXprime
+import com.hexated.SoraExtractor.invokeRiveStream
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
@@ -70,6 +72,7 @@ open class SoraStream : TmdbProvider() {
         const val vidsrccxAPI = "https://vidsrc.cx"
         const val superembedAPI = "https://multiembed.mov"
         const val vidrockAPI = "https://vidrock.net"
+        const val RiveStreamAPI = "https://rivestream.org"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -330,6 +333,16 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
+            invokeKisskh(
+                    res.title ?: return@runAllAsync,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
                 invokeVidsrccc(
                     res.id,
                     res.imdbId,
@@ -347,6 +360,9 @@ open class SoraStream : TmdbProvider() {
                     subtitleCallback,
                     callback
                 )
+            },
+            {
+                if (!res.isAnime) invokeRiveStream(res.id, res.season, res.episode, callback)
             },
             {
                 invokeWatchsomuch(
