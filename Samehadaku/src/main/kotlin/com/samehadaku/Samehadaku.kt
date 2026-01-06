@@ -12,7 +12,7 @@ import org.jsoup.nodes.Element
 class Samehadaku : MainAPI() {
 
     override var mainUrl = "https://v1.samehadaku.how"
-    override var name = "Samehadaku"
+    override var name = "Samehadaku⛩️"
     override var lang = "id"
     override val hasMainPage = true
     override val hasDownloadSupport = true
@@ -27,7 +27,7 @@ class Samehadaku : MainAPI() {
         "$mainUrl/page/" to "Episode Terbaru",
         "daftar-anime-2/?title=&status=&type=TV&order=popular&page=" to "TV Populer",
         "daftar-anime-2/?title=&status=&type=OVA&order=title&page=" to "OVA",
-        "daftar-anime-2/?title=&status=&type=Movie&order=title&page=" to "Movie",
+        "daftar-anime-2/?title=&status=&type=Movie&order=title&page=" to "Movie"
     )
 
     override suspend fun getMainPage(
@@ -37,9 +37,21 @@ class Samehadaku : MainAPI() {
 
         if (request.name == "Episode Terbaru") {
             val document = app.get("${request.data}$page").document
+
             val home = document
                 .select("div.post-show ul li")
-                .mapNotNull { it.toSearchResult() }
+                .mapNotNull { el ->
+                    val result = el.toSearchResult() ?: return@mapNotNull null
+
+                    val ep = el.selectFirst("span.lchx")
+                        ?.text()
+                        ?.filter { it.isDigit() }
+                        ?.toIntOrNull()
+
+                    result.apply {
+                        addSub(ep)
+                    }
+                }
 
             return newHomePageResponse(
                 HomePageList(request.name, home, true),
@@ -48,6 +60,7 @@ class Samehadaku : MainAPI() {
         }
 
         val document = app.get("$mainUrl/${request.data}$page").document
+
         val home = document
             .select("div.animposx")
             .mapNotNull { it.toSearchResult() }
@@ -60,6 +73,7 @@ class Samehadaku : MainAPI() {
 
     private fun Element.toSearchResult(): AnimeSearchResponse? {
         val a = selectFirst("a") ?: return null
+
         val title = a.attr("title").ifBlank {
             selectFirst("div.title, h2.entry-title a, div.lftinfo h2")?.text()
         } ?: return null
@@ -78,12 +92,11 @@ class Samehadaku : MainAPI() {
         }
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        return app.get("$mainUrl/?s=$query")
+    override suspend fun search(query: String): List<SearchResponse> =
+        app.get("$mainUrl/?s=$query")
             .document
             .select("div.animposx")
             .mapNotNull { it.toSearchResult() }
-    }
 
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
@@ -123,7 +136,8 @@ class Samehadaku : MainAPI() {
             .select("div.lstepsiode ul li")
             .mapNotNull {
                 val a = it.selectFirst("a") ?: return@mapNotNull null
-                val ep = Regex("Episode\\s?(\\d+)").find(a.text())
+                val ep = Regex("Episode\\s?(\\d+)", RegexOption.IGNORE_CASE)
+                    .find(a.text())
                     ?.groupValues
                     ?.getOrNull(1)
                     ?.toIntOrNull()
