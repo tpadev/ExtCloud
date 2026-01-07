@@ -58,7 +58,9 @@ open class Kotakajaib : ExtractorApi() {
                     ) {
                         this.referer = mainUrl
                         this.quality = quality
-                        this.isM3u8 = false
+                        this.headers = mapOf(
+                            "Referer" to mainUrl
+                        )
                     }
                 )
             }
