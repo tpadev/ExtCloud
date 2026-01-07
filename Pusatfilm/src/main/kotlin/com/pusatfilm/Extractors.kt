@@ -162,6 +162,6 @@ data class KotakajaibMirror(
 
 class Emturbovid : EmturbovidExtractor() {
     override var name = "Emturbovid"
-    override var mainUrl = "https://emturbovid.com"
+    override var mainUrl = "https://turbovidhls.com"
 }
 
