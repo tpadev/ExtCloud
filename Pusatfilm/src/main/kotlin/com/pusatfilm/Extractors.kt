@@ -35,10 +35,10 @@ class Kotakajaib : ExtractorApi() {
                     loadExtractor(decoded, url, subtitleCallback, callback)
                 }
             }
-
             doc.select("iframe[src]").forEach { iframe ->
                 val src = iframe.attr("src")
                 if (src.isNullOrBlank()) return@forEach
+
                 runCatching {
                     loadExtractor(src, url, subtitleCallback, callback)
                 }
@@ -54,28 +54,90 @@ class Kotakajaib : ExtractorApi() {
         if (fileId.isBlank()) return
 
         val apiUrl = "$mainUrl/api/file/$fileId/download"
-        val json = app.get(apiUrl, referer = url)
-            .parsedSafe<KotakajaibApi>() ?: return
 
-        json.result?.mirrors.orEmpty().forEach { mirror ->
+        val apiRes = app.get(apiUrl, referer = url)
+        println("Kotakajaib apiStatus=${apiRes.code}")
+
+        val json = apiRes.parsedSafe<KotakajaibApi>() ?: run {
+            println("Kotakajaib: parsedSafe returned null")
+            return
+        }
+
+        val mirrors = json.result?.mirrors.orEmpty()
+        println("Kotakajaib mirrorsCount=${mirrors.size}")
+
+        mirrors.forEach { mirror ->
             val server = mirror.server.trim().lowercase()
+            val qualities = mirror.resolution.orEmpty()
+
+            println("Kotakajaib mirror server=$server qualities=$qualities")
+
             if (server.isBlank()) return@forEach
 
-            mirror.resolution.orEmpty().forEach { quality ->
+            qualities.forEach { quality ->
                 if (quality <= 0) return@forEach
 
                 val mirrorUrl = "$mainUrl/mirror/$server/$fileId/$quality"
-
+                val commonHeaders = mapOf("Referer" to url)
+                val finalUrl = runCatching {
+                    followRedirects(
+                        startUrl = mirrorUrl,
+                        referer = url,
+                        headers = commonHeaders,
+                        maxHops = 10
+                    )
+                }.getOrNull()
+                println("Kotakajaib mirrorUrl=$mirrorUrl")
+                println("Kotakajaib finalUrl=${finalUrl ?: "-"}")
                 runCatching {
                     loadExtractor(
-                        mirrorUrl,
+                        finalUrl ?: mirrorUrl,
                         url,
                         subtitleCallback,
                         callback
                     )
+                }.onFailure {
+                    runCatching {
+                        loadExtractor(mirrorUrl, url, subtitleCallback, callback)
+                    }
                 }
             }
         }
+    }
+
+    private suspend fun followRedirects(
+        startUrl: String,
+        referer: String?,
+        headers: Map<String, String> = emptyMap(),
+        maxHops: Int = 10
+    ): String? {
+        var currentUrl = startUrl
+
+        repeat(maxHops) { hop ->
+            val res = app.get(
+                currentUrl,
+                referer = referer,
+                headers = headers,
+                allowRedirects = false
+            )
+
+            val code = res.code
+            val location = res.headers["Location"] ?: res.headers["location"]
+
+            // Debug log (hapus kalau sudah stabil)
+            println("Kotakajaib redirect hop=$hop code=$code url=$currentUrl loc=${location ?: "-"}")
+
+            if (code in 300..399 && !location.isNullOrBlank()) {
+                currentUrl = if (location.startsWith("http")) {
+                    location
+                } else {
+                    java.net.URI(currentUrl).resolve(location).toString()
+                }
+            } else {
+                return currentUrl
+            }
+        }
+        return currentUrl
     }
 }
 
@@ -94,6 +156,7 @@ data class KotakajaibMirror(
     val server: String = "",
     val resolution: List<Int>? = null
 )
+
 
 
 
