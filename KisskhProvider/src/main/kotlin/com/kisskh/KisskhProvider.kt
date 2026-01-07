@@ -26,7 +26,7 @@ private const val KISSKH_SUB_API =
 
 class KisskhProvider : MainAPI() {
     override var mainUrl = "https://kisskh.ovh"
-    override var name = "Kisskh"
+    override var name = "Kisskh🍂"
     override val hasMainPage = true
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(

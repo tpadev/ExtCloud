@@ -4,11 +4,11 @@ version = 16
 
 
 cloudstream {
-    language = "en"
+    language = "id"
     // All of these properties are optional, you can safely remove them
 
     // description = "Lorem Ipsum"
-     authors = listOf("Phisher98,Hexated,Peerless")
+     authors = listOf("Duro92")
 
     /**
      * Status int as the following:
@@ -25,7 +25,7 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=kisskh.co&sz=%size%"
+    iconUrl = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://kisskh.ovh&size=%size%"
 
     isCrossPlatform = true
 }
