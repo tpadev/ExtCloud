@@ -31,8 +31,52 @@ open class Kotakajaib : ExtractorApi() {
         callback
     )
         }
+    val fileId = url.substringAfterLast("/")
+
+        val apiUrl = "$mainUrl/api/file/$fileId/download"
+
+        val json = app.get(apiUrl, referer = url)
+            .parsedSafe<KotakajaibApi>() ?: return
+
+        json.result?.mirrors?.forEach { mirror ->
+            mirror.resolution.forEach { quality ->
+
+                val directUrl = when (mirror.server.lowercase()) {
+                    "pixeldrain" -> "https://pixeldrain.com/api/file/$fileId?download"
+                    "gofile" -> "https://gofile.io/d/$fileId"
+                    else -> return@forEach
+                }
+
+                callback(
+                    ExtractorLink(
+                        source = name,
+                        name = "Kotakajaib ${mirror.server.uppercase()} ${quality}p",
+                        url = directUrl,
+                        referer = mainUrl,
+                        quality = quality,
+                        type = ExtractorLinkType.VIDEO
+                    )
+                )
+            }
+        }
     }
 }
+
+data class KotakajaibApi(
+    val status: String?,
+    val result: KotakajaibResult?
+)
+
+data class KotakajaibResult(
+    val title: String?,
+    val mirrors: List<KotakajaibMirror>?
+)
+
+data class KotakajaibMirror(
+    val server: String,
+    val resolution: List<Int>
+)
+
 
 class Emturbovid : EmturbovidExtractor() {
     override var name = "Emturbovid"
