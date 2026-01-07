@@ -13,75 +13,88 @@ import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.utils.loadExtractor
 
 
-open class Kotakajaib : ExtractorApi() {
+class Kotakajaib : ExtractorApi() {
     override val name = "Kotakajaib"
     override val mainUrl = "https://kotakajaib.me"
     override val requiresReferer = true
 
     override suspend fun getUrl(
-            url: String,
-            referer: String?,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ) {
-        val links = app.get(url, referer = referer).document.select("ul#dropdown-server li a")
-        for (a in links) {
-    loadExtractor(
-        base64Decode(a.attr("data-frame")),
-        "$mainUrl/",
-        subtitleCallback,
-        callback
-    )
+        runCatching {
+            val doc = app.get(url, referer = referer).document
+            doc.select("ul#dropdown-server li a").forEach { a ->
+                val frame = a.attr("data-frame")
+                if (frame.isNullOrBlank()) return@forEach
+
+                runCatching {
+                    val decoded = base64Decode(frame)
+                    loadExtractor(decoded, url, subtitleCallback, callback)
+                }
+            }
+
+            doc.select("iframe[src]").forEach { iframe ->
+                val src = iframe.attr("src")
+                if (src.isNullOrBlank()) return@forEach
+                runCatching {
+                    loadExtractor(src, url, subtitleCallback, callback)
+                }
+            }
         }
-    val fileId = url.substringAfterLast("/")
+
+        val fileId = url
+            .substringBefore("?")
+            .trimEnd('/')
+            .substringAfterLast("/")
+            .trim()
+
+        if (fileId.isBlank()) return
 
         val apiUrl = "$mainUrl/api/file/$fileId/download"
-
         val json = app.get(apiUrl, referer = url)
             .parsedSafe<KotakajaibApi>() ?: return
 
-        json.result?.mirrors?.forEach { mirror ->
-            mirror.resolution.forEach { quality ->
+        json.result?.mirrors.orEmpty().forEach { mirror ->
+            val server = mirror.server.trim().lowercase()
+            if (server.isBlank()) return@forEach
 
-                val directUrl = when (mirror.server.lowercase()) {
-                    "pixeldrain" -> "https://pixeldrain.com/api/file/$fileId?download"
-                    "gofile" -> "https://gofile.io/d/$fileId"
-                    else -> return@forEach
+            mirror.resolution.orEmpty().forEach { quality ->
+                if (quality <= 0) return@forEach
+
+                val mirrorUrl = "$mainUrl/mirror/$server/$fileId/$quality"
+
+                runCatching {
+                    loadExtractor(
+                        mirrorUrl,
+                        url,
+                        subtitleCallback,
+                        callback
+                    )
                 }
-
-                callback(
-                    newExtractorLink(
-                        source = name,
-                        name = "Kotakajaib ${mirror.server.uppercase()} ${quality}p",
-                        url = directUrl,
-                        type = ExtractorLinkType.VIDEO
-                    ) {
-                        this.referer = mainUrl
-                        this.quality = quality
-                        this.headers = mapOf(
-                            "Referer" to mainUrl
-                        )
-                    }
-                )
             }
         }
     }
 }
 
+
 data class KotakajaibApi(
-    val status: String?,
-    val result: KotakajaibResult?
+    val status: String? = null,
+    val result: KotakajaibResult? = null
 )
 
 data class KotakajaibResult(
-    val title: String?,
-    val mirrors: List<KotakajaibMirror>?
+    val title: String? = null,
+    val mirrors: List<KotakajaibMirror>? = null
 )
 
 data class KotakajaibMirror(
-    val server: String,
-    val resolution: List<Int>
+    val server: String = "",
+    val resolution: List<Int>? = null
 )
+
 
 
 class Emturbovid : EmturbovidExtractor() {
