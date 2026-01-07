@@ -49,12 +49,12 @@ open class Kotakajaib : ExtractorApi() {
 
                 callback(
                     ExtractorLink(
-                        source = name,
-                        name = "Kotakajaib ${mirror.server.uppercase()} ${quality}p",
-                        url = directUrl,
-                        referer = mainUrl,
-                        quality = quality,
-                        type = ExtractorLinkType.VIDEO
+                        name,
+                        "Kotakajaib ${mirror.server.uppercase()} ${quality}p",
+                        directUrl,
+                        mainUrl,
+                        quality,
+                        false
                     )
                 )
             }
