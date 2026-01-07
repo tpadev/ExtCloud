@@ -20,5 +20,5 @@ cloudstream {
         "OVA",
     )
 
-    iconUrl = "https://oploverz.ltd/favicon.ico"
+    iconUrl = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://anime.oploverz.ac&size=%size%"
 }

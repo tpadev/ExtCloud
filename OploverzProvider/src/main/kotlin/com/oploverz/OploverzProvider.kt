@@ -32,6 +32,8 @@ class OploverzProvider : MainAPI() {
                 else -> TvType.Anime
             }
         }
+        
+        var context: android.content.Context? = null
 
         fun getStatus(t: String?): ShowStatus {
             return when {

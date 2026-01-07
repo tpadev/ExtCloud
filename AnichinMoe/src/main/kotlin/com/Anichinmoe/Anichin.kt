@@ -6,6 +6,9 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.Jsoup
 
 class Anichin : MainAPI() {
+    companion object {
+        var context: android.content.Context? = null
+    }
     override var mainUrl = "https://anichin.moe"
     override var name = "Anichin 🔥"
     override val hasMainPage = true
@@ -22,6 +25,7 @@ class Anichin : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = app.get("${mainUrl}/${request.data}&page=$page").document
         val home = document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
         return newHomePageResponse(
