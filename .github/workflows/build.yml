@@ -48,8 +48,8 @@ jobs:
           ANICHI_SERVER: ${{ secrets.ANICHI_SERVER }}
           ANICHI_ENDPOINT: ${{ secrets.ANICHI_ENDPOINT }}
           ANICHI_APP: ${{ secrets.ANICHI_APP }}
-          KissKh: ${{ secrets.KissKh }}
-          KisskhSub: ${{ secrets.KisskhSub }}
+          KissKh: ${{ secrets.KISSKH }}
+          KisskhSub: ${{ secrets.KISSKHSUB }}
           ZSHOW_API: ${{ secrets.ZSHOW_API }}
           SFMOVIES_API: ${{ secrets.SFMOVIES_API }}
           CINEMATV_API: ${{ secrets.CINEMATV_API }}
