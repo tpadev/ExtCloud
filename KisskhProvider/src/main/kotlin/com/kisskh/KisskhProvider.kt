@@ -224,7 +224,6 @@ class KisskhProvider : MainAPI() {
     }.joinToString("\n\n")
      */
 
-
     private val CHUNK_REGEX1 by lazy { Regex("^\\d+$", RegexOption.MULTILINE) }
     override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor {
         return object : Interceptor {
