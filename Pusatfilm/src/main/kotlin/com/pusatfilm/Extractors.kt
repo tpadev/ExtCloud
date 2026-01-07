@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -48,7 +49,7 @@ open class Kotakajaib : ExtractorApi() {
                 }
 
                 callback(
-                    ExtractorLink(
+                    newExtractorLink(
                         name,
                         "Kotakajaib ${mirror.server.uppercase()} ${quality}p",
                         directUrl,
