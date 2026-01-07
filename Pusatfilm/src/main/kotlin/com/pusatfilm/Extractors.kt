@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -50,13 +51,15 @@ open class Kotakajaib : ExtractorApi() {
 
                 callback(
                     newExtractorLink(
-                        name,
-                        "Kotakajaib ${mirror.server.uppercase()} ${quality}p",
-                        directUrl,
-                        mainUrl,
-                        quality,
-                        false
-                    )
+                        source = name,
+                        name = "Kotakajaib ${mirror.server.uppercase()} ${quality}p",
+                        url = directUrl,
+                        type = ExtractorLinkType.VIDEO
+                    ) {
+                        this.referer = mainUrl
+                        this.quality = quality
+                        this.isM3u8 = false
+                    }
                 )
             }
         }
