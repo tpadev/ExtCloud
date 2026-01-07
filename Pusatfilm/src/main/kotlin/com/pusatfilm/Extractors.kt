@@ -19,21 +19,21 @@ open class Kotakajaib : ExtractorApi() {
     override val requiresReferer = true
 
     override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
+            url: String,
+            referer: String?,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
     ) {
-        app.get(url, referer = referer).document.select("ul#dropdown-server li a").amap {
-            loadExtractor(
-                base64Decode(it.attr("data-frame")),
-                "$mainUrl/",
-                subtitleCallback,
-                callback
-            )
+        val links = app.get(url, referer = referer).document.select("ul#dropdown-server li a")
+        for (a in links) {
+    loadExtractor(
+        base64Decode(a.attr("data-frame")),
+        "$mainUrl/",
+        subtitleCallback,
+        callback
+    )
         }
     }
-
 }
 
 
