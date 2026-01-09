@@ -24,8 +24,7 @@ class Fufafilm : MainAPI() {
     override var name = "Fufafilm🍁"
     override val hasMainPage = true
     override var lang = "id"
-    override val supportedTypes =
-            setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
+    override val supportedTypes = setOf(TvType.NSFW)
     
 
     override val mainPage =
