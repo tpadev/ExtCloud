@@ -30,13 +30,23 @@ class Fufafilm : MainAPI() {
 
     override val mainPage =
             mainPageOf(
-                "category/movie/page/%d/" to "Semua Film",
-                "category/moviebox/page/%d/" to "Trending Minggu Ini",
-                "country/indonesia/page/%d/" to "Film Indonesia",
-                "tv/page/%d/" to "Series Unggulan",
-                "/page/%d/?s=&search=advanced&post_type=movie&index=&orderby=date&genre=animation" to
-                            "Animasi",
+                // "category/movie/page/%d/" to "Semua Film",
+                // "category/moviebox/page/%d/" to "Trending Minggu Ini",
+                // "tv/page/%d/" to "Series Unggulan",
+				"country/indonesia/page/%d/" to "Film Indonesia",
+                "category/animation/page/%d/" to "Animasi",
                 "category/superhero/page/%d/" to "Superhero",
+
+				// "category/brother-musang/page/%d/" to "Musang",
+				// "category/indo-Lokal/page/%d/" to "Indo Lokal",
+				// "category/semi-jepang-sub-indo/page/%d/" to "Jav",
+				// "category/pinoy/page/%d/" to "Pinoy",
+				// "category/semi-korea/page/%d/" to "Korea",
+				// "category/vivamax-sub-indo/page/%d/" to "Vivamax",
+				// "category/kelas-bintang/page/%d/" to "Kelas Bintang",
+				// "category/togefilm/page/%d/" to "Toge Film",
+				// "category/short-series/page/%d/" to "Short-series",
+				// "category/shorts/page/%d/" to "Shorts",
             )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
