@@ -37,7 +37,6 @@ class IdlixProvider : MainAPI() {
         "$mainUrl/" to "Featured",
         "$mainUrl/movie/page/" to "Latest Movies",
         "$mainUrl/tvseries/page/" to "Latest TV Series",
-        "$mainUrl/tvseries/page/" to "Latest TV Season",
         "$mainUrl/network/netflix/page/" to "Netflix",
         "$mainUrl/network/amazon/page/" to "Amazon Prime",
         "$mainUrl/network/apple-tv/page/" to "AppleTV+",
