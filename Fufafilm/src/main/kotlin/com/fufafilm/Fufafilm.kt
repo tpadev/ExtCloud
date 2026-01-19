@@ -59,7 +59,7 @@ class Fufafilm : MainAPI() {
 private fun Element.toSearchResult(): SearchResponse? {
     val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
     val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-    val posterUrl = fixUrlNull(this.selectFirst("a > img > src"))
+    val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr()).fixImageQuality()
 
     val quality = this.select("div.gmr-qual, div.gmr-quality-item > a")
         .text().trim().replace("-", "")
@@ -100,11 +100,11 @@ private fun Element.toSearchResult(): SearchResponse? {
         private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr())
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
         return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
 
-        override suspend fun load(url: String): LoadResponse {
+    override suspend fun load(url: String): LoadResponse {
     // Pakai Desktop User-Agent agar website tidak mengirim halaman mobile
     val desktopHeaders = mapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -125,6 +125,7 @@ private fun Element.toSearchResult(): SearchResponse? {
 
     val poster =
         fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
+            ?.fixImageQuality()
             
 
     val tags = document.select("strong:contains(Genre) ~ a").eachText()
