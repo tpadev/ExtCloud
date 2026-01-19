@@ -100,7 +100,7 @@ private fun Element.toSearchResult(): SearchResponse? {
         private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr().fixImageQuality())
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.getImageAttr())
         return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
 
@@ -125,7 +125,7 @@ private fun Element.toSearchResult(): SearchResponse? {
 
     val poster =
         fixUrlNull(document.selectFirst("figure.pull-left > img")?.getImageAttr())
-            ?.fixImageQuality()
+            
 
     val tags = document.select("strong:contains(Genre) ~ a").eachText()
 
