@@ -36,16 +36,16 @@ class Fufafilm : MainAPI() {
                 // "category/animation/page/%d/" to "Animasi",
                 // "category/superhero/page/%d/" to "Superhero",
 
-				"category/brother-musang/" to "Musang",
-				"category/indo-Lokal/" to "Indo Lokal",
-				"category/semi-jepang-sub-indo/" to "Jav",
-				"category/pinoy/" to "Pinoy",
-				"category/semi-korea/" to "Korea",
-				"category/vivamax-sub-indo/" to "Vivamax",
-				"category/kelas-bintang/" to "Kelas Bintang",
-				"category/togefilm/" to "Toge Film",
-				"category/short-series/" to "Short-series",
-				"category/shorts/" to "Shorts",
+				"category/brother-musang/page/%d/" to "Musang",
+				"category/indo-Lokal/page/%d/" to "Indo Lokal",
+				"category/semi-jepang-sub-indo/page/%d/" to "Jav",
+				"category/pinoy/page/%d/" to "Pinoy",
+				"category/semi-korea/page/%d/" to "Korea",
+				"category/vivamax-sub-indo/page/%d/" to "Vivamax",
+				"category/kelas-bintang/page/%d/" to "Kelas Bintang",
+				"category/togefilm/page/%d/" to "Toge Film",
+				"category/short-series/page/%d/" to "Short-series",
+				"category/shorts/page/%d/" to "Shorts",
             )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
